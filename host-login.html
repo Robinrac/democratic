@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#EA528E">
+  <title>Host access | Hacked</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/host-login.js" defer></script>
+</head>
+<body>
+  <main class="host-login">
+    <a class="brand" href="/"><span class="brand-mark">hacked<span>●</span></span></a>
+    <section class="join-card">
+      <span class="eyebrow">HOST ACCESS</span>
+      <h1>Open your host screen.</h1>
+      <p>Enter the host password to display the workshop QR code.</p>
+      <form id="host-login-form">
+        <label for="host-password">Password</label>
+        <input type="password" id="host-password" name="password" autocomplete="current-password" required autofocus>
+        <button class="primary" id="host-unlock">Unlock host screen <span aria-hidden="true">→</span></button>
+        <p id="host-error" class="error" role="alert"></p>
+      </form>
+    </section>
+    <a class="quiet-link" href="/">← Back to the workshop</a>
+  </main>
+</body>
+</html>

@@ -1,0 +1,13 @@
+{
+  "name": "nordic-youth-workshop",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node server.mjs",
+    "start": "node server.mjs",
+    "dev:lan": "node server.mjs --lan",
+    "test": "node --test tests/*.test.mjs"
+  },
+  "dependencies": { "qrcode-generator": "1.4.4" }
+}

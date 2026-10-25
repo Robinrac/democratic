@@ -1,0 +1,14 @@
+node_modules/
+.reference/
+.codebase-memory/
+*.log
+.env*
+test-results/
+
+# Local development notes and earlier prototypes
+/archive/
+/AGENTS.md
+/VERIFICATION.md
+/docs/*
+!/docs/identity-welcome.png
+!/docs/csa-color-sections.png
