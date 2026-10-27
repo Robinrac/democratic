@@ -2,16 +2,23 @@
 
 A small English social app for Workshop 2 at Nordic Youth Conference, exploring privacy, identity and the freedom to participate.
 
+The planned 60-minute Open Circle experience and its Point feature record are
+summarized in [the Workshop 2 specification](docs/workshop-2-specification.md).
+The Open Circle flow is implemented locally; live hosting and venue verification remain.
+Draft participant copy and cartoon portraits are in
+[the seven role cards](docs/workshop-2-role-cards.md).
+
 ## Run locally
 
-Requires Node.js 20 or newer. No build step is needed.
+Requires Node.js 20 or newer. No build step is needed. In PowerShell 7:
 
-```sh
+```powershell
 npm ci --ignore-scripts
+$env:HOST_PASSWORD = Read-Host 'Choose a private host password (at least 16 characters)' -MaskInput
 npm start
 ```
 
-Open http://localhost:4173. To let phones on the same network connect:
+Open [the private host screen](http://localhost:4173/host), sign in with that password, and create a **rehearsal** session. Distribute its seven codes and use its participant/projector links. To let phones on the same network connect:
 
 ```sh
 npm run dev:lan
@@ -21,21 +28,21 @@ Use the network URL printed by the server. A localhost link only works on the co
 
 ## Current experience
 
-1. A welcome popup invites the participant to reveal a fictional identity.
-2. Their assigned name, handle, avatar and cover are shown clearly.
-3. **Begin** opens the shared feed.
-4. Participants can post, discover others and view profiles.
-5. They can edit their bio, avatar palette and cover, while keeping their assigned name.
+1. Seven teams redeem one code each. Each sees only its own private fictional role card; the public forum shows a neutral handle, portrait and optional bio.
+2. The host opens debate. Teams choose public real names or public usernames, give a reason and reply in grouped conversations.
+3. The private host confirms **Launch simulated takeover**, **Release forged posts**, and **Release reactions** separately, then begins reflection and confirms **Reveal what happened**. Nothing advances on a timer.
+4. Teams can dispute posts under their handle. At reveal, genuine, injected and scripted contributions are labelled; teams can publish corrections and choose a recovery response.
+5. Observers and read-only team devices create no extra posting identity. The projector shows QR, prompts and aggregate progress only.
 
-The feed updates every two seconds. Session identity is stored in the browser. All workshop data lives in server memory: restarting the server clears posts and invalidates identities. No participant data is written to disk.
+The feed updates every two seconds. Browser access tokens are scoped to a session. Local rehearsal uses a persistent PGlite Postgres database in `~/.democratic/open-circle`, outside this repository; `DATA_DIR` can select a different private folder. Hosted mode uses `DATABASE_URL` with PostgreSQL. Session writes, wave releases, claims and retries are transactional. An ordinary restart preserves state.
 
-The app is a workshop foundation. The privacy exposure, impersonation incident and guided recovery exercise are not implemented in this simplified version.
+Read [the rehearsal and operations guide](docs/open-circle-rehearsal.md) before running the workshop. [Implementation status and specification decisions](docs/open-circle-implementation.md) map the work to Point's task order.
 
 ## Presenter and QR
 
-Open `/?presenter=1`, or use the hidden entry in the top-right corner. Keyboard focus reveals the entry. The presenter page displays a QR code, participant link and joined count.
+Use **Open read-only projector** from the selected session in `/host`. Its URL is `/?s=SESSION_ID&presenter=1`. Participant links carry only the session ID, never host credentials, team codes or future script. Open the host using the computer's network address before generating projector links for phones.
 
-The default prototype host password is `password`. Set `HOST_PASSWORD` when running outside a local demonstration. Host access is checked by the server with expiring HttpOnly sessions. Participant access requires no real name, email or password.
+`HOST_PASSWORD` is required (at least 16 characters); there is no default password. Host access uses expiring HttpOnly, SameSite cookies, with Secure cookies in production. Server authorization protects previews, code issuance and every host mutation. Participant access requires no attendee name, email or password.
 
 ## Design
 
@@ -45,22 +52,24 @@ White outer canvas with CSA palette section colors, varied profile themes and li
 
 ```sh
 npm test
+npx playwright install chromium
+npm run test:browser
 ```
 
-- `server.mjs`: HTTP server, workshop API and host access.
-- `dist/participant.js`: participant experience and identity welcome.
-- `dist/social-ui.js`: profile and navigation templates.
-- `dist/profile-themes.js`: seven profile themes and appearance assignment.
-- `dist/app.js`: presenter page and entry routing.
-- `dist/styles.css`: responsive design and animation.
+- `server.mjs`: HTTP routes, authorization and safe static-asset serving.
+- `storage/`: Postgres adapters, migration and transactional session storage.
+- `workshop/`: private role loading, public projections and ordered incident state machine.
+- `dist/open-circle.js`: participant and read-only projector experience.
+- `dist/open-circle.css`: responsive layout, keyboard focus and reduced motion.
+- `host.html` and `host.js`: server-gated private host interface.
 - `host-login.html`: server-gated host login template.
-- `tests/`: shared-feed, profile and host-access integration tests.
+- `tests/`: transaction, privacy, authorization, restart and browser rehearsal tests.
 
-Text-only posts are limited to 500 characters. The server assigns authors, validates profile changes and rejects unrelated cross-origin writes. Posts are rendered as text. This is a facilitated workshop prototype, not a production social network.
+Text-only posts are limited to 500 characters; bios to 160. The server assigns authors, rejects markup and unrelated cross-origin writes, and the client escapes all attendee text. Existing prototype UI files and third-party notices are retained, but obsolete entry points are not served.
 
 ## Hosting
 
-Publishing the repository does not deploy the app. Shared posts need the Node server or an equivalent backend; static hosting of `dist` alone will not work. No public app deployment or custom domain is configured.
+No public deployment was made. Static hosting of `dist` alone will not work. Production requires a reachable HTTPS Node service, persistent Postgres, `HOST_PASSWORD`, `DATABASE_URL`, `PUBLIC_ORIGIN`, and `NODE_ENV=production`. The Point plan recommends Render plus Neon; accounts, region, service tier and public URL remain operator decisions. See the operations guide for migrations, backups, retention and deletion.
 
 ## Third-party notices
 
@@ -68,7 +77,7 @@ Profile and navigation structure is adapted from [Munia](https://github.com/lean
 
 QR generation uses qrcode-generator 1.4.4. Its MIT license header is retained in `dist/vendor/qrcode.js`.
 
-## Preview
+## Earlier prototype previews
 
 ![Identity welcome](docs/identity-welcome.png)
 

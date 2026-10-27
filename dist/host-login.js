@@ -13,7 +13,7 @@ document.querySelector('#host-login-form').addEventListener('submit', async even
     });
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || 'Could not sign in. Try again.');
-    location.replace('/?presenter=1');
+    location.replace('/host' + location.search);
   } catch (failure) {
     error.textContent = failure.name === 'TimeoutError' || failure.name === 'TypeError' ? 'Could not connect. Try again.' : failure.message;
     button.disabled = false;

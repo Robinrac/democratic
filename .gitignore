@@ -12,3 +12,8 @@ test-results/
 /docs/*
 !/docs/identity-welcome.png
 !/docs/csa-color-sections.png
+!/docs/workshop-2-specification.md
+!/docs/workshop-2-role-cards.md
+!/docs/open-circle-rehearsal.md
+!/docs/open-circle-implementation.md
+/playwright-report/
