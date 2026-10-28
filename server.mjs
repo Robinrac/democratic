@@ -6,7 +6,9 @@ import path from 'node:path';
 import os from 'node:os';
 import { openStore } from './storage/store.mjs';
 import { roleCards } from './workshop/roles.mjs';
-import { hash, fail, makeSession, issueCodes, summary, feed, hostView, release, join, me, participantWrite } from './workshop/model.mjs';
+import { renderProfileAvatar } from './dist/profile-avatars.js';
+import { runtimeConfig, validateConfig } from './config.mjs';
+import { hash, fail, makeSession, summary, feed, hostView, release, join, joinPreview, me, credential, participantWrite, receipt, question } from './workshop/model.mjs';
 
 const root = fileURLToPath(new URL('./dist/', import.meta.url));
 const types = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.png': 'image/png', '.txt': 'text/plain; charset=utf-8' };
@@ -23,8 +25,7 @@ async function readJSON(req) {
 const equal = (a, b) => { const x = Buffer.from(a), y = Buffer.from(b); return x.length === y.length && timingSafeEqual(x, y); };
 
 export async function createWorkshopServer({ hostPassword = process.env.HOST_PASSWORD, store, databaseUrl = process.env.DATABASE_URL, dataDir = process.env.DATA_DIR, production = process.env.NODE_ENV === 'production', publicOrigin = process.env.PUBLIC_ORIGIN } = {}) {
-  if (!hostPassword || hostPassword.length < 16) throw new Error('Set HOST_PASSWORD to a unique secret of at least 16 characters.');
-  if (production && ((!databaseUrl && !store) || !publicOrigin?.startsWith('https://'))) throw new Error('Production requires DATABASE_URL and an HTTPS PUBLIC_ORIGIN.');
+  publicOrigin = validateConfig({ hostPassword, databaseUrl, publicOrigin, production, store });
   const ownStore = !store;
   store ||= await openStore({ databaseUrl, ...(dataDir ? { dataDir } : {}) });
   const sign = value => createHmac('sha256', hostPassword).update('open-circle-host:' + value).digest('hex');
@@ -34,10 +35,10 @@ export async function createWorkshopServer({ hostPassword = process.env.HOST_PAS
     return Number(expiry) > Date.now() && Number(expiry) < Date.now() + 9 * 3600000 && !!nonce && !!signature && equal(sign(expiry + '.' + nonce), signature);
   }
   const attempts = new Map();
-  function limit(req, category, max) {
+  function limit(req, category, max, identity = req.socket.remoteAddress) {
     const now = Date.now();
     for (const [key, record] of attempts) if (record.until <= now) attempts.delete(key);
-    const key = category + ':' + req.socket.remoteAddress;
+    const key = category + ':' + identity;
     const record = attempts.get(key) || { count: 0, until: now + 60000 };
     record.count++; attempts.set(key, record);
     if (record.count > max) fail(429, 'Too many attempts. Wait one minute and try again.');
@@ -78,7 +79,7 @@ export async function createWorkshopServer({ hostPassword = process.env.HOST_PAS
             if (req.method === 'GET') return reply(res, 200, { sessions: (await store.list()).map(summary) });
             const data = await readJSON(req), created = makeSession(data);
             const inserted = await store.create(created.state);
-            return reply(res, inserted ? 201 : 200, { session: summary(inserted ? created.state : await store.read(data.id)), codes: inserted ? created.codes : [], retried: !inserted });
+            return reply(res, inserted ? 201 : 200, { session: summary(inserted ? created.state : await store.read(data.id)), retried: !inserted });
           }
           if (!sid) fail(400, 'Choose a workshop session.');
           if (route === 'host/state' && req.method === 'GET') {
@@ -104,10 +105,6 @@ export async function createWorkshopServer({ hostPassword = process.env.HOST_PAS
               if (typeof data.paused !== 'boolean' || state.phase === 'ended') fail(400, 'Choose pause or resume for an active session.');
               state.paused = data.paused; state.version++; return summary(state);
             }
-            if (route === 'host/codes') {
-              if (!['opening', 'debate'].includes(state.phase)) fail(409, 'Team claiming has closed.');
-              const codes = issueCodes(state); state.version++; return { codes };
-            }
             if (route === 'host/moderate') {
               const post = state.posts.find(p => p.id === data.postId && p.origin === 'team');
               if (!post) fail(400, 'Only participant-authored content can be hidden.');
@@ -117,7 +114,7 @@ export async function createWorkshopServer({ hostPassword = process.env.HOST_PAS
               if (state.kind !== 'rehearsal' || data.confirmLabel !== state.label) fail(403, 'Only a rehearsal can be reset; type its exact label.');
               const fresh = makeSession({ id: sid, label: state.label, kind: state.kind, expiresAt: data.expiresAt });
               fresh.state.version = state.version + 1;
-              Object.assign(state, fresh.state); return { session: summary(state), codes: fresh.codes };
+              Object.assign(state, fresh.state); return { session: summary(state) };
             }
             fail(404, 'Not found.');
           });
@@ -126,9 +123,11 @@ export async function createWorkshopServer({ hostPassword = process.env.HOST_PAS
         if (!sid) fail(400, 'Open the session link supplied by your host.');
         if (req.method === 'GET') {
           const state = await store.read(sid); if (!state) fail(410, 'Session expired or cleared. Ask the host for the current link.');
+          if (['feed', 'profile'].includes(route) && !hostAuthorized) credential(state, token);
           if (route === 'feed') return reply(res, 200, feed(state));
-          if (route === 'projector') return reply(res, 200, { ...summary(state), question: feed(state).question });
+          if (route === 'projector') return reply(res, 200, { ...summary(state), question });
           if (route === 'me') return reply(res, 200, me(state, token));
+          if (route === 'receipt') return reply(res, 200, receipt(state, token, url.searchParams.get('id')));
           if (route === 'profile') {
             const result = feed(state), profile = result.profiles.find(p => p.id === url.searchParams.get('id'));
             if (!profile) fail(404, 'This profile is unavailable.');
@@ -137,9 +136,22 @@ export async function createWorkshopServer({ hostPassword = process.env.HOST_PAS
           }
           fail(404, 'Not found.');
         }
-        if (route === 'join') limit(req, 'join', 30); else limit(req, 'writes', 180);
+        if (route === 'join-preview') {
+          // Seven teams often share one venue/router address, including behind HTTPS proxies.
+          // Never trust arbitrary X-Forwarded-For headers as a way around these limits.
+          limit(req, 'join-preview', 1200);
+          const data = await readJSON(req), state = await store.read(sid);
+          if (!state) fail(410, 'Session expired or cleared.');
+          return reply(res, 200, joinPreview(state, data));
+        }
+        if (route === 'join') limit(req, 'join', 60);
         const data = await readJSON(req);
-        const result = await store.update(sid, state => route === 'join' ? join(state, data, token) : participantWrite(state, token, route, data));
+        const result = await store.update(sid, state => {
+          if (route === 'join') return join(state, data, token);
+          const access = credential(state, token, true);
+          limit(req, 'writes', 180, sid + ':' + access.roleId);
+          return participantWrite(state, token, route, data);
+        });
         return reply(res, 200, result);
       }
       if (!['GET', 'HEAD'].includes(req.method)) fail(405, 'Method not allowed.');
@@ -153,8 +165,13 @@ export async function createWorkshopServer({ hostPassword = process.env.HOST_PAS
       } else if (/^\/portraits\/[1-7]\.png$/.test(url.pathname)) {
         const card = roleCards[Number(url.pathname.split('/')[2][0]) - 1];
         file = fileURLToPath(new URL('./assets/role-portraits/' + card.portraitFile, import.meta.url));
+      } else if (/^\/avatars\/[0-6]\.svg$/.test(url.pathname)) {
+        const svg = renderProfileAvatar(Number(url.pathname.split('/')[2][0]));
+        res.writeHead(200, { ...headers, 'Content-Type': 'image/svg+xml; charset=utf-8' });
+        res.end(req.method === 'HEAD' ? undefined : svg);
+        return;
       } else {
-        const allowed = ['/', '/index.html', '/app.js', '/open-circle.js', '/open-circle.css', '/host-login.js', '/styles.css', '/profile-themes.js', '/vendor/qrcode.js', '/vendor/MUNIA-LICENSE.txt'];
+        const allowed = ['/brand/open-circle-mark.png', '/', '/index.html', '/app.js', '/open-circle.js', '/open-circle.css', '/open-circle-theme.css', '/host-login.js', '/styles.css', '/profile-themes.js', '/vendor/qrcode.js', '/vendor/MUNIA-LICENSE.txt'];
         if (!allowed.includes(url.pathname)) fail(404, 'Not found.');
         file = path.join(root, url.pathname === '/' ? 'index.html' : url.pathname.slice(1));
       }
@@ -166,15 +183,18 @@ export async function createWorkshopServer({ hostPassword = process.env.HOST_PAS
     }
   });
   server.store = store;
-  server.shutdown = async () => { server.closeAllConnections(); await new Promise(resolve => server.close(resolve)); if (ownStore) await store.close(); };
+  server.shutdown = async () => {
+    const deadline = setTimeout(() => server.closeAllConnections(), 10000).unref();
+    try { await new Promise(resolve => server.close(resolve)); if (ownStore) await store.close(); }
+    finally { clearTimeout(deadline); }
+  };
   return server;
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   try {
-    const port = Number(process.env.PORT || 4173);
-    const host = process.env.HOST || (process.argv.includes('--lan') ? '0.0.0.0' : '127.0.0.1');
-    const server = await createWorkshopServer();
+    const { port, host, ...config } = runtimeConfig();
+    const server = await createWorkshopServer(config);
     server.on('error', error => { console.error(error.message); void server.shutdown(); process.exitCode = 1; });
     server.listen(port, host, () => {
       console.log('Open Circle host: http://localhost:' + port + '/host');

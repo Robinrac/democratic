@@ -7,7 +7,7 @@ import pg from 'pg';
 
 export async function openStore({ databaseUrl, dataDir = path.join(os.homedir(), '.democratic', 'open-circle') } = {}) {
   let db, lock;
-  if (databaseUrl) db = new pg.Pool({ connectionString: databaseUrl });
+  if (databaseUrl) db = new pg.Pool({ connectionString: databaseUrl, connectionTimeoutMillis: 5000, statement_timeout: 10000, idleTimeoutMillis: 30000 });
   else {
     if (dataDir !== ':memory:') {
       await mkdir(dataDir, { recursive: true });
@@ -21,6 +21,9 @@ export async function openStore({ databaseUrl, dataDir = path.join(os.homedir(),
     }
     db = new PGlite(dataDir === ':memory:' ? undefined : dataDir);
   }
+  // An idle provider connection may disappear during maintenance. Failed requests
+  // still surface through the route; an idle pool error must not crash the process.
+  if (databaseUrl) db.on('error', () => {});
   const transaction = databaseUrl ? async fn => {
     const client = await db.connect();
     try { await client.query('BEGIN'); const result = await fn(client); await client.query('COMMIT'); return result; }

@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { roleCards } from '../../workshop/roles.mjs';
 
 test('host-paced seven-team rehearsal on phone and laptop, with cancel, reconnect and repeated clicks', async ({ browser, page: host }, info) => {
   const errors=[]; host.on('pageerror',e=>errors.push(e.message));
@@ -8,24 +9,68 @@ test('host-paced seven-team rehearsal on phone and laptop, with cancel, reconnec
   await host.getByLabel('Session label').fill('Seven-team browser rehearsal'); await host.getByRole('button',{name:'Create session',exact:true}).click();
   await expect(host.getByRole('heading',{name:'Seven-team browser rehearsal',exact:true})).toBeVisible();
   const sid=new URL(host.url()).searchParams.get('s');
-  await host.getByText('Private one-use team codes',{exact:true}).click();
-  const codes=await host.locator('.code-grid code').allTextContents(); expect(codes).toHaveLength(7);
+  await expect(host.getByText('Private one-use team codes',{exact:true})).toHaveCount(0);
   const contexts=[],teams=[];
   for(let i=0;i<7;i++) {
     const context=await browser.newContext({viewport:i===0?{width:360,height:800}:{width:1280,height:900},reducedMotion:'reduce'}); contexts.push(context);
     const page=await context.newPage(); page.on('pageerror',e=>errors.push(e.message)); teams.push(page);
-    await page.goto('/?s='+sid); await page.getByLabel('Team code',{exact:true}).fill(codes[i]); await page.getByRole('button',{name:'Join as a team'}).click();
-    await expect(page.getByText('Your private role card',{exact:true})).toBeVisible();
+    await page.goto('/?s='+sid);
+    const join=page.getByRole('dialog',{name:'Create your profile.'}); await expect(join).toBeVisible();
+    await expect(join.getByLabel('Username',{exact:true})).toHaveCount(0);
+    await expect(join.getByLabel('Team code',{exact:true})).toHaveCount(0);
+    await expect(join.getByRole('button',{name:'Continue as observer'})).toHaveCount(0);
+    await page.keyboard.press('Escape'); await expect(join).toBeVisible();
+    await expect(join.getByRole('tab',{name:'Personal info',exact:true})).toHaveAttribute('aria-selected','true');
+    await join.getByLabel('Name',{exact:true}).fill(['Eydis','Joensen','Ingrid','Karlsson','Sjoberg','Mikko','Berg'][i]);
+    await join.getByLabel('Home town',{exact:true}).fill(roleCards[i].town);
+    await expect(join.locator('#preview-name')).toHaveText('@' + ['quiet-cedar','bright-river','open-meadow','gentle-cloud','silver-leaf','clear-sky','steady-pine'][i]);
+    await expect(join.locator('.profile-preview')).not.toContainText(roleCards[i].fullName);
+    await join.getByLabel('Bio',{exact:true}).fill('Exploring the conversation.');
+    await join.getByRole('tab',{name:'Profile',exact:true}).click();
+    await expect(join.getByLabel('Name',{exact:true})).not.toBeVisible();
+    await join.getByRole('group',{name:'Profile picture'}).getByRole('radio',{name:'Ocean'}).check();
+    await join.getByRole('group',{name:'Banner'}).getByRole('radio',{name:'Sage'}).check();
+    await join.getByRole('button',{name:'Join the forum'}).click();
+    await expect(page.getByText('Private details',{exact:true}).first()).toBeVisible();
+    await expect(page.locator('#team > .identity')).toContainText('@');
+    await expect(page.locator('#team > .identity')).not.toContainText(roleCards[i].fullName);
+    await expect(page.locator('#team .profile-banner')).toHaveClass(/cover-4/);
+    await expect(page.locator('#team > .identity img')).toHaveAttribute('src','/avatars/3.svg');
   }
   const phone=teams[0];
-  await phone.getByText('Your private role card',{exact:true}).click(); await expect(phone.getByRole('heading',{name:'Eydís Jónsdóttir'})).toBeVisible();
-  await phone.getByText('Your private role card',{exact:true}).click();
-  await phone.getByText('Edit your public bio and style',{exact:true}).click(); await phone.getByLabel('In-character public bio').fill('Listening and exploring new ideas.'); await phone.getByRole('button',{name:'Save profile'}).click();
-  await expect(phone.getByText('Listening and exploring new ideas.',{exact:true}).first()).toBeVisible();
-  const observer=await browser.newPage(); await observer.goto('/?s='+sid); await observer.getByRole('button',{name:'Continue as observer'}).click();
-  await expect(observer.getByText('Your private role card',{exact:true})).toHaveCount(0);
+  const hostEntry=teams[1].getByRole('link',{name:'Host access'});
+  await expect(hostEntry).toHaveAttribute('href','/host');
+  expect(await hostEntry.locator('span').evaluate(el=>getComputedStyle(el).opacity)).toBe('0');
+  await hostEntry.hover();
+  expect(await hostEntry.locator('span').evaluate(el=>getComputedStyle(el).opacity)).toBe('1');
+  await expect(teams[1].locator('.social-nav')).toContainText('Discover');
+  await phone.locator('.private-profile > summary').click();
+  await expect(phone.locator('.private-profile')).toContainText(roleCards[0].fullName);
+  await phone.getByText('Your profile notes',{exact:true}).click(); await expect(phone.getByRole('heading',{name:'Eydís Jónsdóttir'})).toBeVisible();
+  await phone.getByText('Your profile notes',{exact:true}).click();
+  await phone.locator('.private-profile > summary').click();
+  await phone.getByText('Edit profile',{exact:true}).click(); await phone.locator('#profile-form').getByLabel('Bio',{exact:true}).fill('Listening and exploring new ideas.'); await phone.getByRole('button',{name:'Save profile'}).click();
+  await expect(phone.getByRole('dialog',{name:'Your profile.'})).not.toBeVisible();
+  await phone.getByRole('link',{name:'Discover',exact:true}).click();
+  await expect(phone.locator('#profiles').getByText('Listening and exploring new ideas.',{exact:true})).toBeVisible();
+  await phone.getByRole('link',{name:'Feed',exact:true}).click();
+  const unjoined=await browser.newPage(); await unjoined.goto('/?s='+sid);
+  await expect(unjoined.getByRole('dialog')).toBeVisible();
+  await unjoined.keyboard.press('Escape'); await expect(unjoined.getByRole('dialog')).toBeVisible();
+  await expect(unjoined.locator('.post')).toHaveCount(0);
+  await expect(unjoined.getByRole('button',{name:'Continue as observer'})).toHaveCount(0);
+  // A second team device uses an explicit, scoped link from its posting device.
+  await phone.locator('.private-profile > summary').click();
+  await phone.getByText('Add a read-only team device',{exact:true}).click();
+  await phone.getByRole('button',{name:'Make viewer link'}).click();
+  const viewerLink=phone.locator('#viewer-url a'); await expect(viewerLink).toBeVisible();
+  const viewer=await browser.newPage(); await viewer.goto(await viewerLink.getAttribute('href'));
+  await expect(viewer.getByRole('dialog')).not.toBeVisible();
+  await expect(viewer.getByText('Your profile notes',{exact:true})).toHaveCount(0);
+  await phone.locator('.private-profile > summary').click();
   const projector=await browser.newPage(); await projector.goto('/?s='+sid+'&presenter=1'); await expect(projector.locator('#qr svg')).toBeVisible();
   await expect(projector.locator('button')).toHaveCount(0); await expect(projector.locator('body')).not.toContainText('Eydís');
+  await expect(projector.getByRole('link',{name:'Host access'})).toHaveCount(0);
   async function release(name) {
     const button=host.getByRole('button',{name,exact:true}); await expect(button).toBeEnabled(); await button.click();
     await expect(host.getByRole('dialog')).toBeVisible(); await host.getByRole('button',{name:'Confirm release',exact:true}).click();
@@ -38,12 +83,12 @@ test('host-paced seven-team rehearsal on phone and laptop, with cancel, reconnec
     await teams[i].getByLabel('Your reason or reply').fill('Our genuine contribution from team '+(i+1)+'.'); await teams[i].getByRole('button',{name:'Publish post'}).click();
     await expect(teams[i].locator('.post').filter({hasText:'Our genuine contribution from team '+(i+1)+'.'})).toBeVisible();
   }
-  await expect(observer.locator('.thread')).toHaveCount(7);
-  await expect(projector.locator('#progress')).toContainText('7 genuine contributions');
+  await expect(viewer.locator('.thread')).toHaveCount(7);
+  await expect(projector.locator('#progress')).toContainText('7 contributions');
   await host.getByRole('button',{name:'Refresh state',exact:true}).click();
   const launch=host.getByRole('button',{name:'Launch simulated takeover',exact:true}); await expect(launch).toBeEnabled(); await launch.click();
   await expect(host.getByRole('dialog')).toContainText('7 new posts'); await host.getByRole('button',{name:'Cancel',exact:true}).click();
-  await expect(observer.locator('body')).not.toContainText('My name is');
+  await expect(viewer.locator('body')).not.toContainText('My name is');
   await host.getByRole('button',{name:'Pause next release',exact:true}).click(); await expect(launch).toBeDisabled();
   await host.getByRole('button',{name:'Resume next release',exact:true}).click();
   await release('Launch simulated takeover'); await expect(host.locator('#status')).toContainText('Released: 7 posts');
@@ -55,8 +100,8 @@ test('host-paced seven-team rehearsal on phone and laptop, with cancel, reconnec
   await contexts[0].setOffline(false); await expect(phone.locator('.thread.mine .post')).toHaveCount(7);
   await phone.locator('.thread.mine .post').filter({hasText:'I have changed my mind.'}).getByRole('button',{name:'I did not write this'}).click();
   await expect(phone.locator('.thread.mine')).toContainText('Authorship disputed');
-  await expect(observer.locator('.thread')).toHaveCount(7); await expect(observer.locator('.post')).toHaveCount(49);
-  await expect(observer.locator('body')).not.toContainText('Simulation-injected');
+  await expect(viewer.locator('.thread')).toHaveCount(7); await expect(viewer.locator('.post')).toHaveCount(49);
+  await expect(viewer.locator('body')).not.toContainText('Simulation-injected');
   await expect(host.getByRole('button',{name:'Reveal what happened',exact:true})).toBeDisabled();
   await release('Begin reflection'); await release('Reveal what happened');
   await expect(phone.locator('#notice')).toContainText('No external accounts were accessed');
@@ -66,12 +111,12 @@ test('host-paced seven-team rehearsal on phone and laptop, with cancel, reconnec
   await expect(phone.locator('.thread.mine .post')).toHaveCount(8);
   await phone.getByLabel('Better privacy boundaries',{exact:true}).check(); await phone.getByRole('button',{name:'Save team response'}).click();
   await expect(phone.locator('#response-status')).toContainText('saved privately');
-  await expect(observer.locator('.post')).toHaveCount(50);
+  await expect(viewer.locator('.post')).toHaveCount(50);
   for(const page of [phone,teams[1],host,projector]) expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
   await phone.screenshot({path:info.outputPath('phone-recovery.png'),fullPage:true});
   await host.screenshot({path:info.outputPath('host-recovery.png'),fullPage:true});
   await projector.screenshot({path:info.outputPath('projector.png'),fullPage:true});
   await phone.keyboard.press('Tab'); expect(await phone.evaluate(()=>document.activeElement!==document.body)).toBe(true);
   expect(errors).toEqual([]);
-  for(const c of contexts) await c.close(); await observer.close(); await projector.close();
+  for(const c of contexts) await c.close(); await viewer.close(); await unjoined.close(); await projector.close();
 });

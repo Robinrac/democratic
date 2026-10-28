@@ -4,7 +4,7 @@ import { randomUUID } from 'node:crypto';
 import { mkdtemp, rm, realpath } from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
-import { workshop, secret } from './helpers.mjs';
+import { workshop, secret, paperProfile } from './helpers.mjs';
 import { roleCards } from '../workshop/roles.mjs';
 
 function privateFree(value) {
@@ -12,36 +12,49 @@ function privateFree(value) {
   for (const role of roleCards) { assert.ok(!json.includes(role.fullName)); assert.ok(!json.includes(role.town)); assert.ok(!json.includes(role.portraitFile)); }
   for (const key of ['codeHash','credentials','actualActor','provenance','suggestedPost','backstory']) assert.ok(!json.includes('"' + key + '"'), key);
 }
-test('seven one-use claims, isolated private cards, safe public projections, observers and viewers', async t => {
-  const w = await workshop(t); await w.login(); const {sid,codes} = await w.session();
+test('seven code-free paper-profile joins, isolated private cards, safe public projections, required joining and team viewers', async t => {
+  const w = await workshop(t); await w.login(); const {sid} = await w.session();
+  assert.equal((await w.call('join',{bio:'',color:0,cover:0},{sid,token:secret()})).status,400);
+  const beforePreview=await w.state(sid);
+  const preview=await w.call('join-preview',{name:'Eydis Jonsdottir'},{sid});
+  assert.equal(preview.username,'quiet-cedar'); privateFree(preview);
+  assert.equal((await w.call('join-preview',{name:'Sjoberg'},{sid})).username,'silver-leaf');
+  assert.equal((await w.call('join-preview',{name:'Eydis'},{sid})).username,preview.username);
+  assert.equal((await w.call('join-preview',{name:'Eydis Karlsson'},{sid})).username,null);
+  assert.equal((await w.call('feed',undefined,{sid,token:null})).status,401);
+  const afterPreview=await w.state(sid); assert.equal(afterPreview.participants,0); assert.equal(afterPreview.version,beforePreview.version);
   const claims = [];
-  for (const code of codes) claims.push(await w.claim(sid, code.code));
+  for (let i=0;i<7;i++) claims.push(await w.claim(sid, i));
   assert.equal(new Set(claims.map(c => c.participant.id)).size, 7);
-  assert.equal(new Set(claims.map(c => c.participant.handle)).size, 7);
-  assert.equal(claims[0].privateRole.fullName, roleCards[0].fullName);
-  assert.equal((await w.call('join', {code:codes[0].code},{sid,token:secret()})).status,403);
-  assert.equal((await w.call('join', {code:'guessed'},{sid,token:secret()})).status,403);
-  assert.equal((await w.call('join', {code:codes[0].code},{sid,token:claims[0].token})).participant.id, claims[0].participant.id);
+  assert.equal(new Set(claims.map(c => c.participant.username)).size, 7);
+  assert.equal(claims[0].participant.avatar,'/avatars/0.svg');
+  assert.equal(claims[0].privateRole.fullName, roleCards[0].fullName); assert.equal(claims[0].privateDetails.name, roleCards[0].fullName);
+  assert.ok(claims.every(c => !('name' in c.participant)));
+  assert.equal((await w.call('join', paperProfile(0),{sid,token:secret()})).status,409);
+  assert.equal((await w.call('join', {...paperProfile(0),name:'Unknown person'},{sid,token:secret()})).status,400);
+  assert.equal((await w.call('join', paperProfile(0),{sid,token:claims[0].token})).participant.id, claims[0].participant.id);
   privateFree(await w.call('feed',undefined,{sid}));
+  assert.equal((await w.call('profile?id='+claims[0].participant.id,undefined,{sid,token:null})).status,401);
   for(const c of claims) privateFree(await w.call('profile?id='+c.participant.id,undefined,{sid}));
   const viewer = secret(); await w.call('viewer',{token:viewer},{sid,token:claims[0].token});
   assert.equal((await w.call('viewer',{token:claims[0].token},{sid,token:claims[0].token})).status,409);
-  const view = await w.call('me',undefined,{sid,token:viewer}); assert.equal(view.scope,'viewer'); assert.equal(view.privateRole,undefined); privateFree(view);
+  const view = await w.call('me',undefined,{sid,token:viewer}); assert.equal(view.scope,'viewer'); assert.equal(view.privateRole,undefined); assert.equal(view.privateDetails,undefined); privateFree(view);
   for(const route of ['posts','profile','flags','viewer']) assert.equal((await w.call(route,{}, {sid,token:viewer})).status,403);
   assert.equal((await w.call('posts',{}, {sid})).status,401);
   assert.equal((await w.call('feed',undefined,{sid})).participants,7);
   const other = await w.session('live');
   assert.equal((await w.call('me',undefined,{sid:other.sid,token:claims[0].token})).status,401);
-  const racedClaims = await Promise.all([secret(),secret()].map(token => w.call('join',{code:other.codes[0].code},{sid:other.sid,token})));
-  assert.deepEqual(racedClaims.map(r=>r.status).sort(),[200,403]);
-  assert.equal((await w.call('feed',undefined,{sid:other.sid})).participants,1);
+  const racedClaims = await Promise.all([secret(),secret()].map((token,i) => w.call('join',{...paperProfile(0),name:i===0?'Eydis':'Jonsdottir',color:2,cover:5},{sid:other.sid,token})));
+  assert.deepEqual(racedClaims.map(r=>r.status).sort(),[200,409]);
+  assert.equal((await w.call('projector',undefined,{sid:other.sid})).participants,1);
   for(const route of ['/docs/workshop-2-role-cards.md','/workshop/roles.mjs','/assets/role-portraits/'+roleCards[0].portraitFile,'/participant.js','/phone-preview.html']) assert.equal((await fetch(w.base+route)).status,404);
   const portrait = await fetch(w.base+'/portraits/1.png'); assert.equal(portrait.status,200); assert.equal(portrait.headers.get('content-type'),'image/png');
+  const avatar = await fetch(w.base+'/avatars/2.svg'); assert.equal(avatar.status,200); assert.match(avatar.headers.get('content-type'),/^image\/svg\+xml/);
 });
 
 test('seven-team debate → 7 disclosures → 14 forgeries → 21 reactions → reflection → reveal → corrections', async t => {
-  const w = await workshop(t); await w.login(); const {sid,codes} = await w.session();
-  const teams = []; for(const c of codes) teams.push(await w.claim(sid,c.code));
+  const w = await workshop(t); await w.login(); const {sid} = await w.session();
+  const teams = []; for(let i=0;i<7;i++) teams.push(await w.claim(sid,i));
   assert.equal((await w.action(sid,'debate')).status,200);
   for(const [i,team] of teams.entries()) {
     const stance = i % 2 === 0 ? 'real-names':'usernames'; // Deliberately opposite the assigned leaning.
@@ -93,16 +106,16 @@ test('seven-team debate → 7 disclosures → 14 forgeries → 21 reactions → 
   assert.equal((await w.call('feed',undefined,{sid})).phase,'ended');
 });
 
-test('no-post fallback is explicit, targets freeze, late codes become observer-only and stale previews fail', async t=>{
-  const w=await workshop(t); await w.login(); const {sid,codes}=await w.session();
-  const a=await w.claim(sid,codes[0].code), b=await w.claim(sid,codes[1].code); await w.action(sid,'debate');
+test('no-post fallback is explicit, targets freeze, late arrivals cannot join and stale previews fail', async t=>{
+  const w=await workshop(t); await w.login(); const {sid}=await w.session();
+  const a=await w.claim(sid,0), b=await w.claim(sid,1); await w.action(sid,'debate');
   assert.equal((await w.action(sid,'exposure')).status,409);
   assert.equal((await w.state(sid,[b.participant.id])).actions.find(a=>a.id==='exposure').count,1);
   const stale=await w.state(sid);
   await w.call('posts',{text:'We choose usernames.',stance:'usernames',requestId:randomUUID()},{sid,token:a.token});
   assert.equal((await w.action(sid,'exposure',{version:stale.version})).status,409);
   assert.equal((await w.action(sid,'exposure',{includeFallback:[b.participant.id]})).count,2);
-  assert.equal((await w.call('join',{code:codes[2].code},{sid,token:secret()})).status,409);
+  assert.equal((await w.call('join',paperProfile(2),{sid,token:secret()})).status,409);
   await w.call('posts',{text:'A later first post must not change frozen stance.',stance:'usernames',requestId:randomUUID()},{sid,token:b.token});
   assert.equal((await w.action(sid,'forgery')).count,4);
   assert.equal((await w.action(sid,'reactions')).count,6);
@@ -111,13 +124,19 @@ test('no-post fallback is explicit, targets freeze, late codes become observer-o
 });
 
 test('posts, replies and profile edits enforce ownership, text limits, origins and exact-once retries', async t=>{
-  const w=await workshop(t); await w.login(); const {sid,codes}=await w.session(); const a=await w.claim(sid,codes[0].code), b=await w.claim(sid,codes[1].code);
+  const w=await workshop(t); await w.login(); const {sid}=await w.session(); const a=await w.claim(sid,0), b=await w.claim(sid,1);
   await w.action(sid,'debate');
   const payload={text:'A first reason.',stance:'usernames',requestId:randomUUID()};
   const posts=await Promise.all([w.call('posts',payload,{sid,token:a.token}),w.call('posts',payload,{sid,token:a.token})]); assert.equal(posts[0].post.id,posts[1].post.id);
   await w.call('posts',payload,{sid,token:b.token});
   const reply=await w.call('posts',{text:'A thoughtful reply.',replyTo:posts[0].post.id,requestId:randomUUID()},{sid,token:b.token}); assert.equal(reply.post.threadId,a.participant.id);
   const edited=await w.call('profile',{id:b.participant.id,bio:'Listening with curiosity.',cover:6,fullName:'Fake override'},{sid,token:a.token}); assert.equal(edited.participant.id,a.participant.id);
+  const editedPrivate=await w.call('profile',{name:roleCards[0].fullName,town:'Private workshop town',color:3,username:'override'},{sid,token:a.token});
+  assert.equal(editedPrivate.privateDetails.name,roleCards[0].fullName); assert.equal(editedPrivate.privateDetails.town,'Private workshop town');
+  assert.equal(editedPrivate.participant.username,a.participant.username); assert.equal(editedPrivate.participant.name,undefined); assert.equal(editedPrivate.participant.avatar,'/avatars/3.svg');
+  const publicViews=[await w.call('feed',undefined,{sid}),await w.call('profile?id='+a.participant.id,undefined,{sid}),await w.call('projector',undefined,{sid})];
+  publicViews.forEach(view=>{ privateFree(view); assert.ok(!JSON.stringify(view).includes('Private workshop town')); });
+  assert.equal((await w.call('profile',{name:'Someone else'},{sid,token:a.token})).status,400);
   assert.equal((await w.call('me',undefined,{sid,token:b.token})).participant.bio,'');
   for(const bad of ['', 'x'.repeat(501), '<img src=x onerror=alert(1)>', null]) assert.equal((await w.call('posts',{...payload,requestId:randomUUID(),text:bad},{sid,token:a.token})).status,400);
   assert.equal((await w.call('profile',{bio:'x'.repeat(161)},{sid,token:a.token})).status,400);
@@ -128,7 +147,7 @@ test('posts, replies and profile edits enforce ownership, text limits, origins a
 });
 
 test('a real database failure rolls back the entire release, then the same request can safely retry', async t=>{
-  const w=await workshop(t); await w.login(); const {sid,codes}=await w.session(); const a=await w.claim(sid,codes[0].code); await w.action(sid,'debate');
+  const w=await workshop(t); await w.login(); const {sid}=await w.session(); const a=await w.claim(sid,0); await w.action(sid,'debate');
   await w.call('posts',{text:'A reason.',stance:'usernames',requestId:randomUUID()},{sid,token:a.token});
   const s=await w.state(sid), body={action:'exposure',version:s.version,requestId:randomUUID()};
   await w.server.store.transaction(async db=>{
@@ -146,15 +165,15 @@ test('a real database failure rolls back the entire release, then the same reque
 test('disk restart restores tokens, phase, waves and flags; logout revocation also survives restart', async t=>{
   const dir=await mkdtemp(path.join(os.tmpdir(),'open-circle-restart-'));
   const first=await workshop(t,{dataDir:dir}); await first.login(); const cookie=first.cookie;
-  const {sid,codes}=await first.session(); const a=await first.claim(sid,codes[0].code); await first.action(sid,'debate');
+  const {sid}=await first.session(); const a=await first.claim(sid,0); await first.action(sid,'debate');
   await first.call('posts',{text:'Persist this opinion.',stance:'usernames',requestId:randomUUID()},{sid,token:a.token});
   const s=await first.state(sid), body={action:'exposure',version:s.version,requestId:randomUUID()}; await first.call('host/action',body,{sid,host:true});
   const f=await first.call('feed',undefined,{sid}); await first.call('flags',{postId:f.posts[1].id},{sid,token:a.token});
   await first.stop();
   const next=await workshop(t,{dataDir:dir}); next.cookie=cookie;
   assert.equal((await next.call('me',undefined,{sid,token:a.token})).participant.id,a.participant.id);
-  assert.equal((await next.state(sid)).phase,'exposure'); assert.equal((await next.call('feed',undefined,{sid})).posts[1].disputed,true);
-  assert.equal((await next.call('host/action',body,{sid,host:true})).count,1); assert.equal((await next.call('feed',undefined,{sid})).posts.length,2);
+  assert.equal((await next.state(sid)).phase,'exposure'); assert.equal((await next.call('feed',undefined,{sid,token:a.token})).posts[1].disputed,true);
+  assert.equal((await next.call('host/action',body,{sid,host:true})).count,1); assert.equal((await next.call('feed',undefined,{sid,token:a.token})).posts.length,2);
   await next.call('host/logout',{}, {host:true}); await next.stop();
   const third=await workshop(t,{dataDir:dir}); third.cookie=cookie; assert.equal((await third.call('host/session',undefined,{host:true})).status,401);
   await third.stop();
@@ -165,17 +184,17 @@ test('disk restart restores tokens, phase, waves and flags; logout revocation al
   await rm(resolved,{recursive:true});
 });
 
-test('moderation, rehearsal reset, live protection, code expiry and session deletion are isolated', async t=>{
+test('moderation, rehearsal reset, live protection, session expiry and session deletion are isolated', async t=>{
   const w=await workshop(t); await w.login(); const rehearsal=await w.session(), live=await w.session('live');
-  const a=await w.claim(rehearsal.sid,rehearsal.codes[0].code), b=await w.claim(live.sid,live.codes[0].code);
+  const a=await w.claim(rehearsal.sid,0), b=await w.claim(live.sid,0);
   await w.action(rehearsal.sid,'debate'); const p=await w.call('posts',{text:'Please hide this.',stance:'usernames',requestId:randomUUID()},{sid:rehearsal.sid,token:a.token});
   let s=await w.state(rehearsal.sid); assert.equal((await w.call('host/moderate',{version:s.version,postId:p.post.id},{sid:rehearsal.sid,host:true})).status,200);
   assert.equal((await w.call('feed',undefined,{sid:rehearsal.sid})).posts[0].text,'[Hidden by the host]');
   s=await w.state(live.sid); assert.equal((await w.call('host/reset',{version:s.version,confirmLabel:s.label,expiresAt:Date.now()+86400000},{sid:live.sid,host:true})).status,403);
-  s=await w.state(rehearsal.sid); const reset=await w.call('host/reset',{version:s.version,confirmLabel:s.label,expiresAt:Date.now()+86400000},{sid:rehearsal.sid,host:true}); assert.equal(reset.codes.length,7);
+  s=await w.state(rehearsal.sid); const reset=await w.call('host/reset',{version:s.version,confirmLabel:s.label,expiresAt:Date.now()+86400000},{sid:rehearsal.sid,host:true}); assert.equal(reset.session.capacity,7);
   assert.equal((await w.call('me',undefined,{sid:rehearsal.sid,token:a.token})).status,401); assert.equal((await w.call('me',undefined,{sid:live.sid,token:b.token})).status,200);
-  assert.equal((await w.call('feed',undefined,{sid:rehearsal.sid})).posts.length,0);
+  assert.equal((await w.call('host/export',undefined,{sid:rehearsal.sid,host:true})).posts.length,0);
   await w.server.store.transaction(db=>db.query('UPDATE open_circle_sessions SET expires_at=$2 WHERE id=$1',[rehearsal.sid,Date.now()-1]));
-  assert.equal((await w.call('join',{code:reset.codes[0].code},{sid:rehearsal.sid,token:secret()})).status,410);
+  assert.equal((await w.call('join',paperProfile(0),{sid:rehearsal.sid,token:secret()})).status,410);
   await w.call('host/delete',{confirmLabel:live.session.label},{sid:live.sid,host:true}); assert.equal((await w.call('feed',undefined,{sid:live.sid})).status,410);
 });

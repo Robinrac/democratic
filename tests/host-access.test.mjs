@@ -11,7 +11,7 @@ test('host page, code, previews and all mutations are gated; projector always us
   assert.equal((await fetch(w.base+'/host.js')).status,401);
   for(const route of ['session','sessions','state','export']) assert.equal((await w.call('host/'+route)).status,401);
   for(const route of ['action','pause','codes','moderate','reset','delete','sessions']) assert.equal((await w.call('host/'+route,{})).status,401);
-  await w.login(); const {sid,codes}=await w.session(); await w.claim(sid,codes[0].code);
+  await w.login(); const {sid}=await w.session(); await w.claim(sid,0);
   const projector=await w.call('projector',undefined,{sid,host:true});
   for(const key of ['roles','actions','targets','posts','events','codes','credentials']) assert.equal(projector[key],undefined);
   const json=JSON.stringify(projector); assert.doesNotMatch(json,/Eydís|Jónsdóttir|Launch simulated|forged posts/);

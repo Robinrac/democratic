@@ -3,7 +3,7 @@
  * Copyright (c) 2023 Leandro Norcio. MIT: ./vendor/MUNIA-LICENSE.txt.
  * React components ported to HTML templates for this workshop's small runtime.
  */
-import { PROFILE_THEMES } from './profile-themes.js';
+import { renderProfileAvatar } from './profile-avatars.js';
 export const escape = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[char]));
 export const handle = person => person.name.toLowerCase().replaceAll(' ', '_');
 export function icon(name) {
@@ -17,8 +17,7 @@ export function icon(name) {
   return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[name] || paths.profile}</svg>`;
 }
 export function avatar(person) {
-  const colors = (PROFILE_THEMES[person.color] || PROFILE_THEMES[0]).avatar;
-  return `<span class="avatar portrait" aria-hidden="true"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="50" fill="${colors[0]}"/><path d="M8 100c2-24 17-37 42-37s40 13 42 37" fill="${colors[2]}"/><path d="M40 58h20v21c-6 6-14 6-20 0" fill="#D69E88"/><ellipse cx="50" cy="43" rx="23" ry="28" fill="#F2C6AE"/><path d="M26 43C15 12 43 7 57 12c21 4 27 19 18 39l-8-22c-10 8-25 0-34 12v15z" fill="${colors[1]}"/></svg></span>`;
+  return `<span class="avatar portrait" aria-hidden="true">${renderProfileAvatar(person.color)}</span>`;
 }
 export function menu(view, me) {
   return `<nav class="social-nav" aria-label="Main navigation">${[

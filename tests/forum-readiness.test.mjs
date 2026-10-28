@@ -1,0 +1,55 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { randomUUID } from 'node:crypto';
+import { workshop, secret, password } from './helpers.mjs';
+import { runtimeConfig } from '../config.mjs';
+
+test('production configuration is checked without connecting and accepts only a complete HTTPS origin', () => {
+  const env = { NODE_ENV: 'production', HOST_PASSWORD: password, DATABASE_URL: 'postgresql://user:secret@db.example/forum', PUBLIC_ORIGIN: 'https://forum.example/', PORT: '8080' };
+  const valid = runtimeConfig(env, []);
+  assert.equal(valid.host, '0.0.0.0'); assert.equal(valid.port, 8080); assert.equal(valid.publicOrigin, 'https://forum.example');
+  assert.equal(runtimeConfig({ HOST_PASSWORD: password }, []).host, '127.0.0.1');
+  for (const origin of ['http://forum.example', 'https://forum.example/path', 'https://forum.example/?s=room', 'https://forum.example/#fragment', 'https://user:secret@forum.example', 'https://']) assert.throws(() => runtimeConfig({ ...env, PUBLIC_ORIGIN: origin }, []), /PUBLIC_ORIGIN/);
+  assert.throws(() => runtimeConfig({ ...env, DATABASE_URL: '' }, []), /DATABASE_URL/);
+  assert.throws(() => runtimeConfig({ ...env, DATABASE_URL: 'https://db.example' }, []), /DATABASE_URL/);
+  for (const port of ['0', '65536', 'NaN', '3.5']) assert.throws(() => runtimeConfig({ ...env, PORT: port }, []), /PORT/);
+});
+
+test('receipts are private, replies preserve context, closed sends reconcile and recovery responses persist privately', async t => {
+  const w = await workshop(t); await w.login(); const { sid } = await w.session();
+  const a = await w.claim(sid, 0), b = await w.claim(sid, 1);
+  const viewer = secret(); await w.call('viewer', { token: viewer }, { sid, token: a.token });
+  await w.action(sid, 'debate');
+  const original = await w.call('posts', { text: 'Names can add context.', stance: 'real-names', requestId: randomUUID() }, { sid, token: b.token });
+  const body = { text: 'How could we protect privacy?', replyTo: original.post.id, requestId: randomUUID() };
+  const result = await w.call('posts', body, { sid, token: a.token });
+  assert.equal(result.post.threadId, b.participant.id);
+  const path = 'receipt?id=' + body.requestId;
+  assert.equal((await w.call(path, undefined, { sid, token: a.token })).post.id, result.post.id);
+  assert.equal((await w.call(path, undefined, { sid, token: b.token })).post, null);
+  assert.equal((await w.call(path, undefined, { sid, token: viewer })).status, 403);
+  assert.equal((await w.call(path, undefined, { sid })).status, 401);
+  assert.equal((await w.call('receipt?id=invalid', undefined, { sid, token: a.token })).status, 400);
+  assert.equal((await w.call('posts', { ...body, text: 'An edited draft' }, { sid, token: a.token })).status, 409);
+  assert.equal((await w.call('corrections', body, { sid, token: a.token })).status, 409);
+  for (const action of ['exposure', 'forgery', 'reactions', 'reflection', 'reveal']) assert.equal((await w.action(sid, action)).status, 200);
+  const before = await w.state(sid);
+  await w.call('responses', { choice: 'protect-privacy' }, { sid, token: a.token });
+  const saved = await w.state(sid);
+  assert.equal(saved.version, before.version + 1);
+  assert.equal(saved.recovery.count, 1);
+  assert.equal(saved.recovery.choices.find(choice => choice.id === 'protect-privacy').count, 1);
+  assert.equal((await w.call('me', undefined, { sid, token: a.token })).response, 'protect-privacy');
+  assert.equal((await w.call('me', undefined, { sid, token: b.token })).response, null);
+  assert.equal((await w.call('me', undefined, { sid, token: viewer })).response, undefined);
+  assert.equal((await w.call('feed', undefined, { sid })).recovery, undefined);
+  await w.call('responses', { choice: 'protect-privacy' }, { sid, token: a.token });
+  assert.equal((await w.state(sid)).version, saved.version);
+  await w.call('responses', { choice: 'moderation' }, { sid, token: a.token });
+  assert.equal((await w.state(sid)).recovery.count, 1);
+  await w.action(sid, 'discussion'); await w.action(sid, 'closing');
+  assert.equal((await w.call('corrections', { text: 'Too late', stance: 'usernames', requestId: randomUUID() }, { sid, token: a.token })).status, 409);
+  await w.action(sid, 'end');
+  assert.equal((await w.call('posts', body, { sid, token: a.token })).post.id, result.post.id);
+  assert.equal((await w.call('responses', { choice: 'take-a-break' }, { sid, token: a.token })).status, 409);
+});

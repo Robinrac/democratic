@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "node server.mjs",
     "start": "node server.mjs",
+    "check:config": "node scripts/check-config.mjs",
     "dev:lan": "node server.mjs --lan",
     "test": "node --test --test-concurrency=1 tests/*.test.mjs",
     "test:browser": "playwright test"
