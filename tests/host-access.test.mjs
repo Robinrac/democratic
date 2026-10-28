@@ -29,8 +29,8 @@ test('host cookies are HttpOnly and SameSite, unrelated origins and password gue
   assert.equal((await w.call('host/login',{password:'wrong'})).status,429);
 });
 
-test('startup refuses default secrets, missing production infrastructure and local data inside source',async()=>{
-  await assert.rejects(createWorkshopServer({hostPassword:'password',dataDir:':memory:',databaseUrl:null}),/at least 16/);
+test('startup refuses empty passwords, missing production infrastructure and local data inside source',async()=>{
+  await assert.rejects(createWorkshopServer({hostPassword:'',dataDir:':memory:',databaseUrl:null}),/non-empty password/);
   await assert.rejects(createWorkshopServer({hostPassword:password,production:true,databaseUrl:null,publicOrigin:null}),/DATABASE_URL/);
   await assert.rejects(openStore({dataDir:fileURLToPath(new URL('../',import.meta.url))}),/outside the source/);
 });

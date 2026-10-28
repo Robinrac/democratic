@@ -1,6 +1,6 @@
 // Configuration only: importing or checking this module never opens a database.
 export function validateConfig({ hostPassword, databaseUrl, publicOrigin, production, store }) {
-  if (typeof hostPassword !== 'string' || hostPassword.length < 16) throw new Error('Set HOST_PASSWORD to a unique secret of at least 16 characters.');
+  if (typeof hostPassword !== 'string' || hostPassword.length === 0) throw new Error('Set HOST_PASSWORD to a non-empty password.');
   if (databaseUrl) {
     let url;
     try { url = new URL(databaseUrl); } catch { throw new Error('DATABASE_URL must be a valid PostgreSQL connection URL.'); }

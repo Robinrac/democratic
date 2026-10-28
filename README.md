@@ -10,11 +10,11 @@ Draft participant copy and cartoon portraits are in
 
 ## Run locally
 
-Requires Node.js 20 or newer. No build step is needed. In PowerShell 7:
+Requires Node.js 20 or newer. No build step is needed. The npm commands load a local `.env` file when present; environment variables already set take precedence. In PowerShell 7:
 
 ```powershell
 npm ci --ignore-scripts
-$env:HOST_PASSWORD = Read-Host 'Choose a private host password (at least 16 characters)' -MaskInput
+$env:HOST_PASSWORD = Read-Host 'Choose a private host password' -MaskInput
 npm start
 ```
 
@@ -44,7 +44,7 @@ Read [the rehearsal and operations guide](docs/open-circle-rehearsal.md) before 
 
 Use **Open read-only projector** from the selected session in `/host`. Its URL is `/?s=SESSION_ID&presenter=1`. Participant links carry only the session ID, never host credentials or future script. Open the host using the computer's network address before generating projector links for phones.
 
-`HOST_PASSWORD` is required (at least 16 characters); there is no default password. Host access uses expiring HttpOnly, SameSite cookies, with Secure cookies in production. Server authorization protects previews and every host mutation. Participants receive a public anonymous username; their paper-role name and town are private. No email or participant password is required.
+`HOST_PASSWORD` is required; there is no default password. Host access uses expiring HttpOnly, SameSite cookies, with Secure cookies in production. Server authorization protects previews and every host mutation. Participants receive a public anonymous username; their paper-role name and town are private. No email or participant password is required.
 
 ## Design
 

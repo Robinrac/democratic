@@ -21,7 +21,7 @@ Use `.env.example` as a list of settings. Keep actual credentials in the host's 
 | `NODE_ENV` | `production` |
 | `PUBLIC_ORIGIN` | Final HTTPS origin, for example `https://forum.example.org`; no path, query or credentials. A trailing slash is normalized. |
 | `DATABASE_URL` | PostgreSQL connection URL supplied by the chosen database, with its required TLS settings. Keep certificate verification enabled. |
-| `HOST_PASSWORD` | A unique private host password of at least 16 characters. |
+| `HOST_PASSWORD` | A unique private host password. |
 | `PORT` | The web service's assigned port. Defaults to 4173. |
 | `HOST` | Optional override; production defaults to `0.0.0.0`. |
 

@@ -6,7 +6,7 @@ Use Node.js 20 or newer. No build or separate database installation is required.
 
 ```sh
 npm ci --ignore-scripts
-# Set HOST_PASSWORD privately in this terminal (at least 16 characters).
+# Set HOST_PASSWORD privately in this terminal.
 npm run check:config
 npm start
 ```
@@ -21,7 +21,7 @@ export HOST_PASSWORD
 In PowerShell 7:
 
 ```powershell
-$env:HOST_PASSWORD = Read-Host 'Host password (at least 16 characters)' -MaskInput
+$env:HOST_PASSWORD = Read-Host 'Host password' -MaskInput
 npm start
 ```
 

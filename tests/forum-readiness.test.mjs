@@ -6,6 +6,8 @@ import { runtimeConfig } from '../config.mjs';
 
 test('production configuration is checked without connecting and accepts only a complete HTTPS origin', () => {
   const env = { NODE_ENV: 'production', HOST_PASSWORD: password, DATABASE_URL: 'postgresql://user:secret@db.example/forum', PUBLIC_ORIGIN: 'https://forum.example/', PORT: '8080' };
+  for (const value of ['a', 'password123']) assert.equal(runtimeConfig({ ...env, HOST_PASSWORD: value }, []).hostPassword, value);
+  for (const value of ['', undefined]) assert.throws(() => runtimeConfig({ ...env, HOST_PASSWORD: value }, []), /non-empty password/);
   const valid = runtimeConfig(env, []);
   assert.equal(valid.host, '0.0.0.0'); assert.equal(valid.port, 8080); assert.equal(valid.publicOrigin, 'https://forum.example');
   assert.equal(runtimeConfig({ HOST_PASSWORD: password }, []).host, '127.0.0.1');
