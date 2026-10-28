@@ -178,7 +178,7 @@ export async function createWorkshopServer({ hostPassword = process.env.HOST_PAS
         res.end(req.method === 'HEAD' ? undefined : svg);
         return;
       } else {
-        const allowed = ['/brand/open-circle-mark.png', '/', '/index.html', '/app.js', '/open-circle.js', '/forum-activity.js', '/open-circle.css', '/open-circle-theme.css', '/host-login.js', '/styles.css', '/profile-themes.js', '/vendor/qrcode.js', '/vendor/MUNIA-LICENSE.txt'];
+        const allowed = ['/brand/open-circle-mark.png', '/', '/index.html', '/app.js', '/open-circle.js', '/forum-activity.js', '/open-circle.css', '/host.css', '/open-circle-theme.css', '/host-login.js', '/styles.css', '/profile-themes.js', '/vendor/qrcode.js', '/vendor/MUNIA-LICENSE.txt'];
         if (!allowed.includes(url.pathname)) fail(404, 'Not found.');
         file = path.join(root, url.pathname === '/' ? 'index.html' : url.pathname.slice(1));
       }

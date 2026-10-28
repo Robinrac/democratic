@@ -18,6 +18,7 @@ test('transport incident is atomic, private, differentiated, persistent and reve
   await w.action(sid, 'debate');
   assert.equal((await w.action(sid, 'incident')).status, 409);
   const originals = [];
+  assert.ok((await w.state(sid)).roles.every(r => r.activity.posts === 0 && r.activity.injected === 0 && r.incidentState === 'pending'));
   for (const [i, team] of teams.entries()) {
     const body = { text: transportCards[i].suggestedPost, requestId: randomUUID() };
     const result = await w.call('posts', body, { sid, token: team.token });
@@ -29,6 +30,8 @@ test('transport incident is atomic, private, differentiated, persistent and reve
   assert.equal(initial.posts.filter(p => p.stance === 'lower-fares').length, 5);
   assert.equal(initial.posts.filter(p => p.stance === 'keep-fares').length, 2);
   assert.ok(!JSON.stringify(initial).includes('effect'));
+  assert.ok(initial.profiles.every(r => r.activity === undefined && r.postingAccess === undefined));
+  assert.ok((await w.state(sid)).roles.every(r => r.activity.posts === 1 && r.activity.replies === 0));
   // Explicit positions sent by older clients remain supported and correctable.
   const mistaken = await w.call('posts', { text: 'Wrong stance selected', stance: 'keep-fares', requestId: randomUUID() }, { sid, token: teams[0].token });
   assert.equal((await w.action(sid, 'incident')).status, 409);
@@ -44,6 +47,12 @@ test('transport incident is atomic, private, differentiated, persistent and reve
   launches.forEach(r => { assert.equal(r.status, 200); assert.equal(r.count, 5); });
   assert.equal(new Set(launches.map(r => r.waveId)).size, 1);
   assert.equal((await w.action(sid, 'incident')).status, 409);
+  const hostIncident = await w.state(sid);
+  assert.deepEqual(hostIncident.roles.map(r => r.activity.injected), [0, 0, 2, 0, 1, 0, 2]);
+  assert.equal(hostIncident.roles[0].postingAccess, 'locked');
+  assert.equal(hostIncident.roles[2].activity.posts, 1);
+  assert.equal(hostIncident.roles[5].activity.hidden, 1);
+  assert.ok(hostIncident.roles.every(r => r.incidentState === 'active'));
   const notices = [];
   for (const team of teams) notices.push(await w.call('me', undefined, { sid, token: team.token }));
   assert.equal(notices[0].canWrite, false);
@@ -86,7 +95,19 @@ test('transport incident is atomic, private, differentiated, persistent and reve
   assert.equal((await w.call('me', undefined, { sid, token: teams[0].token })).canWrite, true);
   assert.match((await w.call('me', undefined, { sid, token: teams[5].token })).incident.message, /hidden from everyone else/);
   assert.match((await w.call('me', undefined, { sid, token: teams[1].token })).incident.message, /did not perform/);
+  const hostRestored = await w.state(sid);
+  assert.ok(hostRestored.roles.every(r => r.incidentState === 'restored' && r.postingAccess === 'open'));
+  assert.equal(hostRestored.roles[5].activity.hidden, 0);
+  assert.equal(hostRestored.roles[0].activity.hidden, 1);
   assert.equal((await w.call('corrections', { text: 'My original view still stands.', stance: 'lower-fares', requestId: randomUUID() }, { sid, token: teams[0].token })).status, 200);
+  await w.call('posts', { text: 'A genuine reply after reveal.', replyTo: originals[1].id, requestId: randomUUID() }, { sid, token: teams[2].token });
+  const replied = await w.state(sid);
+  assert.equal(replied.roles[2].activity.posts, 1);
+  assert.equal(replied.roles[2].activity.replies, 1);
+  assert.equal(replied.roles[2].activity.injected, 2);
+  assert.equal((await w.call('host/reset', { version: replied.version, confirmLabel: replied.label, expiresAt: Date.now() + 86400000 }, { sid, host: true })).status, 200);
+  assert.ok((await w.state(sid)).roles.every(r => !r.claimed && r.activity.posts === 0 && r.activity.replies === 0 && r.activity.injected === 0 && r.incidentState === 'pending'));
+
 });
 
 

@@ -11,6 +11,9 @@ test('transport host launch shows seven private outcomes on phone and desktop an
   await host.getByRole('button', { name: 'Create session', exact: true }).click();
   await expect(host.getByRole('heading', { name: 'Transport browser rehearsal', exact: true })).toBeVisible();
   const sid = new URL(host.url()).searchParams.get('s');
+  await host.setViewportSize({ width: 1440, height: 1000 });
+  await expect(host.locator('.host-table tbody tr')).toHaveCount(7);
+  await expect(host.locator('.host-table .join-dot.joined')).toHaveCount(0);
   const contexts = [], pages = [], tokens = [];
   for (let i = 0; i < 7; i++) {
     const token = randomBytes(32).toString('hex'); tokens.push(token);
@@ -34,6 +37,9 @@ test('transport host launch shows seven private outcomes on phone and desktop an
   await host.getByLabel('Find a fictional name, town or username').fill('Mats');
   await expect(host.locator('[data-person]:visible')).toHaveCount(1);
   await expect(host.locator('[data-person]:visible')).toContainText('Mats Berg');
+  await host.getByLabel('Find a fictional name, town or username').fill('');
+  await expect(host.locator('.host-table .join-dot.joined')).toHaveCount(7);
+  await host.screenshot({ path: info.outputPath('host-before.png'), fullPage: true });
   await release('Open debate');
   await expect(host.getByRole('button', { name: 'Launch incident', exact: true })).toBeDisabled();
   for (let i = 0; i < 7; i++) {
@@ -42,6 +48,15 @@ test('transport host launch shows seven private outcomes on phone and desktop an
     await expect(pages[i].locator('.thread.mine')).toContainText(transportCards[i].suggestedPost);
   }
   await release('Launch incident');
+  await expect(host.locator('[data-role-card="1"] .access')).toHaveText('Read only');
+  await expect(host.locator('[data-role-card="3"]')).toContainText('2 simulated posts');
+  await expect(host.locator('[data-role-card="6"]')).toContainText('1 own contribution hidden');
+  await host.screenshot({ path: info.outputPath('host-incident.png'), fullPage: true });
+  await host.setViewportSize({ width: 390, height: 844 });
+  expect(await host.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await host.locator('.host-table-scroll').scrollIntoViewIfNeeded();
+  await host.screenshot({ path: info.outputPath('host-phone.png') });
+  await host.setViewportSize({ width: 1440, height: 1000 });
   const titles = ['Your account is locked', 'Support is arriving', 'Someone is speaking as you', 'Support is arriving', 'Your private identity is now public', 'Something is wrong with your reach', 'Someone is speaking as you'];
   for (let i = 0; i < 7; i++) {
     const dialog = pages[i].getByRole('dialog', { name: titles[i], exact: true });
@@ -70,6 +85,9 @@ test('transport host launch shows seven private outcomes on phone and desktop an
   await expect(pages[1].locator('#incident-dialog')).toBeVisible();
   await pages[1].getByRole('button', { name: 'Back to the feed' }).click();
   await release('Begin reflection'); await release('Reveal and restore');
+  await expect(host.locator('.outcome-restored')).toHaveCount(7);
+  await expect(host.locator('.access-open')).toHaveCount(7);
+  await host.screenshot({ path: info.outputPath('host-restored.png'), fullPage: true });
   for (let i = 0; i < 7; i++) {
     await expect(pages[i].getByRole('dialog', { name: 'The incident has been revealed' })).toBeVisible();
     await pages[i].getByRole('button', { name: 'Back to the feed' }).click();

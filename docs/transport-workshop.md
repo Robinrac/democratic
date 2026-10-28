@@ -4,6 +4,12 @@ New sessions use the transport scenario. Earlier sessions retain their original 
 
 The existing Open Circle design, profile modal, portraits, Neon connection and Render hosting are retained. The participant-facing transport copy is in `workshop/transport.mjs`; `roles.mjs` and the earlier role-card document retain identity/portrait data and archived scenario content. The seven current paper cards are in the existing Canva design.
 
+## Host dashboard
+
+The seven-person table reads left to right: joined status, genuine posts and replies, planned incident, actual outcome, and current posting access. A filled green circle means the paper profile has joined; an empty circle means it has not. This is not an online or typing indicator. Last-post times refer to published genuine contributions. Simulated posts have their own count in the outcome column; they never inflate a participant’s post count. Hidden contributions include incident suppression and host moderation. Reveal restores incident-hidden content while preserving moderation.
+
+The step bar enables only the next eligible action. Each release still requires confirmation, and incident readiness still requires all seven genuine first posts. Use the name search to find a person. **Switch or create session**, moderation and **Rehearsal reset, export and clear** are collapsed away from the main controls. Individual profile release lives inside maintenance. On phones the table scrolls horizontally, keeping the person’s name visible.
+
 ## Running the hour
 
 | Minutes | Host action and participant activity |

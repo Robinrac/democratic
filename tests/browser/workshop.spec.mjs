@@ -89,18 +89,17 @@ test('host-paced seven-team rehearsal on phone and laptop, with cancel, reconnec
   }
   await expect(viewer.locator('.thread')).toHaveCount(7);
   await expect(projector.locator('#progress')).toContainText('7 contributions');
-  await host.getByRole('button',{name:'Refresh state',exact:true}).click();
   const launch=host.getByRole('button',{name:'Launch simulated takeover',exact:true}); await expect(launch).toBeEnabled(); await launch.click();
-  await expect(host.getByRole('dialog')).toContainText('7 new posts'); await host.getByRole('button',{name:'Cancel',exact:true}).click();
+  await expect(host.getByRole('dialog')).toContainText('7 simulated posts'); await host.getByRole('button',{name:'Cancel',exact:true}).click();
   await expect(viewer.locator('body')).not.toContainText('My name is');
   await host.getByRole('button',{name:'Pause next release',exact:true}).click(); await expect(launch).toBeDisabled();
   await host.getByRole('button',{name:'Resume next release',exact:true}).click();
-  await release('Launch simulated takeover'); await expect(host.locator('#status')).toContainText('Released: 7 posts');
+  await release('Launch simulated takeover'); await expect(host.locator('#status')).toContainText('7 simulated posts published');
   await expect(phone.locator('.thread.mine')).toContainText('My name is Eydís');
   await host.reload(); await expect(host.getByRole('button',{name:'Launch simulated takeover',exact:true})).toBeDisabled();
-  await release('Release forged posts'); await expect(host.locator('#status')).toContainText('Released: 14 posts');
+  await release('Release forged posts'); await expect(host.locator('#status')).toContainText('14 simulated posts published');
   await contexts[0].setOffline(true); await expect(phone.locator('#connection')).toContainText('Connection lost',{timeout:15000});
-  await release('Release reactions'); await expect(host.locator('#status')).toContainText('Released: 21 posts');
+  await release('Release reactions'); await expect(host.locator('#status')).toContainText('21 simulated posts published');
   await contexts[0].setOffline(false); await expect(phone.locator('.thread.mine .post')).toHaveCount(7);
   await phone.locator('.thread.mine .post').filter({hasText:'I have changed my mind.'}).getByRole('button',{name:'I did not write this'}).click();
   await expect(phone.locator('.thread.mine')).toContainText('Authorship disputed');

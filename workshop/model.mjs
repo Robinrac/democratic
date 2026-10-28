@@ -134,7 +134,20 @@ export function targets(state, includeFallback = []) {
 }
 export function hostView(state, includeFallback = []) {
   const selected = targets(state, includeFallback);
-  return { ...summary(state), roles: state.roles.map(r => ({ ...publicRole(r), ...privateDetails(r), card: r.card, claimed: r.claimed, hasPost: state.posts.some(p => p.origin === 'team' && p.authorId === r.id && p.stance && !p.replyTo && !p.correction) })),
+  return { ...summary(state), roles: state.roles.map(r => {
+    const own = state.posts.filter(p => p.authorId === r.id), genuine = own.filter(p => p.origin === 'team');
+    const injected = own.filter(p => p.origin !== 'team');
+    const incidentStarted = isTransport(state) ? !!state.incidentId : injected.length > 0;
+    return { ...publicRole(r), ...privateDetails(r), card: r.card, claimed: r.claimed,
+      hasPost: genuine.some(p => p.stance && !p.replyTo && !p.correction),
+      activity: { posts: genuine.filter(p => !p.replyTo).length, replies: genuine.filter(p => p.replyTo).length,
+        injected: injected.length, hidden: genuine.filter(p => p.hidden || !visibleTo(state, p, null)).length,
+        lastPostedAt: genuine.at(-1)?.createdAt || null },
+      effect: isTransport(state) ? transportCards[r.card - 1].effect : 'takeover',
+      incidentState: !incidentStarted ? 'pending' : revealed(state) ? 'restored' : 'active',
+      postingAccess: !r.claimed ? 'not-joined' : ['closing', 'ended'].includes(state.phase) ? 'closed' : state.phase === 'opening' ? 'waiting' : lockedOut(state, r) ? 'locked' : 'open'
+    };
+  }),
     targets: selected, postCount: state.posts.length,
     actions: actionsFor(state).map(a => ({ ...a, enabled: !state.paused && state.phase === a.from && (a.id !== 'exposure' || selected.length > 0) && (a.id !== 'incident' || selected.every(t => t.ready && t.matchesCard)), count: a.id === 'incident' ? 5 : a.multiplier * selected.length, names: selected.map(t => t.username) })),
     posts: state.posts.filter(p => p.origin === 'team').map(p => ({ ...publicPost(state, p), origin: p.origin })),
