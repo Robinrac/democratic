@@ -34,6 +34,8 @@ Use the network URL printed by the server. A localhost link only works on the co
 
 Public profiles open from member names and Discover. Replies quote their original post and stay in its conversation. Drafts retain text, stance and reply context across reloads. Unconfirmed sends keep their exact payload until a receipt or retry confirms publication. Saved recovery choices return on reload; the host sees a private aggregate.
 
+Recognised complete paper names are required; partial or unknown names show an error. Posts support public @mentions, tagged posts on profiles, clickable hashtags and ranked visible-feed trends. Personal notifications show genuine sends, posts injected under the account and mentions, with a persistent Activity history. See the [host guide](docs/transport-workshop.md) for the full participant flow, single-profile release, rehearsal reset and end-to-end test checklist.
+
 The feed updates every two seconds. Browser access tokens are scoped to a session. Local rehearsal uses a persistent PGlite Postgres database in `~/.democratic/open-circle`, outside this repository; `DATA_DIR` can select a different private folder. Hosted mode uses `DATABASE_URL` with PostgreSQL. Session writes, wave releases, claims and retries are transactional. An ordinary restart preserves state.
 
 Read [the rehearsal and operations guide](docs/open-circle-rehearsal.md) before running the workshop. [Implementation status and specification decisions](docs/open-circle-implementation.md) map the work to Point's task order.

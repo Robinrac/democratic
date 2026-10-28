@@ -40,6 +40,35 @@ At reveal, original posts reappear, Eydís regains writing access, Mikko’s con
 
 ## Rehearsal checks
 
+### Joining and identifying teams
+
+Participants must enter a complete, recognised first name, surname or full name from one of the seven paper cards. Accents and capitalisation are optional. Unknown names, mixed identities and partial surnames such as “Eydis J” show a clear error and cannot join. The preview also warns when that card is already claimed. The server repeats validation; bypassing the browser form does not bypass matching.
+
+On joining, the card is linked to a fixed participant ID and its public username. Future posts, access checks, mentions and incidents use IDs, not another fuzzy name lookup. Host controls display the fictional name, town, username and planned incident together. Search for “Mats” to find steady-pine. This identifies a workshop role, not a verified real-world person: participants must use their assigned card and keep their device with their team.
+
+### Writing, questions and social cues
+
+- Participants can write their own post or ask a question, choose its broad position and publish. Use **Reply** to keep a question or answer in the original conversation; replies do not require a new position selection.
+- Type `@` for member suggestions, or use **Tag someone (@)**. Only public usernames identify mentions. A visible mention produces a notification for that team and appears under **Tagged posts** on its public profile. Click a mention to open that profile.
+- Type a hashtag or use a hashtag button below the composer. Click a hashtag in a post or the trending list to filter the feed; **Show all posts** removes the filter.
+- Starter ranking is #1 **#AffordableJourneys**, #2 **#ServiceFirst**, #3 **#FreeUnder25**, #4 **#KeepFares**, #5 **#FreeUnder20**, #6 **#FareCap**. These start at zero, clearly labelled as starter topics. Once posts appear, frequency ranks the top six; ties use starter order, then alphabetical order. A repeated tag in one post counts once; capitalisation does not split a topic. Linnea can also introduce #EveningFreedom.
+- Top-right notifications show the full post text and **View post**. A confirmed genuine send says **You have created this post**. A simulated post says **A post appeared under your name**. Mentions identify the public username that tagged the team. The feed updates every two seconds, and incoming posts are highlighted.
+- Alerts wait until a modal is closed, remain available in **Activity**, and are not replayed on every poll or reload. Notifications pause dismissal while hovered or focused. Browser/system notification permission is not needed.
+- Hidden or moderated posts are excluded from other teams’ notifications, mentions and trending counts as well as their feed. Mikko sees his own contributions, but they cannot notify another participant during suppression. At reveal the restored visible content contributes again. A simulated reversal uses #KeepFares and #ServiceFirst, so the visible hashtag ranking can shift alongside the apparent opinions.
+
+### Restarting and recovering a device
+
+| Situation | Host control | What participants see |
+| --- | --- | --- |
+| Wrong team claimed a card, or a posting device was lost before the incident | **Seven teams and their profiles → Release this profile**; type its exact fictional name | Only that role’s credentials and profile are cleared, along with its posts, its conversations and dependent replies. Its old devices return to joining. Other teams remain connected. The card can be claimed again. |
+| Rehearse the whole workshop again | **Rehearsal reset, export and clear → Reset this rehearsal**; type the session label | All profiles, posts, tags, credentials, flags, responses and incident state clear. Open dialogs and old notifications close; teams see a blank join form. The room link remains the same. The scenario is preserved and the expiry is renewed for 24 hours. |
+| Finish and remove the room | **Clear this session’s data**; type the session label | The room and its access are deleted. Old links show that the session has been cleared. Create a new room for another run. |
+| Run another real event | **Create a separate session → Live** | A separate clean room and link. A live room is protected from accidental reset. |
+
+Profile release is unavailable after the incident begins, so the planned cast cannot be changed halfway through. Rehearsal reset can be used during any phase, including while participants are locked out. Version checks prevent stale host actions from clearing newly changed state. An ordinary server restart retains the room and all access.
+
+Keep the seven paper cards and the room link ready before participants arrive. Open the hosted app before the introduction so an idle hosting service has time to wake. Test Wi-Fi on participant phones, and never project private host controls. If a request loses its connection, keep the page open and retry; post receipts prevent duplicate publication.
+
 Run `npm test` and `npm run test:browser`. If using installed Edge, set `PLAYWRIGHT_CHANNEL=msedge`. The transport tests cover all seven outcomes, private projections, duplicate-launch protection, host lookup, mobile layout, reloads, reduced motion, baseline correction and restoration. Legacy tests cover existing archived sessions as well.
 
 Before the event, rehearse with seven separate devices/browser profiles, check venue connectivity and create a clean live session. Use the host’s **Open participant view** link; an older room keeps its older scenario. Never project the private host controls.

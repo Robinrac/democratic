@@ -9,14 +9,14 @@ test('paper names match by first name, surname, reversed order and Nordic spelli
   assert.equal(normalizeProfileName('Ö Ø Å Ä Æ Ð Þ Ł'), 'o o a a ae d th l');
 });
 
-test('typing a surname retains a recognized first name but never ignores conflicting parts', () => {
-  assert.equal(identifyProfileByName('Eydis J',roleCards).profile?.card,1);
+test('incomplete or conflicting name parts cannot claim an identity', () => {
+  assert.equal(identifyProfileByName('Eydis J',roleCards).profile,null);
   for (const input of ['Ey','E','Eydis Karlsson','Linnea unknown','Nobody','Eydis Eydis','']) assert.equal(identifyProfileByName(input,roleCards).profile,null,input);
 });
 
 test('future casts with shared names require a unique match', () => {
   const cast=[{fullName:'Anna Berg'},{fullName:'Anna Solheim'},{fullName:'Erik Berg'},{fullName:'Anna Bergman'}];
-  for(const name of ['Anna','Berg','Anna B']) assert.equal(identifyProfileByName(name,cast).status,'ambiguous',name);
+  for(const name of ['Anna','Berg']) assert.equal(identifyProfileByName(name,cast).status,'ambiguous',name);
   assert.equal(identifyProfileByName('Anna Berg',cast).profile,cast[0]);
   assert.equal(identifyProfileByName('Solheim',cast).profile,cast[1]);
   assert.equal(identifyProfileByName('Erik',cast).profile,cast[2]);

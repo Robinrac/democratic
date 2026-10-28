@@ -2,6 +2,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { roleCards } from './roles.mjs';
 import { identifyProfileByName } from './profile-matching.mjs';
 import { transportCards, transportQuestion, effectLabels, incidentNotice } from './transport.mjs';
+import { socialText, trendingTags } from './social.mjs';
 
 const isTransport = state => state.scenario === 'transport-v1';
 const cardsFor = state => isTransport(state) ? transportCards : roleCards;
@@ -95,6 +96,7 @@ export function me(state, token) {
 export function publicPost(state, post) {
   const author = [...state.roles, ...state.accounts].find(r => r.id === post.authorId);
   return { id: post.id, author: publicRole(author), text: post.hidden ? '[Hidden by the host]' : post.text, hidden: !!post.hidden, createdAt: post.createdAt, threadId: post.threadId, replyTo: post.replyTo || null, stance: post.hidden ? null : post.stance || null, correction: !!post.correction,
+    ...(post.hidden ? { mentions: [], hashtags: [] } : { mentions: post.mentions || socialText(post.text, state.roles).mentions, hashtags: post.hashtags || socialText(post.text, state.roles).hashtags }),
     disputed: state.flags.some(f => f.postId === post.id),
     ...(revealed(state) ? { provenance: post.origin, actualActor: post.actor } : {}) };
 }
@@ -105,7 +107,14 @@ export function feed(state, token) {
   const viewerRoleId = token ? credential(state, token).roleId : null;
   const visiblePosts = state.posts.filter(p => visibleTo(state, p, viewerRoleId));
   const visible = visiblePosts.map(p => publicPost(state, p));
-  return { ...summary(state), genuinePosts: visiblePosts.filter(p => p.origin === 'team' && !p.hidden).length, question: questionFor(state), profiles: state.roles.filter(r => r.claimed).map(publicRole), posts: visible,
+  const activity = visiblePosts.flatMap(post => {
+    if (!viewerRoleId || post.hidden) return [];
+    const publicItem = publicPost(state, post);
+    const own = post.authorId === viewerRoleId, mentioned = publicItem.mentions.includes(viewerRoleId);
+    if (!own && !mentioned) return [];
+    return [{ id: post.id, postId: post.id, type: own ? (post.actor === viewerRoleId ? 'published' : 'account-post') : 'mention', text: publicItem.text, author: publicItem.author, createdAt: post.createdAt }];
+  });
+  return { ...summary(state), activity: activity.slice(-50), trending: trendingTags(visible, isTransport(state)), genuinePosts: visiblePosts.filter(p => p.origin === 'team' && !p.hidden).length, question: questionFor(state), profiles: state.roles.filter(r => r.claimed).map(publicRole), posts: visible,
     threads: state.roles.filter(r => r.claimed).map(r => ({ id: r.id, username: publicRole(r).username, posts: visible.filter(p => p.threadId === r.id) })).filter(t => t.posts.length),
     notice: revealed(state) ? (isTransport(state) ? 'The workshop host simulated a lockout, forged opposition, fictional identity exposure and hidden contributions. The two opposing accounts received outside-support notices, but did not control the attacks. Original contributions and posting access are restored; injected posts are labelled. No external accounts or passwords were changed. Compare the real opinions with the impression created by the feed.' : 'The identity disclosures, changed opinions and withdrawals were injected by the workshop host. The tagged reactions were scripted. No external accounts were accessed. Team-authored contributions remain labelled below. You can correct the record.') : null };
 }
@@ -140,7 +149,7 @@ export function receipt(state, token, id) {
 }
 const rule = stance => stance === 'usernames' ? 'allow public usernames' : 'require public real names';
 function addPost(state, values) {
-  const post = { id: randomUUID(), createdAt: new Date().toISOString(), ...values };
+  const post = { id: randomUUID(), createdAt: new Date().toISOString(), ...values, ...socialText(values.text, state.roles) };
   state.posts.push(post); return post;
 }
 export function release(state, data) {
@@ -168,10 +177,10 @@ export function release(state, data) {
       const base = { threadId: role.id, authorId: role.id, actor: 'workshop-host', origin: 'simulation' };
       if (['lockout', 'forgery'].includes(target.effect)) for (const post of state.posts) if (post.authorId === role.id && post.origin === 'team') post.incidentHidden = true;
       if (target.effect === 'forgery') {
-        addPost(state, { ...base, stance: 'keep-fares', text: 'I have changed my mind. I am against reducing youth fares or making buses free. Keep ticket prices as they are and put the money into the service instead.' });
-        addPost(state, { ...base, stance: 'keep-fares', text: 'Please disregard my earlier argument for cheaper travel. I no longer support youth fare reductions.' });
+        addPost(state, { ...base, stance: 'keep-fares', text: 'I have changed my mind. I am against reducing youth fares or making buses free. Keep ticket prices as they are and put the money into the service instead. #KeepFares #ServiceFirst' });
+        addPost(state, { ...base, stance: 'keep-fares', text: 'Please disregard my earlier argument for cheaper travel. I no longer support youth fare reductions. #KeepFares' });
       }
-      if (target.effect === 'exposure') addPost(state, { ...base, text: `I am ${privateDetails(role).name} from ${privateDetails(role).town}. I support free buses after 18:00 and at weekends for under-25s. This is the opinion behind my username.` });
+      if (target.effect === 'exposure') addPost(state, { ...base, text: `I am ${privateDetails(role).name} from ${privateDetails(role).town}. I support free buses after 18:00 and at weekends for under-25s. This is the opinion behind my username. #EveningFreedom` });
     }
   }
   for (const target of state.targets) {
@@ -195,9 +204,27 @@ export function release(state, data) {
 export function joinPreview(state, data) {
   const name = profileName(data.name);
   const { profile: card, status } = identifyProfileByName(name, roleCards);
-  if (!card) return { username: null, status };
+  if (!card) return { username: null, status, error: status === 'ambiguous' ? 'More than one paper profile matches. Enter the full first name and surname.' : 'Name not recognised. Enter a complete first name, surname or full name from your assigned paper card. Do not use your own name.' };
   const role = state.roles.find(role => role.card === card.card);
-  return { username: role ? publicRole(role).username : null, status };
+  return { username: role ? publicRole(role).username : null, status, claimed: !!role?.claimed };
+}
+export function clearProfile(state, data) {
+  if (!['opening', 'debate'].includes(state.phase)) fail(409, 'Profiles can only be released before the incident. Reset a rehearsal or create a new session to start again.');
+  const role = state.roles.find(r => r.id === data.roleId);
+  if (!role || data.confirmName !== privateDetails(role).name) fail(400, 'Type the exact fictional name shown in the host controls.');
+  // Remove dependent replies too, so no conversation points to a deleted post.
+  const removed = new Set(state.posts.filter(p => p.authorId === role.id || p.threadId === role.id).map(p => p.id));
+  let changed;
+  do { changed = false; for (const post of state.posts) if (removed.has(post.replyTo) && !removed.has(post.id)) { removed.add(post.id); changed = true; } } while (changed);
+  state.posts = state.posts.filter(p => !removed.has(p.id));
+  state.flags = state.flags.filter(f => f.roleId !== role.id && !removed.has(f.postId));
+  state.credentials = state.credentials.filter(c => c.roleId !== role.id);
+  delete state.responses[role.id];
+  const { id, card } = role;
+  for (const field of Object.keys(role)) delete role[field];
+  Object.assign(role, { id, card, username: usernames[card - 1], bio: '', color: card - 1, cover: card - 1, claimed: false });
+  state.version++;
+  return { ok: true, removedPosts: removed.size };
 }
 export function join(state, data, token) {
   if (state.credentials.some(c => typeof token === 'string' && c.hash === hash(token))) return me(state, token);
@@ -205,7 +232,7 @@ export function join(state, data, token) {
   if (typeof token !== 'string' || !/^[a-f0-9]{64}$/.test(token)) fail(400, 'This browser needs a fresh secure access token. Reload and try again.');
   const name = profileName(data.name);
   const { profile: card, status } = identifyProfileByName(name, roleCards);
-  if (!card) fail(400, status === 'ambiguous' ? 'More than one profile matches. Add the full name from your paper.' : 'Enter the first name or surname from your paper profile. Accents are optional.');
+  if (!card) fail(400, status === 'ambiguous' ? 'More than one profile matches. Add the full name from your paper.' : 'Name not recognised. Use the complete first name, surname or full name from your assigned paper card. Incomplete or mixed names cannot join. Accents are optional.');
   const role = state.roles.find(role => role.card === card.card);
   if (!role || role.claimed) fail(409, 'This paper profile has already joined. Use your team’s original device.');
   const profile = { privateName: card.fullName, privateTown: text(data.town, 80), bio: text(data.bio, 160, true), color: profileStyle(data.color), cover: profileStyle(data.cover) };

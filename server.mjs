@@ -8,7 +8,7 @@ import { openStore } from './storage/store.mjs';
 import { roleCards } from './workshop/roles.mjs';
 import { renderProfileAvatar } from './dist/profile-avatars.js';
 import { runtimeConfig, validateConfig } from './config.mjs';
-import { hash, fail, makeSession, summary, feed, hostView, release, join, joinPreview, me, credential, participantWrite, receipt, questionFor } from './workshop/model.mjs';
+import { hash, fail, makeSession, summary, feed, hostView, release, join, joinPreview, me, credential, participantWrite, receipt, questionFor, clearProfile } from './workshop/model.mjs';
 
 const root = fileURLToPath(new URL('./dist/', import.meta.url));
 const types = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.png': 'image/png', '.txt': 'text/plain; charset=utf-8' };
@@ -101,6 +101,7 @@ export async function createWorkshopServer({ hostPassword = process.env.HOST_PAS
           const result = await store.update(sid, state => {
             if (route === 'host/action') return release(state, data);
             if (data.version !== state.version) fail(409, 'The session changed. Refresh before trying again.');
+            if (route === 'host/clear-profile') return clearProfile(state, data);
             if (route === 'host/pause') {
               if (typeof data.paused !== 'boolean' || state.phase === 'ended') fail(400, 'Choose pause or resume for an active session.');
               state.paused = data.paused; state.version++; return summary(state);
@@ -112,8 +113,9 @@ export async function createWorkshopServer({ hostPassword = process.env.HOST_PAS
             }
             if (route === 'host/reset') {
               if (state.kind !== 'rehearsal' || data.confirmLabel !== state.label) fail(403, 'Only a rehearsal can be reset; type its exact label.');
-              const fresh = makeSession({ id: sid, label: state.label, kind: state.kind, expiresAt: data.expiresAt });
+              const fresh = makeSession({ id: sid, label: state.label, kind: state.kind, scenario: state.scenario || 'legacy', expiresAt: data.expiresAt });
               fresh.state.version = state.version + 1;
+              for (const field of Object.keys(state)) delete state[field];
               Object.assign(state, fresh.state); return { session: summary(state) };
             }
             fail(404, 'Not found.');
@@ -171,7 +173,7 @@ export async function createWorkshopServer({ hostPassword = process.env.HOST_PAS
         res.end(req.method === 'HEAD' ? undefined : svg);
         return;
       } else {
-        const allowed = ['/brand/open-circle-mark.png', '/', '/index.html', '/app.js', '/open-circle.js', '/open-circle.css', '/open-circle-theme.css', '/host-login.js', '/styles.css', '/profile-themes.js', '/vendor/qrcode.js', '/vendor/MUNIA-LICENSE.txt'];
+        const allowed = ['/brand/open-circle-mark.png', '/', '/index.html', '/app.js', '/open-circle.js', '/forum-activity.js', '/open-circle.css', '/open-circle-theme.css', '/host-login.js', '/styles.css', '/profile-themes.js', '/vendor/qrcode.js', '/vendor/MUNIA-LICENSE.txt'];
         if (!allowed.includes(url.pathname)) fail(404, 'Not found.');
         file = path.join(root, url.pathname === '/' ? 'index.html' : url.pathname.slice(1));
       }

@@ -55,6 +55,10 @@ test('transport host launch shows seven private outcomes on phone and desktop an
     await pages[i].screenshot({ path: info.outputPath('incident-' + i + '.png') });
     await pages[i].getByRole('button', { name: 'Back to the feed', exact: true }).click();
     await expect(pages[i].locator('#incident-banner')).toContainText(titles[i]);
+    if ([2, 6].includes(i)) {
+      await expect(pages[i].locator('#post-toast')).toContainText('A post appeared under your name');
+      await expect(pages[i].locator('#post-toast')).toContainText('against reducing youth fares');
+    }
     await expect(pages[i].getByRole('button', { name: 'Publish post' }))[i === 0 ? 'toBeDisabled' : 'toBeEnabled']();
   }
   await expect(pages[0].getByRole('button', { name: 'Edit profile', exact: true })).toBeDisabled();

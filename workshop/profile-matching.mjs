@@ -10,7 +10,7 @@ export function normalizeProfileName(value) {
 /**
  * Identify one paper profile by full name, first name or surname.
  * A whole name part is required; a single prefix never claims an identity.
- * While typing a second part, keep the match if that part is a valid prefix.
+ * Every entered part must be complete; prefixes never claim an identity.
  * Unknown parts and ambiguous matches return no profile. Never guess or pick
  * the first record. Pass a different profile list to reuse this for future casts.
  */
@@ -23,10 +23,9 @@ export function identifyProfileByName(value, profiles) {
   const matches = profiles.filter(profile => {
     const remaining = normalizeProfileName(profile.fullName).split(' ');
     let wholeParts = 0;
-    for (const [index, part] of parts.entries()) {
-      let found = remaining.indexOf(part);
+    for (const part of parts) {
+      const found = remaining.indexOf(part);
       if (found >= 0) wholeParts++;
-      else if (index === parts.length - 1 && wholeParts > 0) found = remaining.findIndex(name => name.startsWith(part));
       if (found < 0) return false;
       remaining.splice(found, 1);
     }
