@@ -1,5 +1,5 @@
 import { PROFILE_THEMES } from './profile-themes.js';
-import { createActivity, postText } from './forum-activity.js';
+import { createActivity, postText, profileStats } from './forum-activity.js';
 
 export const e = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 export const uid = () => [...crypto.getRandomValues(new Uint8Array(32))].map(v => v.toString(16).padStart(2, '0')).join('');
@@ -386,16 +386,21 @@ export async function startParticipant() {
   const memberDialog = document.querySelector('#member-dialog');
   document.querySelector('#close-member').onclick = () => memberDialog.close();
   memberDialog.addEventListener('close', () => { memberId = null; document.querySelector('#member-content').replaceChildren(); });
+  function renderProfileStats(id) {
+    const stats = profileStats(data.posts, id, data.profiles);
+    const ranking = (items, kind) => items.length ? `<ol>${items.map(item => `<li><button class="inline-tag" ${kind === 'hashtag' ? 'data-hashtag' : 'data-profile'}="${e(item.id)}">${kind === 'hashtag' ? '#' : '@'}${e(item.label)}</button><span>${item.count}</span></li>`).join('')}</ol>` : '<p class="muted">None yet.</p>';
+    return `<section class="circle-profile-stats" aria-label="Your circle stats"><h3>Your circle stats</h3><dl class="profile-stat-totals"><div><dt>Posts</dt><dd data-stat="posts">${stats.posts}</dd></div><div><dt>Replies</dt><dd data-stat="replies">${stats.replies}</dd></div><div><dt>Mentions received</dt><dd data-stat="mentions">${stats.mentions}</dd></div></dl><div class="profile-rankings"><section><h4>Most-used hashtags</h4>${ranking(stats.hashtags, 'hashtag')}</section><section><h4>Most-tagged people</h4>${ranking(stats.tagged, 'profile')}</section></div><p class="stats-note">Based on posts currently visible to you. Each hashtag or person counts once per contribution.</p></section>`;
+  }
   function renderMember() {
     const profile = data?.profiles?.find(p => p.id === memberId);
     if (!profile) { if (memberDialog.open) memberDialog.close(); return; }
     const posts = data.posts.filter(post => post.author.id === memberId);
     const tagged = data.posts.filter(post => post.mentions?.includes(memberId));
-    const html = `<div class="profile-preview"><div class="profile-preview-banner banner-art cover-${profile.cover}">${bannerArtwork(profile.cover)}</div><div class="profile-preview-content"><img src="${e(profile.avatar)}" alt="Profile picture"><span class="eyebrow">PUBLIC PROFILE</span><h2 id="member-title">@${e(profile.username)}</h2><p>${e(profile.bio)}</p></div></div><h3>${posts.length} ${posts.length === 1 ? 'contribution' : 'contributions'}</h3>${posts.slice().reverse().map(post => renderPost(post, true)).join('') || '<p class="muted">No contributions yet.</p>'}<h3>Tagged posts · ${tagged.length}</h3>${tagged.slice().reverse().map(post => `<article class="tagged-post"><strong>@${e(post.author.username)} mentioned @${e(profile.username)}</strong><p>${postText(post, data.profiles)}</p><button class="secondary" data-jump="${e(post.id)}">View conversation</button></article>`).join('') || '<p class="muted">Posts tagging this member will appear here.</p>'}`;
+    const html = `<div class="profile-preview"><div class="profile-preview-banner banner-art cover-${profile.cover}">${bannerArtwork(profile.cover)}</div><div class="profile-preview-content"><img src="${e(profile.avatar)}" alt="Profile picture"><span class="eyebrow">PUBLIC PROFILE</span><h2 id="member-title" tabindex="-1">@${e(profile.username)}</h2><p>${e(profile.bio)}</p></div></div>${memberId === person?.participant.id ? renderProfileStats(memberId) : ''}<h3>${posts.length} ${posts.length === 1 ? 'contribution' : 'contributions'}</h3>${posts.slice().reverse().map(post => renderPost(post, true)).join('') || '<p class="muted">No contributions yet.</p>'}<h3>Tagged posts · ${tagged.length}</h3>${tagged.slice().reverse().map(post => `<article class="tagged-post"><strong>@${e(post.author.username)} mentioned @${e(profile.username)}</strong><p>${postText(post, data.profiles)}</p><button class="secondary" data-jump="${e(post.id)}">View conversation</button></article>`).join('') || '<p class="muted">Posts tagging this member will appear here.</p>'}`;
     const content = document.querySelector('#member-content');
     if (content.innerHTML !== html) content.innerHTML = html;
   }
-  function openMember(id) { memberId = id; renderMember(); if (memberId && !memberDialog.open) memberDialog.showModal(); }
+  function openMember(id) { memberId = id; renderMember(); if (memberId && !memberDialog.open) memberDialog.showModal(); memberDialog.scrollTop = 0; document.querySelector('#member-title')?.focus({ preventScroll: true }); }
   root.addEventListener('click', event => {
     const button = event.target.closest('[data-profile], [data-reply], [data-flag], [data-jump], [data-hashtag], [data-insert-tag], [data-insert-mention], [data-clear-tag]');
     if (!button || !data?.posts) return;

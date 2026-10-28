@@ -97,6 +97,9 @@ test('name errors, mentions, post alerts, ranked tags and reset work together on
   await b.getByRole('button', { name: 'Dismiss notification' }).click();
   await b.getByRole('button', { name: 'Open your profile', exact: true }).click();
   await expect(b.locator('#member-dialog')).toContainText('Tagged posts · 1');
+  await expect(b.locator('[data-stat=posts]')).toHaveText('0');
+  await expect(b.locator('[data-stat=mentions]')).toHaveText('1');
+  await b.screenshot({ path: info.outputPath('profile-stats-phone.png') });
   await expect(b.locator('#member-dialog .tagged-post')).toContainText(text.trim());
   await b.locator('#member-dialog .tagged-post').getByRole('button', { name: 'View conversation' }).click();
   await b.locator('#threads').getByRole('button', { name: 'Reply', exact: true }).click();
@@ -114,6 +117,16 @@ test('name errors, mentions, post alerts, ranked tags and reset work together on
   await a.reload();
   await expect(a.locator('#activity-history')).toContainText('Activity · 2');
   await expect(a.locator('#post-toast')).not.toBeVisible();
+  await a.getByRole('button', { name: 'Open your profile', exact: true }).click();
+  await expect(a.locator('[data-stat=posts]')).toHaveText('1');
+  await expect(a.locator('[data-stat=replies]')).toHaveText('0');
+  await expect(a.locator('[data-stat=mentions]')).toHaveText('1');
+  await expect(a.locator('.profile-rankings')).toContainText('#affordablejourneys');
+  await expect(a.locator('.profile-rankings')).toContainText('@bright-river');
+  const statsWidth = (await a.locator('.circle-profile-stats').boundingBox()).width;
+  expect((await a.locator('.profile-stat-totals').boundingBox()).width).toBeGreaterThan(statsWidth * .9);
+  await a.screenshot({ path: info.outputPath('profile-stats-desktop.png') });
+  await a.getByRole('button', { name: 'Close profile', exact: true }).click();
   await a.locator('#trending [data-hashtag="servicefirst"]').click();
   await expect(a.locator('#tag-filter')).toContainText('#servicefirst');
   await expect(a.locator('#threads .post')).toHaveCount(1);

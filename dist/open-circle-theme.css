@@ -435,6 +435,23 @@ input[aria-invalid="true"] { border: 2px solid #ad244b; }
 .mention-menu [role=option]:hover, .mention-menu [aria-selected=true] { background: var(--oc-secondary); }
 .post-toast { border: 1px solid var(--oc-border); border-top: 4px solid var(--pink); border-radius: var(--oc-control-radius); box-shadow: 0 5px 20px #302b321a; }
 .reply-context { border-left: 2px solid var(--oc-border); border-radius: 8px; background: var(--oc-input); color: var(--oc-muted); }
+.circle-profile-stats { margin: 20px 0 28px; }
+.circle-profile-stats h3 { font-size: 17px; margin-bottom: 12px; }
+.profile-stat-totals { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 0 0 16px; }
+.profile-stat-totals > div { display: flex; flex-direction: column-reverse; gap: 4px; padding: 14px 10px; border-radius: 12px; background: #fce5ef; color: var(--burgundy); }
+.profile-stat-totals > div:nth-child(2) { background: #e3edf4; color: var(--blue); }
+.profile-stat-totals > div:nth-child(3) { background: #eaf0df; color: #3f5530; }
+.profile-stat-totals dt { font-size: 11px; line-height: 1.4; }
+.profile-stat-totals dd { margin: 0; font-size: 26px; font-weight: 700; }
+.profile-rankings { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.profile-rankings h4 { font-size: 13px; margin: 0 0 8px; }
+.profile-rankings ol { padding-left: 18px; margin: 0; }
+.profile-rankings li { font-size: 12px; padding: 4px 0; color: var(--oc-muted); }
+.profile-rankings .inline-tag { background: transparent; color: var(--burgundy); padding: 0; min-height: 28px; font-size: 12px; text-align: left; overflow-wrap: anywhere; max-width: calc(100% - 24px); vertical-align: middle; }
+.profile-rankings li > span { float: right; padding-top: 5px; }
+.profile-rankings .muted, .circle-profile-stats .stats-note { font-size: 11px; color: var(--oc-muted); }
+.circle-profile-stats .stats-note { margin: 12px 0 0; line-height: 1.5; }
+@media (max-width: 480px) { .profile-rankings { grid-template-columns: 1fr; gap: 12px; } }
 @media (max-width: 760px) {
   .join-dialog, .member-dialog { padding: 20px; }
   .social-layout .sidebar-trends { width: 100%; }

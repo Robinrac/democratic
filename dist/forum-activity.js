@@ -1,4 +1,22 @@
 const escape = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+export function profileStats(posts, profileId, profiles) {
+  const visible = posts.filter(post => !post.hidden);
+  const own = visible.filter(post => post.author.id === profileId);
+  const members = new Map(profiles.map(profile => [profile.id, profile.username]));
+  const hashtags = new Map(), tagged = new Map();
+  for (const post of own) {
+    for (const tag of new Set(post.hashtags || [])) hashtags.set(tag, (hashtags.get(tag) || 0) + 1);
+    for (const id of new Set(post.mentions || [])) if (id !== profileId && members.has(id)) tagged.set(id, (tagged.get(id) || 0) + 1);
+  }
+  const rank = (counts, label) => [...counts].map(([id, count]) => ({ id, label: label(id), count }))
+    .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label)).slice(0, 3);
+  return {
+    posts: own.filter(post => !post.replyTo).length,
+    replies: own.filter(post => post.replyTo).length,
+    mentions: visible.filter(post => post.author.id !== profileId && post.mentions?.includes(profileId)).length,
+    hashtags: rank(hashtags, id => id), tagged: rank(tagged, id => members.get(id))
+  };
+}
 export function postText(post, profiles) {
   let html = '', offset = 0;
   const tokens = /(?<![\p{L}\p{N}_@])(?:@([a-z0-9]+(?:-[a-z0-9]+)*)(?![\w-])|#([\p{L}\p{N}_]{1,32})(?![\p{L}\p{N}_]))/giu;

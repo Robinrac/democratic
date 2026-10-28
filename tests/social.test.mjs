@@ -1,3 +1,4 @@
+import { profileStats } from '../dist/forum-activity.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
@@ -69,4 +70,21 @@ test('personal activity and hashtag ranks respect incident visibility, and a ful
   for (const team of teams) assert.equal((await w.call('me', undefined, { sid, token: team.token })).status, 401);
   const fresh = await w.claim(sid, 0); assert.equal(fresh.canWrite, true); assert.equal(fresh.incident, null);
   assert.equal((await w.call('feed', undefined, { sid, token: fresh.token })).activity.length, 0);
+});
+
+
+test('profile stats count visible posts, replies and mentions without leaking hidden content', () => {
+  const profiles = [{ id: 'me', username: 'my-profile' }, { id: 'a', username: 'alpha' }, { id: 'b', username: 'beta' }];
+  const stats = profileStats([
+    { author: { id: 'me' }, hashtags: ['buses', 'buses', 'free'], mentions: ['a', 'a', 'me'] },
+    { author: { id: 'me' }, replyTo: 'first', hashtags: ['buses'], mentions: ['a', 'b', 'removed'] },
+    { author: { id: 'me' }, hidden: true, hashtags: ['secret'], mentions: ['b'] },
+    { author: { id: 'a' }, mentions: ['me', 'me'] },
+    { author: { id: 'b' }, hidden: true, mentions: ['me'] },
+    { author: { id: 'me' }, text: 'A visible simulated post' }
+  ], 'me', profiles);
+  assert.equal(stats.posts, 2); assert.equal(stats.replies, 1); assert.equal(stats.mentions, 1);
+  assert.deepEqual(stats.hashtags, [{ id: 'buses', label: 'buses', count: 2 }, { id: 'free', label: 'free', count: 1 }]);
+  assert.deepEqual(stats.tagged, [{ id: 'a', label: 'alpha', count: 2 }, { id: 'b', label: 'beta', count: 1 }]);
+  assert.deepEqual(profileStats([], 'me', profiles), { posts: 0, replies: 0, mentions: 0, hashtags: [], tagged: [] });
 });
