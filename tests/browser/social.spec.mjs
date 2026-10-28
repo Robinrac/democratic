@@ -37,6 +37,12 @@ test('name errors, mentions, post alerts, ranked tags and reset work together on
   await expect(a.locator('#mention-person')).toHaveCount(0);
   await expect(a.getByRole('link', { name: 'My profile', exact: true })).toHaveCount(0);
   await expect(a.locator('#trending li')).toHaveCount(5);
+  await expect(a.locator('#team > .sidebar-names li')).toHaveCount(7);
+  await expect(a.locator('#team > .sidebar-names img, #team > .profile-banner, #team > .sidebar-bio')).toHaveCount(0);
+  await expect(a.locator('.sidebar #trending')).toHaveCount(1);
+  const desktopTrends = await a.locator('#trending').boundingBox();
+  const desktopFeed = await a.locator('#feed-view').boundingBox();
+  expect(desktopTrends.x + desktopTrends.width).toBeLessThan(desktopFeed.x);
   await a.getByRole('link', { name: 'Discover', exact: true }).click();
   await expect(a.locator('#feed-view')).toBeHidden();
   await expect(a.locator('#profiles .member-card')).toHaveCount(6);
@@ -46,6 +52,9 @@ test('name errors, mentions, post alerts, ranked tags and reset work together on
   await a.screenshot({ path: info.outputPath('discover-desktop.png') });
   await b.getByRole('link', { name: 'Discover', exact: true }).click();
   await expect(b.locator('#profiles .member-card')).toHaveCount(6);
+  const phoneTrends = await b.locator('#trending').boundingBox();
+  const phoneDiscover = await b.locator('#discover-view').boundingBox();
+  expect(phoneTrends.y).toBeGreaterThanOrEqual(phoneDiscover.y + phoneDiscover.height);
   await b.screenshot({ path: info.outputPath('discover-phone.png') });
   await a.getByRole('link', { name: 'Feed', exact: true }).click();
   await b.getByRole('link', { name: 'Feed', exact: true }).click();

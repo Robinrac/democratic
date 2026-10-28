@@ -317,3 +317,20 @@ input[aria-invalid="true"] { border: 2px solid #ad244b; }
 .member-card { display: flex; flex-direction: column; justify-content: flex-start; }
 .member-card .member-cover { width: 100%; flex-shrink: 0; }
 .member-card-body { width: 100%; }
+
+/* Keep member navigation small; artwork belongs on the full profile. */
+.sidebar-members { margin-bottom: 18px; }
+.sidebar-names { list-style: none; padding: 0; margin: 0; }
+.sidebar-names li { margin: 0; }
+.sidebar-names .profile-link { display: block; width: 100%; min-height: 32px; padding: 5px 3px; font-size: 13px; line-height: 22px; }
+.sidebar-names small { color: var(--muted); font-size: 10px; font-weight: 400; margin-left: 5px; }
+.sidebar-members > .edit-profile-button { padding: 4px 3px; min-height: 30px; margin-top: 4px; background: transparent; color: var(--burgundy); font-size: 11px; }
+@media (max-width: 760px) {
+  .social-layout { display: flex; flex-direction: column; gap: 0; }
+  .social-layout .sidebar { display: contents; }
+  .social-layout #team { order: 0; }
+  .social-layout .social-nav { order: 1; }
+  .social-layout .sidebar .session-note { order: 2; }
+  .social-layout .conversation { order: 3; }
+  .social-layout .sidebar-trends { order: 4; margin-top: 20px; }
+}
