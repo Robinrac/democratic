@@ -136,6 +136,8 @@ test('restoration interrupts a live takeover without losing a draft or duplicati
   await expect(page.locator('#account-takeover')).toHaveAttribute('data-state', 'typing');
   await expect(page.locator('#discover-view')).toBeHidden();
   await expect(page.locator('#composer')).toBeHidden();
+  await expect(page.locator('[data-takeover-pending]').first()).toBeHidden();
+  expect(await page.locator('[data-takeover-pending]').count()).toBeGreaterThan(0);
   await page.screenshot({ path: info.outputPath('live-typing-phone.png') });
   await release('reflection'); await release('reveal');
   await expect(page.locator('.account-restored')).toBeVisible();

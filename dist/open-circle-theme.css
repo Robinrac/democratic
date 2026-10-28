@@ -522,6 +522,7 @@ input[aria-invalid="true"] { border: 2px solid #ad244b; }
 #account-takeover:not([data-state=typing]) .typing-dots { visibility: hidden; }
 .takeover-arrived { outline: 2px solid #cf5381; outline-offset: 3px; }
 .account-typing #post-toast { visibility: hidden; }
+[data-takeover-pending] { display: none !important; }
 @media (prefers-reduced-motion: no-preference) {
  .typing-dots i { animation: takeover-dot .9s ease-in-out infinite alternate; }
  .typing-dots i:nth-child(2) { animation-delay: .2s; }.typing-dots i:nth-child(3) { animation-delay: .4s; }

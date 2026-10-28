@@ -167,6 +167,7 @@ export async function startParticipant() {
       document.querySelector('#incident-banner').scrollIntoView({ block: 'start', behavior: 'instant' });
     },
     updateControls: updateIncidentControls,
+    refreshPosts: renderFeed,
     showPost(id) {
       renderFeed();
       const post = document.getElementById('post-' + id);
@@ -398,7 +399,7 @@ export async function startParticipant() {
     const mine = post.author.id === person?.participant.id;
     const original = post.replyTo && data.posts.find(item => item.id === post.replyTo);
     const canPost = person?.scope === 'poster' && person?.canWrite !== false && !['opening', 'closing', 'ended'].includes(data.phase);
-    return `<article class="post${mentionsYou(post) ? ' is-mentioned' : ''}" id="${memberView ? 'member-post-' : 'post-'}${e(post.id)}" tabindex="-1">${identity(post.author, !memberView && data.profiles.some(p => p.id === post.author.id))}${mentionMarker(post)}${post.provenance ? `<span class="badge">${{ team: 'Team-authored', simulation: 'Simulation-injected', scripted: 'Scripted reaction' }[post.provenance]}</span>` : ''}${post.correction ? '<span class="badge">Correction</span>' : ''}${post.disputed ? '<span class="badge disputed">Authorship disputed by this team</span>' : ''}${original ? `<button class="reply-context" data-jump="${e(original.id)}">Reply to @${e(original.author.username)}<span>${e(original.text.slice(0, 100))}</span></button>` : ''}<p class="post-body">${postText(post, data.profiles)}</p><time datetime="${e(post.createdAt)}">${e(new Date(post.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }))}</time><div class="row">${memberView ? `<button class="secondary" data-jump="${e(post.id)}">View conversation</button>` : ''}${canPost ? `<button class="secondary" data-reply="${e(post.id)}">Reply</button>` : ''}${person?.scope === 'poster' && person?.canWrite !== false && data.phase !== 'ended' && mine && !post.disputed ? `<button class="secondary" data-flag="${e(post.id)}">I did not write this</button>` : ''}</div></article>`;
+    return `<article ${incidentExperience.hiddenPostIds.includes(post.id) ? 'data-takeover-pending' : ''} class="post${mentionsYou(post) ? ' is-mentioned' : ''}" id="${memberView ? 'member-post-' : 'post-'}${e(post.id)}" tabindex="-1">${identity(post.author, !memberView && data.profiles.some(p => p.id === post.author.id))}${mentionMarker(post)}${post.provenance ? `<span class="badge">${{ team: 'Team-authored', simulation: 'Simulation-injected', scripted: 'Scripted reaction' }[post.provenance]}</span>` : ''}${post.correction ? '<span class="badge">Correction</span>' : ''}${post.disputed ? '<span class="badge disputed">Authorship disputed by this team</span>' : ''}${original ? `<button class="reply-context" data-jump="${e(original.id)}">Reply to @${e(original.author.username)}<span>${e(original.text.slice(0, 100))}</span></button>` : ''}<p class="post-body">${postText(post, data.profiles)}</p><time datetime="${e(post.createdAt)}">${e(new Date(post.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }))}</time><div class="row">${memberView ? `<button class="secondary" data-jump="${e(post.id)}">View conversation</button>` : ''}${canPost ? `<button class="secondary" data-reply="${e(post.id)}">Reply</button>` : ''}${person?.scope === 'poster' && person?.canWrite !== false && data.phase !== 'ended' && mine && !post.disputed ? `<button class="secondary" data-flag="${e(post.id)}">I did not write this</button>` : ''}</div></article>`;
   }
   root.insertAdjacentHTML('beforeend', '<dialog id="member-dialog" class="join-dialog member-dialog" aria-labelledby="member-title"><div id="member-content"></div><button class="secondary" id="close-member">Close profile</button></dialog>');
   const memberDialog = document.querySelector('#member-dialog');
@@ -438,7 +439,7 @@ export async function startParticipant() {
   });
   function renderFeed() {
     if (!person) { document.querySelector('#threads').replaceChildren(); document.querySelector('#profiles').replaceChildren(); feedSignature = ''; return; }
-    const signature = JSON.stringify([data.threads, data.profiles, person?.participant.id, data.phase, activeHashtag]); if (signature === feedSignature) return; feedSignature = signature;
+    const signature = JSON.stringify([data.threads, data.profiles, person?.participant.id, data.phase, activeHashtag, incidentExperience.hiddenPostIds]); if (signature === feedSignature) return; feedSignature = signature;
     const container = document.querySelector('#threads');
     const existingPosts = new Set([...container.querySelectorAll('.post')].map(el => el.id));
     const expanded = new Map([...container.querySelectorAll('details')].map(el => [el.dataset.thread, el.open]));

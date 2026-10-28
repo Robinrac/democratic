@@ -3,13 +3,13 @@ const warning = '<svg class="incident-symbol" viewBox="0 0 48 48" aria-hidden="t
 
 // A visualisation of confirmed server posts. Animation never submits a post or
 // modifies the participant's real composer/draft. Seen IDs survive refreshes.
-export function createIncidentExperience({ root, key, forceFeed, updateControls, showPost }) {
+export function createIncidentExperience({ root, key, forceFeed, updateControls, showPost, refreshPosts }) {
   root.insertAdjacentHTML('beforeend', '<dialog id="incident-dialog" class="join-dialog incident-dialog" aria-labelledby="incident-title" aria-describedby="incident-message"><div id="incident-content"></div><button id="close-incident" class="primary">Back to the feed</button></dialog>');
   const dialog = document.querySelector('#incident-dialog');
   const banner = document.querySelector('#incident-banner');
   const stage = document.querySelector('#account-takeover');
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  let notice = null, person = null, seen = new Set(), queue = [], active = null, timers = [], generation = 0, lastID = '';
+  let notice = null, person = null, seen = new Set(), queue = [], active = null, visualState = '', timers = [], generation = 0, lastID = '';
   const saveSeen = () => sessionStorage.setItem(key + ':account-animation:' + notice.id, JSON.stringify([...seen]));
   const later = (fn, ms) => { const current = generation; timers.push(setTimeout(() => { if (current === generation) fn(); }, ms)); };
   function stop() { generation++; timers.forEach(clearTimeout); timers = []; queue = []; active = null; stage.hidden = true; stage.replaceChildren(); root.classList.remove('account-typing'); }
@@ -34,7 +34,7 @@ export function createIncidentExperience({ root, key, forceFeed, updateControls,
   dialog.addEventListener('close', () => { if (notice && !notice.restored) { forceFeed(); later(playNext, 100); } });
   function playNext() {
     if (active || !queue.length || !notice || notice.restored || dialog.open) return;
-    active = queue.shift(); const item = active;
+    active = queue.shift(); visualState = 'typing'; const item = active;
     forceFeed(); root.classList.add('account-typing'); updateControls();
     stage.hidden = false; stage.dataset.state = 'typing';
     stage.innerHTML = `<section class="takeover-player" aria-label="Someone else is posting from your account"><div class="takeover-player-heading">${warning}<div><span class="eyebrow">YOUR ACCOUNT · ANOTHER DEVICE</span><h3>${notice.effect === 'exposure' ? 'Your identity is being shared' : 'Someone is writing as you'}</h3></div></div><div class="takeover-author"><img src="${escape(person.participant.avatar)}" alt=""><strong>@${escape(person.participant.username)}</strong><span class="typing-dots" aria-hidden="true"><i></i><i></i><i></i></span></div><div class="takeover-text" aria-label="Text being posted"></div><div class="takeover-send-row"><span class="takeover-status" role="status">Another device is typing…</span><span class="takeover-send" aria-hidden="true">Post ↑</span></div><p class="takeover-explanation">This is not your draft. Your own writing is saved.</p></section>`;
@@ -47,9 +47,10 @@ export function createIncidentExperience({ root, key, forceFeed, updateControls,
       stage.dataset.state = 'sending'; stage.querySelector('.takeover-status').textContent = 'The other device is pressing Post…';
       stage.querySelector('.takeover-send').textContent = 'Posting…';
       later(() => {
-        stage.dataset.state = 'posted'; stage.querySelector('.takeover-status').textContent = 'Posted under your name';
+        visualState = 'posted'; stage.dataset.state = 'posted'; stage.querySelector('.takeover-status').textContent = 'Posted under your name';
         stage.querySelector('.takeover-send').textContent = '✓ Posted';
         seen.add(item.id); saveSeen();
+        refreshPosts();
         document.querySelector('#announcer').textContent = 'A post you did not write appeared under your name.';
         later(() => {
           showPost(item.postId); active = null; root.classList.remove('account-typing'); updateControls();
@@ -61,6 +62,7 @@ export function createIncidentExperience({ root, key, forceFeed, updateControls,
   }
   return {
     get busy() { return !!active; },
+    get hiddenPostIds() { return [...queue.map(item => item.postId), ...(active && visualState !== 'posted' ? [active.postId] : [])]; },
     get lockedToFeed() { return !!active || (notice && !notice.restored && notice.effect === 'lockout'); },
     get readOnly() { return !!notice && !notice.restored && notice.effect === 'lockout'; },
     clear() { stop(); notice = null; person = null; lastID = ''; seen.clear(); banner.replaceChildren(); if (dialog.open) dialog.close(); root.classList.remove('incident-active'); updateControls(); },
