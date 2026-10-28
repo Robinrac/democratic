@@ -5,7 +5,7 @@ import { roleCards } from '../../workshop/roles.mjs';
 test('profile browsing, reply drafts, interrupted sends and private saved responses work across reloads', async ({ browser, request }, info) => {
   await request.post('/api/host/login', { data: { password: 'browser-test-host-password-only' } });
   const sid = randomUUID();
-  await request.post('/api/host/sessions', { data: { id: sid, label: 'Conversation resilience', kind: 'rehearsal', expiresAt: Date.now() + 86400000 } });
+  await request.post('/api/host/sessions', { data: { id: sid, label: 'Conversation resilience', scenario: 'legacy', kind: 'rehearsal', expiresAt: Date.now() + 86400000 } });
   const tokens = [0, 1].map(() => randomBytes(32).toString('hex'));
   const members = [];
   for (let i = 0; i < 2; i++) {

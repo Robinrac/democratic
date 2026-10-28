@@ -2,6 +2,11 @@ import { test, expect } from '@playwright/test';
 import { roleCards } from '../../workshop/roles.mjs';
 
 test('host-paced seven-team rehearsal on phone and laptop, with cancel, reconnect and repeated clicks', async ({ browser, page: host }, info) => {
+  // Exercise archived rooms with their original scenario. New transport rooms have a separate E2E test.
+  await host.route('**/api/host/sessions', async route => {
+    if (route.request().method() === 'POST') return route.continue({ postData: JSON.stringify({ ...route.request().postDataJSON(), scenario: 'legacy' }) });
+    return route.continue();
+  });
   const errors=[]; host.on('pageerror',e=>errors.push(e.message));
   await host.goto('/host'); await host.getByLabel('Password',{exact:true}).fill('browser-test-host-password-only'); await host.getByRole('button',{name:'Unlock host screen'}).click();
   await expect(host.getByRole('heading',{name:'You set the pace.'})).toBeVisible();

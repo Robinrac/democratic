@@ -23,8 +23,8 @@ export async function workshop(t, options = {}) {
     return { status: response.status, headers: response.headers, ...await response.json() };
   }
   async function login() { const result = await call('host/login', { password }); assert.equal(result.status, 200); cookie = result.headers.get('set-cookie').split(';')[0]; return cookie; }
-  async function session(kind = 'rehearsal') {
-    const result = await call('host/sessions', { id: randomUUID(), label: kind + ' test', kind, expiresAt: Date.now() + 86400000 }, { host: true });
+  async function session(kind = 'rehearsal', scenario = 'legacy') {
+    const result = await call('host/sessions', { id: randomUUID(), label: kind + ' test', kind, scenario, expiresAt: Date.now() + 86400000 }, { host: true });
     assert.equal(result.status, 201); return { sid: result.session.id, session: result.session };
   }
   async function state(sid, include = []) { return call('host/state' + (include.length ? '?' + include.map(v => 'include=' + v).join('&') : ''), undefined, { host: true, sid }); }

@@ -2,11 +2,9 @@
 
 A small English social app for Workshop 2 at Nordic Youth Conference, exploring privacy, identity and the freedom to participate.
 
-The planned 60-minute Open Circle experience and its Point feature record are
-summarized in [the Workshop 2 specification](docs/workshop-2-specification.md).
-The Open Circle flow is implemented locally; live hosting and venue verification remain. See [deployment readiness](docs/deployment-readiness.md) for the configuration handoff.
-Draft participant copy and cartoon portraits are in
-[the seven role cards](docs/workshop-2-role-cards.md).
+New sessions use the [youth transport workshop](docs/transport-workshop.md): five different proposals for cheaper youth transport, two opponents, and seven role-specific incident outcomes. Earlier sessions keep their original scenario.
+
+Hosted at [democratic.onrender.com](https://democratic.onrender.com), with [private host controls](https://democratic.onrender.com/host) and Neon PostgreSQL. See [deployment readiness](docs/deployment-readiness.md) for operational details. The current printed profiles are in the existing Canva design; transport role copy is maintained in `workshop/transport.mjs`.
 
 ## Run locally
 
@@ -29,9 +27,9 @@ Use the network URL printed by the server. A localhost link only works on the co
 ## Current experience
 
 1. Seven teams scan the room QR or open its link. The first modal asks for the name and home town from their paper profile, a public bio based on that person, and a profile picture and banner. Joining matches a unique first name, surname or full paper name (accents optional) to an available role and automatically assigns its anonymous username. No host code is needed. Name and town appear only under the owner’s Private details until the host-controlled identity disclosure. A paper profile can join once; repeated requests from its original browser reconnect safely.
-2. The host opens debate. Teams choose public real names or public usernames, give a reason and reply in grouped conversations.
-3. The private host confirms **Launch simulated takeover**, **Release forged posts**, and **Release reactions** separately, then begins reflection and confirms **Reveal what happened**. Nothing advances on a timer.
-4. Teams can dispute posts shown under their username. At reveal, genuine, injected and scripted contributions are labelled; teams can publish corrections and choose a recovery response.
+2. The host opens debate. Teams discuss their specific transport proposals, choose the broad lower-fares or keep-fares position, and reply in grouped conversations.
+3. The private host checks all seven names, usernames and planned effects, then confirms **Launch incident**. Role-specific lockout, forgeries, exposure, hidden posts and outside-support notices arrive together. After reflection, **Reveal and restore** restores original contributions and access. Nothing advances on a timer.
+4. Teams with writing access can dispute posts shown under their username. At reveal, genuine, injected and scripted contributions are labelled; teams can publish corrections and choose a recovery response.
 5. Profile setup is required to enter the forum. Anonymous feed/profile requests are rejected, and setup cannot be skipped with Escape or an old observer preference. An existing team can share a scoped read-only link with another device. The projector shows QR, prompts and aggregate progress only.
 
 Public profiles open from member names and Discover. Replies quote their original post and stay in its conversation. Drafts retain text, stance and reply context across reloads. Unconfirmed sends keep their exact payload until a receipt or retry confirms publication. Saved recovery choices return on reload; the host sees a private aggregate.

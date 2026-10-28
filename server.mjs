@@ -8,7 +8,7 @@ import { openStore } from './storage/store.mjs';
 import { roleCards } from './workshop/roles.mjs';
 import { renderProfileAvatar } from './dist/profile-avatars.js';
 import { runtimeConfig, validateConfig } from './config.mjs';
-import { hash, fail, makeSession, summary, feed, hostView, release, join, joinPreview, me, credential, participantWrite, receipt, question } from './workshop/model.mjs';
+import { hash, fail, makeSession, summary, feed, hostView, release, join, joinPreview, me, credential, participantWrite, receipt, questionFor } from './workshop/model.mjs';
 
 const root = fileURLToPath(new URL('./dist/', import.meta.url));
 const types = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.png': 'image/png', '.txt': 'text/plain; charset=utf-8' };
@@ -124,12 +124,12 @@ export async function createWorkshopServer({ hostPassword = process.env.HOST_PAS
         if (req.method === 'GET') {
           const state = await store.read(sid); if (!state) fail(410, 'Session expired or cleared. Ask the host for the current link.');
           if (['feed', 'profile'].includes(route) && !hostAuthorized) credential(state, token);
-          if (route === 'feed') return reply(res, 200, feed(state));
-          if (route === 'projector') return reply(res, 200, { ...summary(state), question });
+          if (route === 'feed') return reply(res, 200, feed(state, token));
+          if (route === 'projector') return reply(res, 200, { ...summary(state), question: questionFor(state) });
           if (route === 'me') return reply(res, 200, me(state, token));
           if (route === 'receipt') return reply(res, 200, receipt(state, token, url.searchParams.get('id')));
           if (route === 'profile') {
-            const result = feed(state), profile = result.profiles.find(p => p.id === url.searchParams.get('id'));
+            const result = feed(state, token), profile = result.profiles.find(p => p.id === url.searchParams.get('id'));
             if (!profile) fail(404, 'This profile is unavailable.');
             const posts = result.posts.filter(p => p.author.id === profile.id);
             return reply(res, 200, { profile, posts, postCount: posts.length });

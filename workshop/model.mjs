@@ -1,6 +1,19 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { roleCards } from './roles.mjs';
 import { identifyProfileByName } from './profile-matching.mjs';
+import { transportCards, transportQuestion, effectLabels, incidentNotice } from './transport.mjs';
+
+const isTransport = state => state.scenario === 'transport-v1';
+const cardsFor = state => isTransport(state) ? transportCards : roleCards;
+export const questionFor = state => isTransport(state) ? transportQuestion : question;
+const incidentActive = state => isTransport(state) && !!state.incidentId && !revealed(state);
+const lockedOut = (state, role) => incidentActive(state) && transportCards[role.card - 1].effect === 'lockout';
+function visibleTo(state, post, viewerRoleId) {
+  if (!incidentActive(state)) return true;
+  if (post.incidentHidden) return false;
+  const author = state.roles.find(r => r.id === post.authorId);
+  return post.origin !== 'team' || !author || transportCards[author.card - 1].effect !== 'suppression' || author.id === viewerRoleId;
+}
 
 export const question = 'Should Open Circle require members to show their real names on every public post, or allow public usernames?';
 export const phases = ['opening', 'debate', 'exposure', 'forgery', 'reactions', 'reflection', 'recovery', 'discussion', 'closing', 'ended'];
@@ -22,6 +35,15 @@ export const actions = [
   { id: 'closing', label: 'Begin closing', from: 'discussion', to: 'closing', multiplier: 0, type: 'Closing · minutes 54–59; one-minute buffer' },
   { id: 'end', label: 'End session', from: 'closing', to: 'ended', multiplier: 0, type: 'Stop participation; data clears at the chosen deadline' }
 ];
+const transportActions = [
+  { ...actions[0], type: 'Introductions 0–10 · profiles 10–16 · genuine debate 16–28' },
+  { id: 'incident', label: 'Launch incident', from: 'debate', to: 'exposure', multiplier: 0, type: 'Seven different outcomes committed together · minutes 28–30' },
+  { ...actions[4], from: 'exposure', type: 'Observe the changed conversation · minutes 30–43' },
+  { ...actions[5], label: 'Reveal and restore', type: 'Restore access and original posts; label the simulation · minutes 43–50' },
+  { ...actions[6], type: 'Discuss whose voices were heard · minutes 50–58' },
+  { ...actions[7], type: 'Close and reflect · minutes 58–60' }, actions[8]
+];
+const actionsFor = state => isTransport(state) ? transportActions : actions;
 export const hash = value => createHash('sha256').update(value).digest('hex');
 export function fail(status, message) { throw Object.assign(new Error(message), { status }); }
 export function text(value, max, empty = false) {
@@ -42,11 +64,13 @@ export function requestId(value) {
   if (typeof value !== 'string' || !/^[a-zA-Z0-9-]{16,80}$/.test(value)) fail(400, 'Missing request identifier. Refresh and try again.');
   return value;
 }
-export function makeSession({ id, label, kind, expiresAt }) {
+export function makeSession({ id, label, kind, expiresAt, scenario = 'transport-v1' }) {
+  if (!['transport-v1', 'legacy'].includes(scenario)) fail(400, 'Choose a supported workshop scenario.');
   if (!['rehearsal', 'live'].includes(kind)) fail(400, 'Choose rehearsal or live.');
   if (!Number.isSafeInteger(expiresAt) || expiresAt < Date.now() + 60000 || expiresAt > Date.now() + 7 * 86400000) fail(400, 'Choose a deletion deadline between one minute and seven days from now.');
   const state = { id: requestId(id), label: text(label, 80), kind, expiresAt, phase: 'opening', version: 0, paused: false, roles: [], accounts: [], posts: [], flags: [], targets: [], events: {}, credentials: [], responses: {}, createdAt: new Date().toISOString() };
-  state.roles = roleCards.map((card, i) => ({ id: randomUUID(), card: card.card, username: usernames[i], bio: '', color: i, cover: i, claimed: false }));
+  state.scenario = scenario;
+  state.roles = cardsFor(state).map((card, i) => ({ id: randomUUID(), card: card.card, username: usernames[i], bio: '', color: i, cover: i, claimed: false }));
   state.accounts = ['garden-visitor', 'river-reader', 'circle-team'].map(username => ({ id: randomUUID(), username, bio: 'Open Circle member', color: 1, cover: 1 }));
   return { state };
 }
@@ -62,9 +86,11 @@ export function credential(state, token, requirePoster = false) {
 }
 export function me(state, token) {
   const c = credential(state, token), role = state.roles.find(r => r.id === c.roleId);
-  const card = roleCards[role.card - 1];
-  const { portraitFile, ...privateRole } = card;
-  return { participant: publicRole(role), scope: c.scope, ...(c.scope === 'poster' ? { response: state.responses[role.id] || null, privateDetails: privateDetails(role), privateRole: { ...privateRole, portrait: `/portraits/${role.card}.png` } } : {}) };
+  const card = cardsFor(state)[role.card - 1];
+  const { portraitFile, effect, ...privateRole } = card;
+  return { participant: publicRole(role), scope: c.scope, scenario: state.scenario || 'legacy', canWrite: c.scope === 'poster' && !lockedOut(state, role), ...(c.scope === 'poster' ? {
+    incident: isTransport(state) && state.incidentId ? { id: state.incidentId + (revealed(state) ? ':restored' : ''), ...incidentNotice(effect, revealed(state)) } : null,
+    response: state.responses[role.id] || null, privateDetails: privateDetails(role), privateRole: { ...privateRole, portrait: `/portraits/${role.card}.png` } } : {}) };
 }
 export function publicPost(state, post) {
   const author = [...state.roles, ...state.accounts].find(r => r.id === post.authorId);
@@ -73,15 +99,23 @@ export function publicPost(state, post) {
     ...(revealed(state) ? { provenance: post.origin, actualActor: post.actor } : {}) };
 }
 export function summary(state) {
-  return { id: state.id, label: state.label, kind: state.kind, phase: state.phase, version: state.version, paused: state.paused, expiresAt: state.expiresAt, participants: state.roles.filter(r => r.claimed).length, capacity: state.roles.length, genuinePosts: state.posts.filter(p => p.origin === 'team' && !p.hidden).length };
+  return { id: state.id, label: state.label, scenario: state.scenario || 'legacy', kind: state.kind, phase: state.phase, version: state.version, paused: state.paused, expiresAt: state.expiresAt, participants: state.roles.filter(r => r.claimed).length, capacity: state.roles.length, genuinePosts: state.posts.filter(p => p.origin === 'team' && !p.hidden).length };
 }
-export function feed(state) {
-  const visible = state.posts.map(p => publicPost(state, p));
-  return { ...summary(state), question, profiles: state.roles.filter(r => r.claimed).map(publicRole), posts: visible,
+export function feed(state, token) {
+  const viewerRoleId = token ? credential(state, token).roleId : null;
+  const visiblePosts = state.posts.filter(p => visibleTo(state, p, viewerRoleId));
+  const visible = visiblePosts.map(p => publicPost(state, p));
+  return { ...summary(state), genuinePosts: visiblePosts.filter(p => p.origin === 'team' && !p.hidden).length, question: questionFor(state), profiles: state.roles.filter(r => r.claimed).map(publicRole), posts: visible,
     threads: state.roles.filter(r => r.claimed).map(r => ({ id: r.id, username: publicRole(r).username, posts: visible.filter(p => p.threadId === r.id) })).filter(t => t.posts.length),
-    notice: revealed(state) ? 'The identity disclosures, changed opinions and withdrawals were injected by the workshop host. The tagged reactions were scripted. No external accounts were accessed. Team-authored contributions remain labelled below. You can correct the record.' : null };
+    notice: revealed(state) ? (isTransport(state) ? 'The workshop host simulated a lockout, forged opposition, fictional identity exposure and hidden contributions. The two opposing accounts received outside-support notices, but did not control the attacks. Original contributions and posting access are restored; injected posts are labelled. No external accounts or passwords were changed. Compare the real opinions with the impression created by the feed.' : 'The identity disclosures, changed opinions and withdrawals were injected by the workshop host. The tagged reactions were scripted. No external accounts were accessed. Team-authored contributions remain labelled below. You can correct the record.') : null };
 }
 export function targets(state, includeFallback = []) {
+  if (isTransport(state) && state.targets.length) return state.targets;
+  if (isTransport(state)) return state.roles.map(role => {
+    const card = transportCards[role.card - 1];
+    const first = state.posts.findLast(p => p.origin === 'team' && p.authorId === role.id && p.stance && !p.replyTo && !p.correction && !p.hidden);
+    return { roleId: role.id, username: publicRole(role).username, name: privateDetails(role).name, town: privateDetails(role).town, stance: first?.stance || card.leaning, proposal: card.proposal, effect: card.effect, source: effectLabels[card.effect], ready: !!role.claimed && !!first, matchesCard: first?.stance === card.leaning };
+  });
   if (state.targets.length) return state.targets.map(({ name, handle, ...target }) => ({ ...target, username: publicRole(state.roles.find(r => r.id === target.roleId)).username }));
   return state.roles.filter(r => r.claimed).flatMap(role => {
     const first = state.posts.find(p => p.origin === 'team' && p.authorId === role.id && p.stance && !p.correction && !p.replyTo);
@@ -91,9 +125,9 @@ export function targets(state, includeFallback = []) {
 }
 export function hostView(state, includeFallback = []) {
   const selected = targets(state, includeFallback);
-  return { ...summary(state), roles: state.roles.map(r => ({ ...publicRole(r), card: r.card, claimed: r.claimed, hasPost: state.posts.some(p => p.origin === 'team' && p.authorId === r.id && p.stance && !p.replyTo && !p.correction) })),
+  return { ...summary(state), roles: state.roles.map(r => ({ ...publicRole(r), ...privateDetails(r), card: r.card, claimed: r.claimed, hasPost: state.posts.some(p => p.origin === 'team' && p.authorId === r.id && p.stance && !p.replyTo && !p.correction) })),
     targets: selected, postCount: state.posts.length,
-    actions: actions.map(a => ({ ...a, enabled: !state.paused && state.phase === a.from && (a.id !== 'exposure' || selected.length > 0), count: a.multiplier * selected.length, names: selected.map(t => t.username) })),
+    actions: actionsFor(state).map(a => ({ ...a, enabled: !state.paused && state.phase === a.from && (a.id !== 'exposure' || selected.length > 0) && (a.id !== 'incident' || selected.every(t => t.ready && t.matchesCard)), count: a.id === 'incident' ? 5 : a.multiplier * selected.length, names: selected.map(t => t.username) })),
     posts: state.posts.filter(p => p.origin === 'team').map(p => ({ ...publicPost(state, p), origin: p.origin })),
     recovery: revealed(state) ? { count: Object.keys(state.responses).length, choices: Object.entries(recoveryChoices).map(([id, label]) => ({ id, label, count: Object.values(state.responses).filter(choice => choice === id).length })) } : null,
     events: state.events };
@@ -116,7 +150,7 @@ export function release(state, data) {
     return state.events[key];
   }
   if (data.version !== state.version) fail(409, 'The session changed. Reload the preview before confirming.');
-  const action = actions.find(a => a.id === data.action);
+  const action = actionsFor(state).find(a => a.id === data.action);
   if (!action || state.phase !== action.from || state.paused) fail(409, 'That action is not available in the current phase. Refresh the host screen.');
   if (data.action === 'exposure') {
     const fallback = Array.isArray(data.includeFallback) ? data.includeFallback : [];
@@ -124,6 +158,22 @@ export function release(state, data) {
     if (!state.targets.length) fail(409, 'Wait for a genuine first post or explicitly include a claimed role’s assigned leaning.');
   }
   const before = state.posts.length;
+  if (data.action === 'incident') {
+    const planned = targets(state);
+    if (!planned.every(t => t.ready && t.matchesCard)) fail(409, 'All seven profiles must publish a genuine position matching their paper card before the incident. The latest position counts. Check the private preview.');
+    state.targets = planned;
+    state.incidentId = randomUUID();
+    for (const target of planned) {
+      const role = state.roles.find(r => r.id === target.roleId);
+      const base = { threadId: role.id, authorId: role.id, actor: 'workshop-host', origin: 'simulation' };
+      if (['lockout', 'forgery'].includes(target.effect)) for (const post of state.posts) if (post.authorId === role.id && post.origin === 'team') post.incidentHidden = true;
+      if (target.effect === 'forgery') {
+        addPost(state, { ...base, stance: 'keep-fares', text: 'I have changed my mind. I am against reducing youth fares or making buses free. Keep ticket prices as they are and put the money into the service instead.' });
+        addPost(state, { ...base, stance: 'keep-fares', text: 'Please disregard my earlier argument for cheaper travel. I no longer support youth fare reductions.' });
+      }
+      if (target.effect === 'exposure') addPost(state, { ...base, text: `I am ${privateDetails(role).name} from ${privateDetails(role).town}. I support free buses after 18:00 and at weekends for under-25s. This is the opinion behind my username.` });
+    }
+  }
   for (const target of state.targets) {
     const role = state.roles.find(r => r.id === target.roleId);
     const base = { threadId: role.id, authorId: role.id, actor: 'workshop-host', origin: 'simulation' };
@@ -175,6 +225,7 @@ export function participantWrite(state, token, route, data) {
     }
   }
   if (state.phase === 'ended') fail(409, 'This workshop has ended.');
+  if (lockedOut(state, role)) fail(403, 'Your account is locked during this incident. You can watch the feed, but cannot change it.');
   if (route === 'profile') {
     if (data.name !== undefined) {
       if (identifyProfileByName(profileName(data.name), roleCards).profile?.card !== role.card) fail(400, 'Keep the name of the person on your assigned paper profile.');
@@ -215,8 +266,8 @@ export function participantWrite(state, token, route, data) {
     if (correction ? !revealed(state) : state.phase === 'opening') fail(409, correction ? 'Corrections open after the reveal.' : 'Wait for the host to open the discussion.');
     if (state.posts.length >= 2000) fail(429, 'Session post limit reached. Ask the host for help.');
     const reply = data.replyTo && state.posts.find(p => p.id === data.replyTo);
-    if (data.replyTo && !reply) fail(400, 'The post you are replying to no longer exists.');
-    if (!reply && !['usernames', 'real-names'].includes(data.stance)) fail(400, 'Choose public usernames or public real names.');
+    if (data.replyTo && (!reply || !visibleTo(state, reply, role.id))) fail(400, 'The post you are replying to is unavailable.');
+    if (!reply && !(isTransport(state) ? ['lower-fares', 'keep-fares'] : ['usernames', 'real-names']).includes(data.stance)) fail(400, isTransport(state) ? 'Choose lower youth fares or keep fares unchanged.' : 'Choose public usernames or public real names.');
     const post = addPost(state, { text: text(data.text, 500), authorId: role.id, actor: role.id, origin: 'team', threadId: reply?.threadId || role.id, replyTo: reply?.id, stance: reply ? null : data.stance, correction, requestId: key });
     state.version++; return { post: publicPost(state, post) };
   }

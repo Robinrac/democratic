@@ -1,5 +1,7 @@
 # Open Circle fictional role cards
 
+> Current workshop: [Youth transport roles and host flow](transport-workshop.md). New sessions use this scenario. The older scenario instructions below are retained for existing sessions.
+
 These seven cards are participant-facing copy for Workshop 2, “Hacked: Who Speaks for You?” Each team receives **one private card**. The portrait can be used on the card and as the account avatar, but the **fictional full name and home town stay off the public forum profile** until the staged incident. The app assigns a neutral public username; the names here are never usernames.
 
 **Character and portrait match:** Eydís, Ingrid, and Linnea are women; Jógvan, Elias, Mikko, and Mats are men. The seven portraits were checked against those character identities.

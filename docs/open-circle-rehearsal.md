@@ -1,5 +1,7 @@
 # Open Circle — rehearsal and operations
 
+> Current workshop: [Youth transport roles and host flow](transport-workshop.md). New sessions use this scenario. The older scenario instructions below are retained for existing sessions.
+
 ## Start locally
 
 Use Node.js 20 or newer. No build or separate database installation is required.
