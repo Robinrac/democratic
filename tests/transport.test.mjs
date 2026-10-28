@@ -19,14 +19,17 @@ test('transport incident is atomic, private, differentiated, persistent and reve
   assert.equal((await w.action(sid, 'incident')).status, 409);
   const originals = [];
   for (const [i, team] of teams.entries()) {
-    const result = await w.call('posts', { text: transportCards[i].suggestedPost, stance: transportCards[i].leaning, requestId: randomUUID() }, { sid, token: team.token });
+    const body = { text: transportCards[i].suggestedPost, requestId: randomUUID() };
+    const result = await w.call('posts', body, { sid, token: team.token });
+    const retry = await w.call('posts', body, { sid, token: team.token });
+    assert.equal(retry.post.id, result.post.id);
     assert.equal(result.status, 200); originals.push(result.post);
   }
   const initial = await w.call('feed', undefined, { sid });
   assert.equal(initial.posts.filter(p => p.stance === 'lower-fares').length, 5);
   assert.equal(initial.posts.filter(p => p.stance === 'keep-fares').length, 2);
   assert.ok(!JSON.stringify(initial).includes('effect'));
-  // A mistaken radio selection must be fixable without resetting the room.
+  // Explicit positions sent by older clients remain supported and correctable.
   const mistaken = await w.call('posts', { text: 'Wrong stance selected', stance: 'keep-fares', requestId: randomUUID() }, { sid, token: teams[0].token });
   assert.equal((await w.action(sid, 'incident')).status, 409);
   await w.call('posts', { text: 'To clarify: I support half-price tickets.', stance: 'lower-fares', requestId: randomUUID() }, { sid, token: teams[0].token });
@@ -84,4 +87,21 @@ test('transport incident is atomic, private, differentiated, persistent and reve
   assert.match((await w.call('me', undefined, { sid, token: teams[5].token })).incident.message, /hidden from everyone else/);
   assert.match((await w.call('me', undefined, { sid, token: teams[1].token })).incident.message, /did not perform/);
   assert.equal((await w.call('corrections', { text: 'My original view still stands.', stance: 'lower-fares', requestId: randomUUID() }, { sid, token: teams[0].token })).status, 200);
+});
+
+
+test('an unopened legacy room can adopt transport without losing its profile or credentials', async t => {
+  const w = await workshop(t); await w.login();
+  const { sid } = await w.session(); const team = await w.claim(sid);
+  const before = await w.state(sid);
+  const body = { version: before.version, confirmLabel: before.label };
+  assert.equal((await w.call('host/transport-topic', body, { sid })).status, 401);
+  assert.equal((await w.call('host/transport-topic', { ...body, confirmLabel: 'wrong' }, { sid, host: true })).status, 409);
+  assert.equal((await w.call('host/transport-topic', body, { sid, host: true })).status, 200);
+  const current = await w.call('me', undefined, { sid, token: team.token });
+  assert.equal(current.participant.id, team.participant.id);
+  assert.equal(current.privateRole.proposal, transportCards[0].proposal);
+  await w.action(sid, 'debate');
+  const state = await w.state(sid);
+  assert.equal((await w.call('host/transport-topic', { version: state.version, confirmLabel: state.label }, { sid, host: true })).status, 409);
 });

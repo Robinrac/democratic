@@ -74,7 +74,7 @@ function phaseHTML(data) { const copy = data.scenario === 'transport-v1' && data
 export async function startProjector() {
   const sid = new URLSearchParams(location.search).get('s');
   const link = location.origin + '/?s=' + encodeURIComponent(sid || '');
-  document.querySelector('#app').innerHTML = header(false) + `<main id="main" class="projector"><section><span class="eyebrow">WELCOME TO OPEN CIRCLE</span><h1>Your voice.<br>Your choice.<br>Our conversation.</h1><p id="question"></p><div class="phase" id="phase"></div><p id="progress" role="status"></p></section><section class="panel"><div id="qr"></div><h2>Join the circle.</h2><p id="display-url"></p><p>Use the details on your paper profile to join.</p><p id="connection" role="status"></p></section></main>`;
+  document.querySelector('#app').innerHTML = header(false) + `<main id="main" class="projector"><section><span class="eyebrow">WELCOME TO OPEN CIRCLE</span><h1>Your voice.<br>Your choice.<br>Our conversation.</h1><span class="eyebrow">TODAY’S TOPIC</span><p id="question"></p><div class="phase" id="phase"></div><p id="progress" role="status"></p></section><section class="panel"><div id="qr"></div><h2>Join the circle.</h2><p id="display-url"></p><p>Use the details on your paper profile to join.</p><p id="connection" role="status"></p></section></main>`;
   if (!sid) { document.querySelector('#connection').textContent = 'Open the projector link from your host screen.'; return; }
   const qr = window.qrcode(0, 'M'); qr.addData(link); qr.make();
   document.querySelector('#qr').innerHTML = qr.createSvgTag({ cellSize: 6, margin: 24, scalable: true });
@@ -86,7 +86,7 @@ export async function startProjector() {
     if (busy) return; busy = true;
     try {
       const data = await request('projector', { sid });
-      document.querySelector('#question').textContent = data.scenario === 'transport-v1' ? 'Youth fares: cheaper, free or service first?' : data.question;
+      document.querySelector('#question').textContent = data.question;
       document.querySelector('#phase').innerHTML = phaseHTML(data);
       document.querySelector('#progress').textContent = `${data.participants} / ${data.capacity} profiles joined · ${data.genuinePosts} contributions`;
       document.querySelector('#connection').textContent = ['localhost', '127.0.0.1'].includes(location.hostname) ? 'For phones, open the host screen using the computer’s network address before opening this projector link.' : 'Live updates connected';
@@ -141,7 +141,7 @@ export async function startParticipant() {
     </aside>
     <section class="conversation" id="feed-view" aria-labelledby="feed-title">
       <div class="feed-heading"><h1 id="feed-title">Feed</h1><span id="counts" class="people"></span></div>
-      <div class="panel prompt"><h2 id="question">Youth transport</h2></div>
+      <div class="panel prompt"><span class="eyebrow">TODAY’S TOPIC</span><h2 id="question">Bus fares for young people</h2></div>
       <div class="phase" id="phase" aria-live="polite"></div><p id="error" role="alert"></p>
       <section id="notice"></section><section id="incident-banner" aria-live="polite"></section>
       <section id="composer"></section><section id="social-tools"><div id="activity-history"></div></section>
@@ -267,14 +267,12 @@ export async function startParticipant() {
   function renderComposer() {
     const composer = document.querySelector('#composer');
     if (person?.scope !== 'poster') { composer.innerHTML = ''; return; }
-    composer.innerHTML = `<section class="panel composer"><div class="composer-person">${identity(person.participant)}<span class="you-tag">YOU</span></div><form id="post-form"><p id="reply-label" class="reply-label"></p><button type="button" id="cancel-reply" class="secondary" hidden>Cancel reply</button><fieldset id="stance">${person.scenario === 'transport-v1' ? '<legend>Your position</legend><label><input type="radio" name="stance" value="lower-fares" aria-label="Lower youth fares, including free travel" required>Lower youth fares</label><label><input type="radio" name="stance" value="keep-fares" aria-label="Keep fares unchanged; improve service first" required>Keep fares unchanged</label>' : '<legend>Which rule do you support?</legend><label><input type="radio" name="stance" value="usernames" required>Allow public usernames</label><label><input type="radio" name="stance" value="real-names" required>Require public real names</label>'}</fieldset><label class="sr-only" for="post-text">Your reason or reply</label><div class="mention-editor"><textarea id="post-text" maxlength="500" required aria-describedby="social-help" aria-autocomplete="list" aria-controls="mention-suggestions" aria-expanded="false" placeholder="Share a thought or ask a question…"></textarea><div id="mention-suggestions" class="mention-menu" role="listbox" aria-label="Members to tag" hidden></div></div><p id="social-help" class="muted">@ mention someone · # add a topic</p><label id="correction-label" hidden><input type="checkbox" id="correction">Publish this as a correction</label><div class="composer-bottom"><span id="counter">0 / 500</span><button class="primary" id="send-post">Publish post <span aria-hidden="true">↑</span></button></div><p id="post-help" class="muted" role="status"></p></form></section>`;
+    composer.innerHTML = `<section class="panel composer"><div class="composer-person">${identity(person.participant)}<span class="you-tag">YOU</span></div><form id="post-form"><p id="reply-label" class="reply-label"></p><button type="button" id="cancel-reply" class="secondary" hidden>Cancel reply</button><label class="sr-only" for="post-text">Your reason or reply</label><div class="mention-editor"><textarea id="post-text" maxlength="500" required aria-describedby="social-help" aria-autocomplete="list" aria-controls="mention-suggestions" aria-expanded="false" placeholder="Share a thought or ask a question…"></textarea><div id="mention-suggestions" class="mention-menu" role="listbox" aria-label="Members to tag" hidden></div></div><p id="social-help" class="muted">@ mention someone · # add a topic</p><label id="correction-label" hidden><input type="checkbox" id="correction">Publish this as a correction</label><div class="composer-bottom"><span id="counter">0 / 500</span><button class="primary" id="send-post">Publish post <span aria-hidden="true">↑</span></button></div><p id="post-help" class="muted" role="status"></p></form></section>`;
     document.querySelector('#post-text').value = draft.text;
-    document.querySelectorAll('input[name=stance]').forEach(input => { input.checked = input.value === draft.stance; });
     document.querySelector('#correction').checked = !!draft.correction;
     const form = document.querySelector('#post-form');
     form.oninput = () => {
       draft.text = document.querySelector('#post-text').value;
-      draft.stance = form.querySelector('input[name=stance]:checked')?.value || null;
       draft.correction = document.querySelector('#correction').checked;
       saveDraft(); updateComposer(); renderMentionSuggestions();
     };
@@ -333,8 +331,6 @@ export async function startParticipant() {
     document.querySelector('#reply-label').textContent = draft.replyTo ? (reply ? `Replying to @${reply.author.username}: ${reply.text.slice(0, 100)}` : 'The original post is unavailable. Cancel this reply to start a new post.') : '';
     document.querySelector('#cancel-reply').hidden = !draft.replyTo;
     document.querySelector('#cancel-reply').disabled = locked;
-    document.querySelector('#stance').hidden = !!draft.replyTo;
-    document.querySelectorAll('input[name=stance]').forEach(input => { input.required = !draft.replyTo; input.disabled = locked || closed; });
     document.querySelector('#post-text').disabled = locked || person.canWrite === false;
     document.querySelector('#correction').disabled = locked || closed;
     document.querySelector('#correction-label').hidden = !data?.notice;
@@ -355,7 +351,7 @@ export async function startParticipant() {
   async function sendPost() {
     if (sending || person?.canWrite === false) return;
     if (!pendingPost) {
-      pendingPost = { route: draft.correction ? 'corrections' : 'posts', body: { text: draft.text, stance: draft.stance, replyTo: draft.replyTo, requestId: uid() } };
+      pendingPost = { route: draft.correction ? 'corrections' : 'posts', body: { text: draft.text, replyTo: draft.replyTo, requestId: uid() } };
       localStorage.setItem(key + ':pending-post', JSON.stringify(pendingPost));
     }
     const send = pendingPost;
@@ -440,7 +436,7 @@ export async function startParticipant() {
       if (person || !membershipChecked) {
         try {
           const current = await api('me');
-          const changed = JSON.stringify([current.participant, current.privateDetails]) !== JSON.stringify([person?.participant, person?.privateDetails]);
+          const changed = JSON.stringify([current.participant, current.privateDetails, current.scenario]) !== JSON.stringify([person?.participant, person?.privateDetails, person?.scenario]);
           const newlyConnected = !person; person = current; membershipChecked = true;
           if (changed) renderTeam(); if (newlyConnected) { renderComposer(); if (joinDialog.open) joinDialog.close(); }
         } catch (err) {
@@ -455,7 +451,7 @@ export async function startParticipant() {
         joinForm.querySelector('[type=submit]').disabled = closed;
         if (closed) document.querySelector('#join-error').textContent = 'Joining has closed. Use your team’s original device.';
       }
-      document.querySelector('#question').textContent = data.scenario === 'transport-v1' ? 'Youth fares: cheaper, free or service first?' : data.question;
+      document.querySelector('#question').textContent = data.question;
       const phase = document.querySelector('#phase'), next = phaseHTML(data); if (phase.innerHTML !== next) phase.innerHTML = next; phase.hidden = ['debate', 'exposure', 'forgery', 'reactions', 'discussion'].includes(data.phase) && !data.paused;
       document.querySelector('#counts').textContent = data.participants + (data.participants === 1 ? ' member' : ' members');
       document.querySelector('#connection').textContent = 'Connected';

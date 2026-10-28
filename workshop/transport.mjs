@@ -1,6 +1,6 @@
 import { roleCards } from './roles.mjs';
 
-export const transportQuestion = 'Cheaper tickets, free journeys or better service first? What should local transport offer young people?';
+export const transportQuestion = 'Bus fares for young people: cheaper tickets, free travel for under-20s or under-25s, or keep fares and improve services?';
 const profiles = [
   { proposal: 'Half-price single bus tickets for everyone under 25.', leaning: 'lower-fares', effect: 'lockout',
     backstory: 'You are a 19-year-old art student in Reykjavík. Between café shifts and organising youth arts evenings, your week is never predictable. You often buy single tickets, and friends sometimes skip your group because the journey costs too much.',

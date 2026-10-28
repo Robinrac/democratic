@@ -37,6 +37,9 @@ test('name errors, mentions, post alerts, ranked tags and reset work together on
   await expect(a.locator('#mention-person')).toHaveCount(0);
   await expect(a.getByRole('link', { name: 'My profile', exact: true })).toHaveCount(0);
   await expect(a.locator('#trending li')).toHaveCount(5);
+  await expect(a.locator('#post-form input[type=radio]')).toHaveCount(0);
+  await expect(a.locator('.prompt')).toContainText('TODAY’S TOPIC');
+  await expect(a.locator('#question')).toContainText('under-20s or under-25s');
   await expect(a.locator('#team > .sidebar-names li')).toHaveCount(7);
   await expect(a.locator('#team > .sidebar-names img, #team > .profile-banner, #team > .sidebar-bio')).toHaveCount(0);
   await expect(a.locator('.sidebar #trending')).toHaveCount(1);
@@ -65,7 +68,6 @@ test('name errors, mentions, post alerts, ranked tags and reset work together on
     expect(r.ok()).toBeTruthy();
   }
   await release('debate');
-  await a.getByLabel('Lower youth fares, including free travel', { exact: true }).check();
   await a.getByLabel('Your reason or reply').fill('Would cheaper travel help @');
   await expect(a.getByRole('listbox', { name: 'Members to tag' })).toBeVisible();
   await expect(a.locator('#mention-suggestions [role=option]')).toHaveCount(7);

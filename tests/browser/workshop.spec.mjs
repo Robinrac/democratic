@@ -85,7 +85,6 @@ test('host-paced seven-team rehearsal on phone and laptop, with cancel, reconnec
   await release('Open debate');
   for(let i=0;i<7;i++) {
     await expect(teams[i].getByRole('button',{name:'Publish post'})).toBeEnabled();
-    await teams[i].getByLabel(i%2===0?'Allow public usernames':'Require public real names',{exact:true}).check();
     await teams[i].getByLabel('Your reason or reply').fill('Our genuine contribution from team '+(i+1)+'.'); await teams[i].getByRole('button',{name:'Publish post'}).click();
     await expect(teams[i].locator('.post').filter({hasText:'Our genuine contribution from team '+(i+1)+'.'})).toBeVisible();
   }

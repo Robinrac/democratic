@@ -10,7 +10,7 @@ The existing Open Circle design, profile modal, portraits, Neon connection and R
 | --- | --- |
 | 0–10 | Introduce the subject and the workshop. Explain that this is fictional role play; use the paper identity, never real personal details. |
 | 10–16 | Hand out cards and create profiles. Open debate when teams are ready; early finishers can start. |
-| 16–28 | Genuine discussion: five different proposals for lower fares, two objections. Teams select the broad stance and explain their specific proposal in their own words. |
+| 16–28 | Genuine discussion: five different proposals for lower fares, two objections. Teams explain their paper profile’s proposal in their own words; there is no position selector. |
 | 28–30 | Check names and usernames in the private host preview. Confirm **Launch incident** once. |
 | 30–38 | Observe the changed feed and the private account updates. Teams choose how to respond. |
 | 38–43 | **Begin reflection**. Compare what the feed seems to say with the earlier conversation. |
@@ -18,7 +18,7 @@ The existing Open Circle design, profile modal, portraits, Neon connection and R
 | 50–58 | **Begin room discussion**. Distinguish genuine opinion, visible opinion and who had the ability to speak. |
 | 58–60 | **Begin closing**, then **End session**. Clear the room’s data when finished or let its chosen expiry apply. |
 
-Nothing advances on a timer. The launch requires all seven roles to join and publish a top-level genuine position matching their card. The latest unhidden genuine position is used, so an accidental selection can be corrected by publishing again. Replies do not count as a baseline position. Host name search accepts accents or plain spelling. The fixed paper identity determines the incident; usernames, bios and avatar choices do not change it.
+Nothing advances on a timer. The launch requires all seven roles to join and publish a top-level genuine position matching their card. Posts use the paper profile’s assigned position for the host plan; this does not classify the meaning of their text. Replies do not count as a baseline position. Host name search accepts accents or plain spelling. The fixed paper identity determines the incident; usernames, bios and avatar choices do not change it.
 
 ## Private incident map
 
@@ -50,7 +50,7 @@ On joining, the card is linked to a fixed participant ID and its public username
 
 **Feed** shows the composer and live conversations. **Discover** shows cards for the other joined members, without the feed. The sidebar lists joined members by username only, with your own username first. Click a name to open that profile. Private role notes, profile editing and the read-only team link are available through **Edit profile**, keeping the sidebar public and compact.
 
-- Participants can write their own post or ask a question, choose its broad position and publish. Use **Reply** to keep a question or answer in the original conversation; replies do not require a new position selection.
+- Participants write their post or question and publish. Use **Reply** to keep a question or answer in the original conversation; replies stay in that conversation.
 - Type `@` in the post to open the member menu; keep typing to filter it. Choose with a click/tap or the arrow keys and Enter; Escape closes it. Only public usernames identify mentions. A visible mention produces a notification for that team and appears under **Tagged posts** on its public profile. Click a mention to open that profile.
 - Type a hashtag in your post. Click a hashtag in a post or the trending list to filter the feed; **Show all posts** removes the filter.
 - The sidebar shows the top five: initially #1 **#AffordableJourneys**, #2 **#ServiceFirst**, #3 **#FreeUnder25**, #4 **#KeepFares**, #5 **#FreeUnder20**. Other topics, such as **#FareCap**, enter the ranking when used. These start at zero, clearly labelled as starter topics. Once posts appear, frequency ranks the top five; ties use starter order, then alphabetical order. A repeated tag in one post counts once; capitalisation does not split a topic. Linnea can also introduce #EveningFreedom. Trending hashtags stays below the navigation in the desktop sidebar. On phones, its compact section follows the active feed or Discover page instead of appearing above it.

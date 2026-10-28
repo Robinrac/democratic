@@ -243,6 +243,11 @@ export function join(state, data, token) {
 }
 export function participantWrite(state, token, route, data) {
   const c = credential(state, token, true), role = state.roles.find(r => r.id === c.roleId);
+  // The paper role supplies the workshop grouping when a post has no explicit stance.
+  // This is assigned role metadata, not an interpretation of the participant’s words.
+  if ((route === 'posts' || route === 'corrections') && !data.replyTo && data.stance == null) {
+    data = { ...data, stance: cardsFor(state)[role.card - 1].leaning };
+  }
   // A committed send can still be acknowledged after the host closes the room.
   if (route === 'posts' || route === 'corrections') {
     const key = requestId(data.requestId), previous = state.posts.find(p => p.actor === role.id && p.requestId === key);

@@ -22,7 +22,7 @@ test('transport host launch shows seven private outcomes on phone and desktop an
     await context.addInitScript(({ sid, token }) => localStorage.setItem('open-circle:' + sid, token), { sid, token });
     const page = await context.newPage(); pages.push(page); page.on('pageerror', error => errors.push(error.message));
     await page.goto('/?s=' + sid);
-    await expect(page.locator('#question')).toContainText('Youth fares');
+    await expect(page.locator('#question')).toContainText('Bus fares for young people');
   }
   async function release(name) {
     const button = host.getByRole('button', { name, exact: true });
@@ -37,7 +37,6 @@ test('transport host launch shows seven private outcomes on phone and desktop an
   await release('Open debate');
   await expect(host.getByRole('button', { name: 'Launch incident', exact: true })).toBeDisabled();
   for (let i = 0; i < 7; i++) {
-    await pages[i].getByLabel(transportCards[i].leaning === 'lower-fares' ? 'Lower youth fares, including free travel' : 'Keep fares unchanged; improve service first', { exact: true }).check();
     await pages[i].getByLabel('Your reason or reply').fill(transportCards[i].suggestedPost);
     await pages[i].getByRole('button', { name: 'Publish post' }).click();
     await expect(pages[i].locator('.thread.mine')).toContainText(transportCards[i].suggestedPost);

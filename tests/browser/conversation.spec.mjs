@@ -61,7 +61,6 @@ test('profile browsing, reply drafts, interrupted sends and private saved respon
   await expect(page.locator('#threads .reply-context')).toContainText('What makes a conversation welcoming?');
   // The server commits, but the response disappears. A receipt must resolve it
   // after reload without producing a duplicate or clearing a different draft.
-  await page.getByLabel('Allow public usernames', { exact: true }).check();
   await page.getByLabel('Your reason or reply').fill('This send will lose its response.');
   await page.route('**/api/receipt?*', route => route.abort('failed'));
   await page.route('**/api/posts?*', async route => { await route.fetch(); await route.abort('failed'); });

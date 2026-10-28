@@ -334,3 +334,6 @@ input[aria-invalid="true"] { border: 2px solid #ad244b; }
   .social-layout .conversation { order: 3; }
   .social-layout .sidebar-trends { order: 4; margin-top: 20px; }
 }
+
+.social-layout .prompt { flex-direction: column; gap: 4px; }
+.social-layout .prompt .eyebrow { display: block; font-size: 10px; }

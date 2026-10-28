@@ -101,6 +101,11 @@ export async function createWorkshopServer({ hostPassword = process.env.HOST_PAS
           const result = await store.update(sid, state => {
             if (route === 'host/action') return release(state, data);
             if (data.version !== state.version) fail(409, 'The session changed. Refresh before trying again.');
+            if (route === 'host/transport-topic') {
+              if (data.confirmLabel !== state.label || state.phase !== 'opening' || state.posts.length || state.incidentId) fail(409, 'Only an unopened discussion with no posts can switch topics; confirm its exact label.');
+              state.scenario = 'transport-v1'; state.version++;
+              return summary(state);
+            }
             if (route === 'host/clear-profile') return clearProfile(state, data);
             if (route === 'host/pause') {
               if (typeof data.paused !== 'boolean' || state.phase === 'ended') fail(400, 'Choose pause or resume for an active session.');
