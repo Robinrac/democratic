@@ -148,6 +148,9 @@ export async function createWorkshopServer({ hostPassword = process.env.HOST_PAS
           }
           fail(404, 'Not found.');
         }
+        // Participant mutations are POST-only. DELETE/PATCH must never fall
+        // through to a handler for creating posts or changing profile data.
+        if (req.method !== 'POST') fail(405, 'Method not allowed.');
         if (route === 'join-preview') {
           // Seven teams often share one venue/router address, including behind HTTPS proxies.
           // Never trust arbitrary X-Forwarded-For headers as a way around these limits.

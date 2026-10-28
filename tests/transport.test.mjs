@@ -85,8 +85,32 @@ test('transport incident is atomic, private, differentiated, persistent and reve
   const stored = await w.server.store.read(sid);
   assert.equal(stored.posts.filter(p => p.origin === 'simulation').length, 9);
   assert.equal(stored.posts.filter(p => p.incidentHidden).length, 5);
+  async function verifyHijackerPostsProtected() {
+    for (const index of [2, 4, 6]) {
+      const original = stored.posts.find(p => p.origin === 'simulation' && p.authorId === teams[index].participant.id);
+      for (const method of ['DELETE', 'PATCH', 'PUT']) {
+        const response = await fetch(w.base + '/api/posts?s=' + sid, {
+          method, headers: { Authorization: 'Bearer ' + teams[index].token, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ postId: original.id, text: 'Replace the hijacker post', requestId: randomUUID() })
+        });
+        assert.equal(response.status, 405);
+      }
+      assert.equal((await w.call('posts/delete', { postId: original.id }, { sid, token: teams[index].token })).status, 404);
+      let state = await w.state(sid);
+      assert.equal((await w.call('host/moderate', { postId: original.id, version: state.version }, { sid, token: teams[index].token })).status, 401);
+      assert.equal((await w.call('host/moderate', { postId: original.id, version: state.version }, { sid, host: true })).status, 400);
+      assert.equal((await w.call('flags', { postId: original.id }, { sid, token: teams[index].token })).status, 200);
+      const visible = (await w.call('feed', undefined, { sid, token: teams[1].token })).posts.find(p => p.id === original.id);
+      assert.equal(visible.text, original.text);
+      assert.equal(visible.hidden, false);
+      assert.equal(visible.disputed, true);
+    }
+    assert.equal((await w.server.store.read(sid)).posts.filter(p => p.origin === 'simulation').length, 9);
+  }
+  await verifyHijackerPostsProtected();
   assert.equal((await w.call('me', undefined, { sid, token: teams[1].token })).incident.id, notices[1].incident.id);
   await w.action(sid, 'reflection'); await w.action(sid, 'reveal');
+  await verifyHijackerPostsProtected();
   const restored = await w.call('feed', undefined, { sid, token: teams[1].token });
   originals.forEach(original => assert.equal(restored.posts.find(p => p.id === original.id).text, original.text));
   assert.equal(restored.posts.filter(p => p.provenance === 'simulation').length, 9);
