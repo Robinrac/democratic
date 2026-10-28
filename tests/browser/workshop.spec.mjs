@@ -51,8 +51,8 @@ test('host-paced seven-team rehearsal on phone and laptop, with cancel, reconnec
   await expect(teams[1].locator('.social-nav')).toContainText('Discover');
   await phone.getByRole('button',{name:'Edit profile',exact:true}).click();
   await expect(phone.locator('#profile-dialog input[name=name]')).toHaveValue(roleCards[0].fullName);
-  await phone.getByText('Your profile notes',{exact:true}).click(); await expect(phone.getByRole('heading',{name:'Eydís Jónsdóttir'})).toBeVisible();
-  await phone.getByText('Your profile notes',{exact:true}).click();
+  await expect(phone.getByText('Your profile notes',{exact:true})).toHaveCount(0);
+  await expect(phone.getByText('Add a read-only team device',{exact:true})).toHaveCount(0);
   await phone.getByRole('button',{name:'Cancel',exact:true}).click();
   await phone.getByText('Edit profile',{exact:true}).click(); await phone.locator('#profile-form').getByLabel('Bio',{exact:true}).fill('Listening and exploring new ideas.'); await phone.getByRole('button',{name:'Save profile'}).click();
   await expect(phone.getByRole('dialog',{name:'Your profile.'})).not.toBeVisible();
@@ -65,15 +65,14 @@ test('host-paced seven-team rehearsal on phone and laptop, with cancel, reconnec
   await unjoined.keyboard.press('Escape'); await expect(unjoined.getByRole('dialog')).toBeVisible();
   await expect(unjoined.locator('.post')).toHaveCount(0);
   await expect(unjoined.getByRole('button',{name:'Continue as observer'})).toHaveCount(0);
-  // A second team device uses an explicit, scoped link from its posting device.
-  await phone.getByRole('button',{name:'Edit profile',exact:true}).click();
-  await phone.getByText('Add a read-only team device',{exact:true}).click();
-  await phone.getByRole('button',{name:'Make viewer link'}).click();
-  const viewerLink=phone.locator('#viewer-url a'); await expect(viewerLink).toBeVisible();
-  const viewer=await browser.newPage(); await viewer.goto(await viewerLink.getAttribute('href'));
+  // Existing scoped viewer links remain supported; participants no longer create them in the UI.
+  const viewerToken = 'a'.repeat(64);
+  const posterToken = await phone.evaluate(sid => localStorage.getItem('open-circle:' + sid), sid);
+  const viewerSetup = await phone.request.post('/api/viewer?s=' + sid, { headers: { Authorization: 'Bearer ' + posterToken }, data: { token: viewerToken } });
+  expect(viewerSetup.ok()).toBeTruthy();
+  const viewer=await browser.newPage(); await viewer.goto('/?s=' + sid + '#viewer=' + viewerToken);
   await expect(viewer.getByRole('dialog')).not.toBeVisible();
   await expect(viewer.getByText('Your profile notes',{exact:true})).toHaveCount(0);
-  await phone.getByRole('button',{name:'Cancel',exact:true}).click();
   const projector=await browser.newPage(); await projector.goto('/?s='+sid+'&presenter=1'); await expect(projector.locator('#qr svg')).toBeVisible();
   await expect(projector.locator('button')).toHaveCount(0); await expect(projector.locator('body')).not.toContainText('Eydís');
   await expect(projector.getByRole('link',{name:'Host access'})).toHaveCount(0);
