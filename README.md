@@ -48,7 +48,7 @@ Use **Open read-only projector** from the selected session in `/host`. Its URL i
 
 ## Design
 
-White outer canvas with the Open Circle burgundy/pink identity and varied profile themes. Component styling follows Munia’s button variants, softly filled inputs, post surfaces and dialog treatments at the credited revision: shared control/card radii, quiet borders, compact secondary actions and visible keyboard focus. These rules live together in the final component section of `dist/open-circle-theme.css`; the current feed/sidebar layout and workshop behavior are retained. Motion respects reduced-motion preferences. The visible app does not use the Cybersecurity Academy name or logo.
+White outer canvas with Open Circle’s pink composer, blue topic panel, burgundy About panel, rosy hashtag panel and varied profile themes. Component styling follows Munia’s button variants, softly filled inputs, post surfaces and dialog treatments at the credited revision: shared control/card radii, quiet borders, compact secondary actions and visible keyboard focus. These rules live together in the final component section of `dist/open-circle-theme.css`; the current feed/sidebar layout and workshop behavior are retained. Motion respects reduced-motion preferences. The visible app does not use the Cybersecurity Academy name or logo.
 
 ## Development
 
