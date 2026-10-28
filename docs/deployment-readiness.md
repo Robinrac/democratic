@@ -1,6 +1,14 @@
 # Open Circle — configuration handoff
 
-The application is prepared for a Node web service backed by PostgreSQL. This work does not create accounts, provision a database, publish source, change DNS or deploy the application. The approved Open Circle design, seven paper profiles, usernames, banners and avatars are preserved.
+The application is prepared for a Node web service backed by PostgreSQL. The hosted deployment is now provisioned and verified as recorded below. The approved Open Circle design, seven paper profiles, usernames, banners and avatars are preserved.
+
+## Hosted deployment — 28 October 2026
+
+- App: https://democratic.onrender.com/ — private host: https://democratic.onrender.com/host
+- Render service `democratic` and Neon project `democratic`, both in Frankfurt. Both use free plans; Render can take about a minute to wake after inactivity.
+- Secrets are configured in Render environment settings, not in Git. The host password matches the local ignored `.env` at deployment time.
+- Verified over HTTPS: database health, secure host login, seven-team joining and posting, 7 disclosures / 14 forged posts / 21 reactions, reveal, correction, recovery, and ending. A Render restart preserved the session, 50 posts and participant credentials. Browser host sign-in and participant joining also passed.
+- Disposable automated sessions were cleared. Create a fresh live session with an appropriate expiry for the actual conference; physical phones, projector and venue Wi-Fi still need rehearsal.
 
 ## Implemented
 

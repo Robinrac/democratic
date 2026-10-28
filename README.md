@@ -72,7 +72,7 @@ Text-only posts are limited to 500 characters; bios to 160. The server assigns a
 
 ## Hosting
 
-No public deployment was made. Static hosting of `dist` alone will not work. Production requires a reachable HTTPS Node service, persistent Postgres, `HOST_PASSWORD`, `DATABASE_URL`, `PUBLIC_ORIGIN`, and `NODE_ENV=production`. The Point plan recommends Render plus Neon; accounts, region, service tier and public URL remain operator decisions. See the operations guide for migrations, backups, retention and deletion.
+The app is deployed at https://democratic.onrender.com/ using Render and Neon in Frankfurt. Static hosting of `dist` alone will not work. Production requires a reachable HTTPS Node service, persistent Postgres, `HOST_PASSWORD`, `DATABASE_URL`, `PUBLIC_ORIGIN`, and `NODE_ENV=production`. The Point plan recommends Render plus Neon; accounts, region, service tier and public URL remain operator decisions. See the operations guide for migrations, backups, retention and deletion.
 
 ## Third-party notices
 
