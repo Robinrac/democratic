@@ -108,13 +108,12 @@ test('host-paced seven-team rehearsal on phone and laptop, with cancel, reconnec
   await expect(viewer.locator('body')).not.toContainText('Simulation-injected');
   await expect(host.getByRole('button',{name:'Reveal what happened',exact:true})).toBeDisabled();
   await release('Begin reflection'); await release('Reveal what happened');
-  await expect(phone.locator('#notice')).toContainText('No external accounts were accessed');
+  await expect(phone.locator('#notice')).toBeEmpty();
   await expect(phone.locator('.thread.mine')).toContainText('Team-authored'); await expect(phone.locator('.thread.mine')).toContainText('Simulation-injected');
   await phone.getByLabel('Publish this as a correction').check(); await phone.getByLabel('Your reason or reply').fill('We did not write those posts. Our view is still usernames.');
   await phone.getByRole('button',{name:'Publish post'}).dblclick();
   await expect(phone.locator('.thread.mine .post')).toHaveCount(8);
-  await phone.getByLabel('Better privacy boundaries',{exact:true}).check(); await phone.getByRole('button',{name:'Save team response'}).click();
-  await expect(phone.locator('#response-status')).toContainText('saved privately');
+  await expect(phone.locator('#response-form')).toHaveCount(0);
   await expect(viewer.locator('.post')).toHaveCount(50);
   for(const page of [phone,teams[1],host,projector]) expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
   await phone.screenshot({path:info.outputPath('phone-recovery.png'),fullPage:true});

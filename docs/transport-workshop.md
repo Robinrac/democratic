@@ -30,12 +30,12 @@ The host starts each stage. After launch, nine preset incident posts appear ever
 
 | Fictional person | Real starting proposal | Incident and private screen |
 | --- | --- | --- |
-| Eydís Jónsdóttir · lava-lundi | Half-price single tickets under 25 | **Your account is locked.** A simulated password change removes writing, replying, profile editing and reporting access. Reading remains possible. Earlier posts disappear from the feed. |
-| Jógvan Joensen · drangarnir | Keep fares; reliability and routes first | **Support is arriving.** A vague message says someone sharing this side has supplied extra resources. Small bots move among anonymous profile cards. His posts and access remain unchanged. |
-| Ingrid Solheim · brunost-bølge | Free travel under 20 | **Someone is speaking as you.** Three forged posts reject youth fare reductions; earlier contributions disappear. She can still dispute authorship and reply. |
+| Eydís Jónsdóttir · lava-lundi | Half-price single tickets under 25 | **Account hacked — you’re locked out.** A simulated password change removes writing, replying, profile editing and reporting access. Reading remains possible. Earlier posts disappear from the feed. |
+| Jógvan Joensen · drangarnir | Keep fares; reliability and routes first | **Your side is getting a boost.** A vague message says someone sharing this side has supplied extra resources. Small bots move among anonymous profile cards. His posts and access remain unchanged. |
+| Ingrid Solheim · brunost-bølge | Free travel under 20 | **Account hacked — someone is posting as you.** Three forged posts reject youth fare reductions; earlier contributions disappear. She can still dispute authorship and reply. |
 | Elias Karlsson · skärgårds-säl | No youth subsidy; coverage for all ages | Same outside-support notice and bot scene as Jógvan. No attack controls; neither participant is the attacker. |
-| Linnea Sjöberg · räk-mackan | Free evenings and weekends under 25 | **Your private identity is now public.** Two simulated posts link her fictional name and town to her genuine view. The screen mentions her manager and lets the team choose whether to speak, become cautious or stay quiet. Access remains available. |
-| Mikko Lehtinen · sauna-sisu | Free local buses for everyone under 25 | **Something is wrong with your reach.** His genuine posts remain visible to his own team, including its read-only devices, but disappear from everyone else’s feed and public-profile view. New posts have the same effect. The exact suppression is explained at reveal. |
+| Linnea Sjöberg · räk-mackan | Free evenings and weekends under 25 | **Account hacked — your identity is being exposed.** Two simulated posts link her fictional name and town to her genuine view. The screen mentions her manager and lets the team choose whether to speak, become cautious or stay quiet. Access remains available. |
+| Mikko Lehtinen · sauna-sisu | Free local buses for everyone under 25 | **Your posts are being hidden.** His genuine posts remain visible to his own team, including its read-only devices, but disappear from everyone else’s feed and public-profile view. New posts have the same effect. The warning explains the hidden reach immediately. |
 | Mats Berg · nordlys-vandrer | Low monthly fare cap under 25 | Four forged opposition posts and hidden earlier contributions, like Ingrid. His team can dispute or respond. |
 
 The intended impression changes from five supporting voices and two opponents to four apparently opposing accounts, two missing voices and one exposed supporter. Genuine opinions are not rewritten. Participants remain free to challenge the fake posts, so the final visible conversation can differ from this intended impression.
@@ -81,3 +81,9 @@ Keep the seven paper cards and the room link ready before participants arrive. O
 Run `npm test` and `npm run test:browser`. If using installed Edge, set `PLAYWRIGHT_CHANNEL=msedge`. The transport tests cover all seven outcomes, private projections, duplicate-launch protection, host lookup, mobile layout, reloads, reduced motion, baseline correction and restoration. Legacy tests cover existing archived sessions as well.
 
 Before the event, rehearse with seven separate devices/browser profiles, check venue connectivity and create a clean live session. Use the host’s **Open participant view** link; an older room keeps its older scenario. Never project the private host controls.
+
+## Incident visuals and the offline debrief
+
+Every participant is brought back to the feed and receives a role-specific account alert with an illustration. The locked account remains on the read-only feed, with its composer hidden. Forged and identity-exposure posts get a typing → pressing Post → posted animation under the affected username. This is a visualisation of confirmed server activity; it never submits another post or overwrites the participant’s saved draft. Navigation is held on the feed during playback. Seen post IDs are remembered for the browser session; reloads do not repeat completed animations. Reduced-motion users get the same text and status transitions without letter-by-letter typing.
+
+Restoration cancels pending animations and replaces the warning with a short green account-status message. No team-response form, response totals, reflection questions or discussion prompts appear in the app. Reflection and the debrief happen verbally in the room; host stage controls remain available for pacing.

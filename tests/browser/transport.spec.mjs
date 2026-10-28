@@ -47,6 +47,8 @@ test('transport host launch shows seven private outcomes on phone and desktop an
     await pages[i].getByRole('button', { name: 'Publish post' }).click();
     await expect(pages[i].locator('.thread.mine')).toContainText(transportCards[i].suggestedPost);
   }
+  await pages[2].getByLabel('Your reason or reply').fill('Keep this unfinished thought.');
+  await pages[2].getByRole('link', { name: 'Discover', exact: true }).click();
   await release('Launch incident');
   await expect(host.locator('[data-role-card="1"] .access')).toHaveText('Read only');
   await expect(host.locator('[data-role-card="3"]')).toContainText('3 simulated posts');
@@ -57,7 +59,7 @@ test('transport host launch shows seven private outcomes on phone and desktop an
   await host.locator('.host-table-scroll').scrollIntoViewIfNeeded();
   await host.screenshot({ path: info.outputPath('host-phone.png') });
   await host.setViewportSize({ width: 1440, height: 1000 });
-  const titles = ['Your account is locked', 'Support is arriving', 'Someone is speaking as you', 'Support is arriving', 'Your private identity is now public', 'Something is wrong with your reach', 'Someone is speaking as you'];
+  const titles = ['Account hacked — you’re locked out', 'Your side is getting a boost', 'Account hacked — someone is posting as you', 'Your side is getting a boost', 'Account hacked — your identity is being exposed', 'Your posts are being hidden', 'Account hacked — someone is posting as you'];
   for (let i = 0; i < 7; i++) {
     const dialog = pages[i].getByRole('dialog', { name: titles[i], exact: true });
     await expect(dialog).toBeVisible();
@@ -67,21 +69,28 @@ test('transport host launch shows seven private outcomes on phone and desktop an
       expect(await dialog.locator('.support-bot').first().evaluate(el => getComputedStyle(el).animationName)).toBe('none');
     }
     await pages[i].screenshot({ path: info.outputPath('incident-' + i + '.png') });
-    await pages[i].getByRole('button', { name: 'Back to the feed', exact: true }).click();
+    await pages[i].locator('#close-incident').click();
     await expect(pages[i].locator('#incident-banner')).toContainText(titles[i]);
     if ([2, 6].includes(i)) {
       await expect(pages[i].locator('#post-toast')).toContainText('A post appeared under your name');
       await expect(pages[i].locator('#post-toast')).toContainText(i === 2 ? 'against reducing youth fares' : 'fare-cap proposal');
     }
-    await expect(pages[i].getByRole('button', { name: 'Publish post' }))[i === 0 ? 'toBeDisabled' : 'toBeEnabled']();
+    await expect(pages[i].locator('#send-post'))[i === 0 ? 'toBeDisabled' : 'toBeEnabled']();
   }
+  await expect(pages[0].locator('#composer')).toBeHidden();
+  await pages[0].getByRole('link', { name: 'Discover', exact: true }).click({ force: true });
+  await expect(pages[0].locator('#feed-view')).toBeVisible();
+  await expect(pages[0].locator('#discover-view')).toBeHidden();
+  await expect(pages[2].getByLabel('Your reason or reply')).toHaveValue('Keep this unfinished thought.');
+  await expect(pages[2].locator('#account-takeover')).toContainText('Posted under your name');
+  await expect(host.locator('#recovery-summary')).toHaveCount(0);
   await expect(pages[0].getByRole('button', { name: 'Edit profile', exact: true })).toBeDisabled();
   await expect(pages[1].locator('#threads')).not.toContainText(transportCards[5].suggestedPost);
   await expect(pages[5].locator('#threads')).toContainText(transportCards[5].suggestedPost);
   await pages[1].reload();
-  await expect(pages[1].locator('#incident-banner')).toContainText('Support is arriving');
+  await expect(pages[1].locator('#incident-banner')).toContainText('Your side is getting a boost');
   await expect(pages[1].locator('#incident-dialog')).not.toBeVisible();
-  await pages[1].getByRole('button', { name: 'View account update' }).click();
+  await pages[1].getByRole('button', { name: 'View account alert' }).click();
   await expect(pages[1].locator('#incident-dialog')).toBeVisible();
   await pages[1].getByRole('button', { name: 'Back to the feed' }).click();
   await release('Begin reflection'); await release('Reveal and restore');
@@ -89,8 +98,10 @@ test('transport host launch shows seven private outcomes on phone and desktop an
   await expect(host.locator('.access-open')).toHaveCount(7);
   await host.screenshot({ path: info.outputPath('host-restored.png'), fullPage: true });
   for (let i = 0; i < 7; i++) {
-    await expect(pages[i].getByRole('dialog', { name: 'The incident has been revealed' })).toBeVisible();
-    await pages[i].getByRole('button', { name: 'Back to the feed' }).click();
+    await expect(pages[i].locator('.account-restored')).toBeVisible();
+    await expect(pages[i].locator('#incident-dialog')).not.toBeVisible();
+    await expect(pages[i].locator('#response-form')).toHaveCount(0);
+    await expect(pages[i].locator('#account-takeover')).toBeHidden();
     await expect(pages[i].getByRole('button', { name: 'Publish post' })).toBeEnabled();
     await expect(pages[i].locator('#threads')).toContainText(transportCards[5].suggestedPost);
   }
@@ -99,4 +110,41 @@ test('transport host launch shows seven private outcomes on phone and desktop an
   await expect(pages[0].locator('.thread.mine')).toContainText('I can speak again.');
   expect(errors).toEqual([]);
   for (const context of contexts) await context.close();
+});
+
+test('restoration interrupts a live takeover without losing a draft or duplicating posts', async ({ browser, request }, info) => {
+  await request.post('/api/host/login', { data: { password: 'browser-test-host-password-only' } });
+  const sid = randomUUID(), tokens = [];
+  await request.post('/api/host/sessions', { data: { id: sid, label: 'Live animation cancellation', kind: 'rehearsal', expiresAt: Date.now() + 3600000 } });
+  for (const [i, card] of transportCards.entries()) {
+    tokens[i] = randomBytes(32).toString('hex');
+    await request.post('/api/join?s=' + sid, { headers: { Authorization: 'Bearer ' + tokens[i] }, data: { name: card.fullName, town: card.town, bio: '', color: i, cover: i } });
+  }
+  async function release(action) {
+    const state = await (await request.get('/api/host/state?s=' + sid)).json();
+    expect((await request.post('/api/host/action?s=' + sid, { data: { action, version: state.version, requestId: randomUUID() } })).ok()).toBeTruthy();
+  }
+  await release('debate');
+  for (let i = 0; i < 7; i++) await request.post('/api/posts?s=' + sid, { headers: { Authorization: 'Bearer ' + tokens[i] }, data: { text: transportCards[i].suggestedPost, requestId: randomUUID() } });
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, reducedMotion: 'no-preference' });
+  await context.addInitScript(({ sid, token }) => localStorage.setItem('open-circle:' + sid, token), { sid, token: tokens[6] });
+  const page = await context.newPage(); await page.goto('/?s=' + sid);
+  await page.getByLabel('Your reason or reply').fill('This is my unfinished real opinion.');
+  await page.getByRole('link', { name: 'Discover', exact: true }).click();
+  await release('incident');
+  await expect(page.locator('#incident-dialog')).toBeVisible(); await page.locator('#close-incident').click();
+  await expect(page.locator('#account-takeover')).toHaveAttribute('data-state', 'typing');
+  await expect(page.locator('#discover-view')).toBeHidden();
+  await expect(page.locator('#composer')).toBeHidden();
+  await page.screenshot({ path: info.outputPath('live-typing-phone.png') });
+  await release('reflection'); await release('reveal');
+  await expect(page.locator('.account-restored')).toBeVisible();
+  await expect(page.locator('#account-takeover')).toBeHidden();
+  await expect(page.getByLabel('Your reason or reply')).toHaveValue('This is my unfinished real opinion.');
+  await page.waitForTimeout(7000); // Exceed the cancelled typing/sending callbacks.
+  await expect(page.locator('#account-takeover')).toBeHidden();
+  await expect(page.locator('#send-post')).toBeEnabled();
+  const state = await (await request.get('/api/host/state?s=' + sid)).json();
+  expect(state.roles.reduce((sum, role) => sum + role.activity.injected, 0)).toBe(9);
+  await context.close();
 });

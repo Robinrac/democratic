@@ -154,8 +154,8 @@ test('name errors, mentions, post alerts, ranked tags and reset work together on
   await expect(a.locator('#threads .post')).toHaveCount(2);
   for (let i = 1; i < 7; i++) await request.post('/api/posts?s=' + sid, { headers: { Authorization: 'Bearer ' + tokens[i] }, data: { text: transportCards[i].suggestedPost, stance: transportCards[i].leaning, requestId: randomUUID() } });
   await release('incident');
-  await expect(a.getByRole('dialog', { name: 'Your account is locked' })).toBeVisible();
-  await expect(b.getByRole('dialog', { name: 'Support is arriving' })).toBeVisible();
+  await expect(a.getByRole('dialog', { name: 'Account hacked — you’re locked out' })).toBeVisible();
+  await expect(b.getByRole('dialog', { name: 'Your side is getting a boost' })).toBeVisible();
   await b.getByRole('button', { name: 'Back to the feed' }).click();
   await b.getByRole('button', { name: 'Open your profile', exact: true }).click();
   await expect(b.locator('#member-dialog')).toContainText('Tagged posts · 3');

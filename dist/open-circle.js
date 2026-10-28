@@ -1,3 +1,4 @@
+import { createIncidentExperience } from './incident-experience.js';
 import { PROFILE_THEMES } from './profile-themes.js';
 import { createActivity, postText, profileStats } from './forum-activity.js';
 
@@ -69,7 +70,7 @@ function setupProfileTabs(form) {
   }, true);
 }
 const header = (hostEntry = true) => `<header class="topbar"><a class="brand forum-brand" href="${e(location.pathname + location.search)}" aria-label="Open Circle home"><img class="forum-mark" src="/brand/open-circle-mark.png" width="40" height="40" alt=""><span class="forum-wordmark">open circle<span class="brand-dot">.</span></span></a><span class="community-tagline">Different voices. Shared space.</span>${hostEntry ? '<a class="host-entry" href="/host" aria-label="Host access"><span>Host access</span></a>' : '<span class="header-spacer" aria-hidden="true"></span>'}</header>`;
-function phaseHTML(data) { const copy = data.scenario === 'transport-v1' && data.phase === 'debate' ? ['Different journeys. Different priorities.', 'Discuss your own proposal: lower fares, free travel, a fare cap or improving services first.'] : phaseCopy[data.phase] || phaseCopy.opening; return `<strong>${e(copy[0])}</strong><p>${e(copy[1])}</p>${data.paused ? '<small>Updates are paused. You can still read the conversation.</small>' : ''}`; }
+function phaseHTML(data) { if (['reflection', 'recovery', 'discussion', 'closing'].includes(data.phase)) return ''; const copy = data.scenario === 'transport-v1' && data.phase === 'debate' ? ['Different journeys. Different priorities.', 'Discuss your own proposal: lower fares, free travel, a fare cap or improving services first.'] : phaseCopy[data.phase] || phaseCopy.opening; return `<strong>${e(copy[0])}</strong><p>${e(copy[1])}</p>${data.paused ? '<small>Updates are paused. You can still read the conversation.</small>' : ''}`; }
 
 export async function startProjector() {
   const sid = new URLSearchParams(location.search).get('s');
@@ -88,6 +89,7 @@ export async function startProjector() {
       const data = await request('projector', { sid });
       document.querySelector('#question').textContent = data.question;
       document.querySelector('#phase').innerHTML = phaseHTML(data);
+      document.querySelector('#phase').hidden = !phaseHTML(data);
       document.querySelector('#progress').textContent = `${data.participants} / ${data.capacity} profiles joined · ${data.genuinePosts} contributions`;
       document.querySelector('#connection').textContent = ['localhost', '127.0.0.1'].includes(location.hostname) ? 'For phones, open the host screen using the computer’s network address before opening this projector link.' : 'Live updates connected';
     } catch (error) { document.querySelector('#connection').textContent = error.message; if (error.status === 410) { document.querySelector('#qr').replaceChildren(); document.querySelector('#progress').textContent = ''; } }
@@ -122,7 +124,7 @@ export async function startParticipant() {
     }
     document.querySelector('#profile-dialog')?.close();
     if (memberDialog.open) memberDialog.close();
-    activity.clear(); activeHashtag = null;
+    incidentExperience.clear(); activity.clear(); activeHashtag = null;
     person = null; token = uid(); localStorage.setItem(key, token);
     [':draft', ':post-id', ':composer', ':pending-post'].forEach(suffix => localStorage.removeItem(key + suffix));
     draft = { text: '', stance: null, replyTo: null, correction: false }; pendingPost = null;
@@ -144,7 +146,7 @@ export async function startParticipant() {
       <div class="feed-heading"><h1 id="feed-title">Feed</h1><span id="counts" class="people"></span></div>
       <div class="panel prompt"><span class="eyebrow">TODAY’S TOPIC</span><h2 id="question">Bus fares for young people</h2></div>
       <div class="phase" id="phase" aria-live="polite"></div><p id="error" role="alert"></p>
-      <section id="notice"></section><section id="incident-banner" aria-live="polite"></section>
+      <section id="notice"></section><section id="incident-banner" aria-live="polite"></section><section id="account-takeover" hidden></section>
       <section id="composer"></section><section id="social-tools"><div id="activity-history"></div></section>
       <div id="tag-filter"></div><div id="threads"></div>
     </section>
@@ -156,26 +158,32 @@ export async function startParticipant() {
   root.insertAdjacentHTML('beforeend', `<dialog id="join-dialog" class="join-dialog" aria-labelledby="join-title"><form id="join-form"><h2 id="join-title">Create your profile.</h2><div class="profile-preview"><div class="profile-preview-banner banner-art cover-0">${bannerArtwork(0)}</div><div class="profile-preview-content"><img id="preview-picture" src="/avatars/0.svg" alt="Selected profile picture"><span class="eyebrow">YOUR PUBLIC PROFILE</span><strong id="preview-name" aria-live="polite">@your-username</strong><p id="preview-bio">Your bio</p><small id="preview-hint">Username assigned from your paper profile.</small></div></div>${profileFields('join')}<p id="join-error" class="error" role="alert"></p><div class="join-actions"><button class="primary" type="submit">Join the forum</button></div></form></dialog>`);
   root.insertAdjacentHTML('beforeend', '<dialog id="workshop-intro-dialog" class="join-dialog welcome-dialog" aria-labelledby="welcome-title"><span class="eyebrow">YOUR PROFILE IS READY</span><h2 id="welcome-title">Today’s topic</h2><p id="welcome-topic"></p><h3>Your anonymous forum</h3><p>Share your paper character’s views using an anonymous username. Read, reply and @tag others.</p><form method="dialog"><button class="primary" autofocus>Enter the forum</button></form></dialog>');
   const welcomeDialog = document.querySelector('#workshop-intro-dialog');
-  root.insertAdjacentHTML('beforeend', '<dialog id="incident-dialog" class="join-dialog incident-dialog" aria-labelledby="incident-title"><div id="incident-content"></div><button id="close-incident" class="primary">Back to the feed</button></dialog>');
-  const incidentDialog = document.querySelector('#incident-dialog');
-  document.querySelector('#close-incident').onclick = () => incidentDialog.close();
-  function renderIncident() {
-    const notice = person?.incident, banner = document.querySelector('#incident-banner');
-    if (person?.canWrite === false) document.querySelector('#profile-dialog')?.close();
-    if (!notice) { banner.replaceChildren(); if (incidentDialog.open) incidentDialog.close(); return; }
-    const openNotice = () => {
-      const animation = notice.animation ? '<div class="support-scene" role="img" aria-label="Small automated helpers move between anonymous profile cards"><span class="support-profile">@•••</span><span class="support-profile">@•••</span><span class="support-profile">@•••</span><span class="support-bot">🤖</span><span class="support-bot">🤖</span><span class="support-bot">🤖</span><span class="support-bot">🤖</span></div>' : '';
-      document.querySelector('#incident-content').innerHTML = `<span class="eyebrow">PRIVATE ACCOUNT UPDATE</span><h2 id="incident-title">${e(notice.title)}</h2>${animation}<p>${e(notice.message)}</p>`;
-      if (!incidentDialog.open) incidentDialog.showModal();
-      sessionStorage.setItem(key + ':incident-seen', notice.id);
-    };
-    if (banner.dataset.notice !== notice.id) {
-      banner.dataset.notice = notice.id;
-      banner.innerHTML = `<div class="panel incident-notice"><h2>${e(notice.title)}</h2><p>${e(notice.message)}</p><button id="show-incident" class="secondary">View account update</button></div>`;
-      document.querySelector('#show-incident').onclick = openNotice;
+  const incidentExperience = createIncidentExperience({ root, key,
+    forceFeed() {
+      memberId = null; activeHashtag = null;
+      document.querySelectorAll('dialog[open]:not(#incident-dialog)').forEach(dialog => dialog.close());
+      setView('feed'); renderFeed();
+      document.querySelectorAll('#threads details').forEach(thread => { thread.open = true; });
+      document.querySelector('#incident-banner').scrollIntoView({ block: 'start', behavior: 'instant' });
+    },
+    updateControls: updateIncidentControls,
+    showPost(id) {
+      renderFeed();
+      const post = document.getElementById('post-' + id);
+      if (post) { post.closest('details').open = true; post.classList.add('takeover-arrived'); post.scrollIntoView({ block: 'center', behavior: 'instant' }); }
     }
-    if (sessionStorage.getItem(key + ':incident-seen') !== notice.id && !document.querySelector('dialog[open]')) openNotice();
+  });
+  const incidentDialog = document.querySelector('#incident-dialog');
+  function updateIncidentControls() {
+    document.querySelector('#composer').hidden = incidentExperience.readOnly || incidentExperience.busy;
+    document.querySelectorAll('[data-view="discover"], [data-profile], #open-profile').forEach(link => {
+      if (incidentExperience.lockedToFeed) link.setAttribute('aria-disabled', 'true'); else link.removeAttribute('aria-disabled');
+    });
+    const edit = document.querySelector('#edit-profile');
+    if (edit) edit.disabled = person?.canWrite === false || incidentExperience.busy || data?.phase === 'ended';
+    updateComposer();
   }
+  function renderIncident() { incidentExperience.update(person, data); }
   const joinDialog = document.querySelector('#join-dialog');
   const joinForm = document.querySelector('#join-form');
   setupProfileTabs(joinForm);
@@ -229,6 +237,7 @@ export async function startParticipant() {
     finally { button.disabled = false; }
   };
   function setView(view, scroll = false) {
+    if (view === 'discover' && incidentExperience.lockedToFeed) return;
     currentView = view === 'discover' ? 'discover' : 'feed';
     document.querySelector('#feed-view').hidden = currentView !== 'feed';
     document.querySelector('#discover-view').hidden = currentView !== 'discover';
@@ -331,7 +340,7 @@ export async function startParticipant() {
   function updateComposer() {
     if (person?.scope !== 'poster') return;
     const closed = !data || person.canWrite === false || ['opening', 'closing', 'ended'].includes(data.phase);
-    const locked = sending || !!pendingPost;
+    const locked = sending || !!pendingPost || incidentExperience.busy;
     const reply = data?.posts?.find(post => post.id === draft.replyTo);
     const missingReply = !!draft.replyTo && !!data?.posts && !reply;
     document.querySelector('#counter').textContent = draft.text.length + ' / 500';
@@ -343,7 +352,7 @@ export async function startParticipant() {
     document.querySelector('#correction-label').hidden = !data?.notice;
     const button = document.querySelector('#send-post');
     button.textContent = sending ? 'Publishing…' : pendingPost ? 'Retry publish' : 'Publish post ↑';
-    button.disabled = person.canWrite === false || sending || (!pendingPost && (closed || missingReply));
+    button.disabled = person.canWrite === false || incidentExperience.busy || sending || (!pendingPost && (closed || missingReply));
     document.querySelector('#post-help').textContent = person.canWrite === false ? 'Account locked. You can watch the feed. Your draft is saved for recovery.' : pendingPost ? 'Waiting for confirmation. Your contribution is saved here; retrying will not publish it twice.' : data?.phase === 'opening' ? 'Posting opens soon. Your draft stays here.' : closed ? 'The discussion is closed. Your draft stays here.' : 'Draft saved';
     renderMentionSuggestions();
   }
@@ -356,7 +365,7 @@ export async function startParticipant() {
     error(''); document.querySelector('#announcer').textContent = 'Your contribution was published.';
   }
   async function sendPost() {
-    if (sending || person?.canWrite === false) return;
+    if (sending || incidentExperience.busy || person?.canWrite === false) return;
     if (!pendingPost) {
       pendingPost = { route: draft.correction ? 'corrections' : 'posts', body: { text: draft.text, replyTo: draft.replyTo, requestId: uid() } };
       localStorage.setItem(key + ':pending-post', JSON.stringify(pendingPost));
@@ -378,7 +387,7 @@ export async function startParticipant() {
     } finally { sending = false; updateComposer(); await refresh(); }
   }
   function selectReply(post) {
-    if (pendingPost || sending || person?.scope !== 'poster' || person?.canWrite === false) return;
+    if (incidentExperience.busy || pendingPost || sending || person?.scope !== 'poster' || person?.canWrite === false) return;
     setView('feed');
     draft.replyTo = post?.id || null; saveDraft(); updateComposer();
     document.querySelector('#post-text').focus();
@@ -409,10 +418,10 @@ export async function startParticipant() {
     const content = document.querySelector('#member-content');
     if (content.innerHTML !== html) content.innerHTML = html;
   }
-  function openMember(id) { memberId = id; renderMember(); if (memberId && !memberDialog.open) memberDialog.showModal(); memberDialog.scrollTop = 0; document.querySelector('#member-title')?.focus({ preventScroll: true }); }
+  function openMember(id) { if (incidentExperience.lockedToFeed) return; memberId = id; renderMember(); if (memberId && !memberDialog.open) memberDialog.showModal(); memberDialog.scrollTop = 0; document.querySelector('#member-title')?.focus({ preventScroll: true }); }
   root.addEventListener('click', event => {
     const button = event.target.closest('[data-profile], [data-reply], [data-flag], [data-jump], [data-hashtag], [data-insert-tag], [data-insert-mention], [data-clear-tag]');
-    if (!button || !data?.posts) return;
+    if (!button || !data?.posts || incidentExperience.busy) return;
     if (button.dataset.insertTag) { insertToken('#' + button.dataset.insertTag); return; }
     if (button.dataset.insertMention) { insertToken('@' + button.dataset.insertMention); return; }
     if (button.dataset.hashtag) { if (memberDialog.open) memberDialog.close(); activeHashtag = button.dataset.hashtag; setView('feed'); renderFeed(); document.querySelector('#tag-filter').scrollIntoView({ block: 'center' }); }
@@ -466,17 +475,14 @@ export async function startParticipant() {
         if (closed) document.querySelector('#join-error').textContent = 'Joining has closed. Use your team’s original device.';
       }
       document.querySelector('#question').textContent = data.question;
-      const phase = document.querySelector('#phase'), next = phaseHTML(data); if (phase.innerHTML !== next) phase.innerHTML = next; phase.hidden = ['debate', 'exposure', 'forgery', 'reactions', 'discussion'].includes(data.phase) && !data.paused;
+      const phase = document.querySelector('#phase'), next = phaseHTML(data); if (phase.innerHTML !== next) phase.innerHTML = next; phase.hidden = !['opening', 'ended'].includes(data.phase);
       document.querySelector('#counts').textContent = data.participants + (data.participants === 1 ? ' member' : ' members');
       document.querySelector('#connection').textContent = 'Connected';
       const notice = document.querySelector('#notice');
-      if (data.notice && !notice.innerHTML) {
-        notice.innerHTML = `<section class="panel notice"><h2>What happened in Open Circle</h2><p>${e(data.notice)}</p>${person?.scope === 'poster' ? `<form id="response-form" class="recovery-options"><fieldset><legend>What would help your team participate again?</legend>${[['correct-record','A visible correction'],['protect-privacy','Better privacy boundaries'],['review-access','Review who can use the account'],['moderation','Clear moderation and reporting'],['take-a-break','Time away from the discussion']].map(([value,label]) => `<label><input name="response" type="radio" value="${value}" ${person.response === value ? 'checked' : ''} required>${label}</label>`).join('')}</fieldset><button>Save team response</button><p id="response-status" role="status">${person.response ? 'Team response saved privately.' : ''}</p></form>` : ''}</section>`;
-        const form = document.querySelector('#response-form'); if (form) form.onsubmit = ev => { ev.preventDefault(); act(ev.submitter, async () => { const choice = new FormData(form).get('response'); await api('responses', { choice }); person.response = choice; document.querySelector('#response-status').textContent = 'Team response saved privately.'; }); };
-      } else if (!data.notice) notice.innerHTML = '';
+      notice.replaceChildren();
       renderIncident();
       updateComposer();
-      document.querySelectorAll('#response-form input, #response-form button, #edit-profile').forEach(control => { control.disabled = data.phase === 'ended' || person?.canWrite === false; });
+      updateIncidentControls();
       document.querySelector('#social-tools').hidden = !person; document.querySelector('#trending').hidden = !person;
       if (person) {
         const trends = document.querySelector('#trending');
@@ -495,7 +501,7 @@ export async function startParticipant() {
       renderFeed(); if (memberId) renderMember();
     } catch (err) {
       document.querySelector('#connection').textContent = err.message;
-      if (err.status === 410) { welcomeDialog.close(); activity.clear(); document.querySelector('#social-tools').hidden = true; document.querySelector('#trending').hidden = true; document.querySelector('#tag-filter').replaceChildren(); person = null; data = null; pendingPost = null; if (incidentDialog.open) incidentDialog.close(); document.querySelector('#incident-banner').replaceChildren(); if (memberDialog.open) memberDialog.close(); if (joinDialog.open) joinDialog.close(); [key,key+':draft',key+':post-id',key+':composer',key+':pending-post'].forEach(k=>localStorage.removeItem(k)); document.querySelector('#team').innerHTML = '<p>This session has been cleared or expired.</p>'; document.querySelector('#composer').innerHTML = ''; document.querySelector('#threads').innerHTML = ''; document.querySelector('#profiles').innerHTML = ''; document.querySelector('#sidebar-other-members').replaceChildren(); document.querySelector('#notice').innerHTML = ''; document.querySelector('#phase').textContent = 'This session has been cleared or expired.'; }
+      if (err.status === 410) { incidentExperience.clear(); welcomeDialog.close(); activity.clear(); document.querySelector('#social-tools').hidden = true; document.querySelector('#trending').hidden = true; document.querySelector('#tag-filter').replaceChildren(); person = null; data = null; pendingPost = null; if (incidentDialog.open) incidentDialog.close(); document.querySelector('#incident-banner').replaceChildren(); if (memberDialog.open) memberDialog.close(); if (joinDialog.open) joinDialog.close(); [key,key+':draft',key+':post-id',key+':composer',key+':pending-post'].forEach(k=>localStorage.removeItem(k)); document.querySelector('#team').innerHTML = '<p>This session has been cleared or expired.</p>'; document.querySelector('#composer').innerHTML = ''; document.querySelector('#threads').innerHTML = ''; document.querySelector('#profiles').innerHTML = ''; document.querySelector('#sidebar-other-members').replaceChildren(); document.querySelector('#notice').innerHTML = ''; document.querySelector('#phase').textContent = 'This session has been cleared or expired.'; }
     } finally { busy = false; }
   }
   try { person = await api('me'); membershipChecked = true; } catch (err) { if (err.status === 401) { membershipChecked = true; forgetTeam(); } }

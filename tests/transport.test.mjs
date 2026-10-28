@@ -58,7 +58,7 @@ test('transport incident is atomic, private, differentiated, persistent and reve
   assert.equal(notices[0].canWrite, false);
   for (const route of ['posts', 'profile', 'flags', 'viewer']) assert.equal((await w.call(route, { requestId: randomUUID(), text: 'Locked attempt', stance: 'lower-fares' }, { sid, token: teams[0].token })).status, 403);
   assert.equal(notices[1].incident.animation, true); assert.equal(notices[3].incident.animation, true);
-  assert.equal(notices[2].incident.title, 'Someone is speaking as you');
+  assert.equal(notices[2].incident.title, 'Account hacked — someone is posting as you');
   assert.equal(notices[4].canWrite, true);
   assert.match(notices[5].incident.message, /your screen/);
   assert.equal((await w.call('me', undefined, { sid, token: viewer })).incident, undefined);
@@ -93,8 +93,8 @@ test('transport incident is atomic, private, differentiated, persistent and reve
   assert.equal(restored.posts.find(p => p.id === mistaken.post.id).hidden, true); // Reveal does not undo host moderation.
   assert.ok(restored.posts.some(p => p.id === suppressed.post.id));
   assert.equal((await w.call('me', undefined, { sid, token: teams[0].token })).canWrite, true);
-  assert.match((await w.call('me', undefined, { sid, token: teams[5].token })).incident.message, /hidden from everyone else/);
-  assert.match((await w.call('me', undefined, { sid, token: teams[1].token })).incident.message, /did not perform/);
+  assert.match((await w.call('me', undefined, { sid, token: teams[5].token })).incident.message, /Everyone can see your contributions again/);
+  assert.match((await w.call('me', undefined, { sid, token: teams[1].token })).incident.message, /account access are unchanged/);
   const hostRestored = await w.state(sid);
   assert.ok(hostRestored.roles.every(r => r.incidentState === 'restored' && r.postingAccess === 'open'));
   assert.equal(hostRestored.roles[5].activity.hidden, 0);

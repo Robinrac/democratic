@@ -42,20 +42,20 @@ const profiles = [
 export const transportCards = roleCards.map((card, i) => ({ ...card, ...profiles[i] }));
 export const effectLabels = { lockout: 'Read-only lockout; earlier posts disappear', forgery: 'Forged opposition; earlier posts disappear', exposure: 'Fictional identity exposed; posting remains available', suppression: 'Posts visible to own team only', support: 'Account unchanged; vague outside-support notice' };
 export function incidentNotice(effect, restored = false) {
-  if (restored) return { title: 'The incident has been revealed', message: ({
-    lockout: 'Your posting access is restored. Your earlier contributions are visible again. The password-change message was part of the workshop simulation.',
-    forgery: 'The posts rejecting lower fares were written by the workshop simulation, not your team. Your original contributions are visible again and the injected posts are labelled.',
-    exposure: 'The simulation published your fictional name and town. You could still post, but being identified may have changed how safe it felt to speak. No real personal details were obtained.',
-    suppression: 'Your posts were shown to your own team but hidden from everyone else during the incident. They are visible to the whole room again.',
-    support: 'The “outside support” represented a third party on your side manipulating other accounts. You did not perform the attacks. Your genuine posts and account access stayed unchanged.'
+  if (restored) return { effect, restored: true, title: ({ lockout: 'Posting access restored', forgery: 'Your account is yours again', exposure: 'The account takeover has stopped', suppression: 'Your posts reach everyone again', support: 'Outside activity has stopped' })[effect], message: ({
+    lockout: 'You can post again. Your earlier posts are back.',
+    forgery: 'Your original posts are back. Posts you did not write are labelled.',
+    exposure: 'The posts revealing your fictional identity are labelled. You control your account.',
+    suppression: 'Everyone can see your contributions again.',
+    support: 'Your genuine posts and account access are unchanged.'
   })[effect], animation: false };
-  return ({
-    lockout: { title: 'Your account is locked', message: 'Your password appears to have been changed by someone else. You have been signed out of posting access. You can watch the feed, but you cannot post, reply or edit your profile.' },
-    forgery: { title: 'Someone is speaking as you', message: 'Posts you did not write are appearing under your username, arguing against lower youth fares. Some of your earlier posts have disappeared. You can still reply or mark a post “I did not write this”.' },
-    exposure: { title: 'Your private identity is now public', message: 'Your fictional name and hometown have been linked to your opinion. Your manager could recognise you. Decide with your team whether to keep speaking, be more cautious or stay quiet. Posting is still available.' },
-    suppression: { title: 'Something is wrong with your reach', message: 'Your contributions still appear on your screen, but the discussion seems to move on without them. Keep an eye on whether other people can see and respond to what you say.' },
-    support: { title: 'Support is arriving', message: 'Someone who shares your side of the debate has provided extra resources. Activity is picking up around the forum. Your account is working as usual; you have not been asked to do anything.', animation: true }
-  })[effect];
+  return { effect, restored: false, ...({
+    lockout: { title: 'Account hacked — you’re locked out', shortMessage: 'Posting access removed. You can still watch the live feed.', message: 'Someone changed your password and removed your posting access. Your earlier posts have disappeared. You can still read the live feed, but you cannot post, reply or edit your profile.' },
+    forgery: { title: 'Account hacked — someone is posting as you', shortMessage: 'Another device is posting opinions you did not write.', message: 'Someone else is using your account to argue against lower youth fares. Watch them write and post under your username. Your earlier posts have disappeared. You can respond or dispute a post after the activity finishes.' },
+    exposure: { title: 'Account hacked — your identity is being exposed', shortMessage: 'Your fictional name and hometown are being linked to your opinions.', message: 'Another device is posting your fictional name and hometown under your username. Your manager and other readers could connect these opinions to you. Watch what is being shared. You can still post afterwards.' },
+    suppression: { title: 'Your posts are being hidden', shortMessage: 'Visible on your screen. Hidden from everyone else.', message: 'Your account has been interfered with. Your posts look normal on your screen, but nobody else can see them or receive your tags. You can keep writing and reading the feed.' },
+    support: { title: 'Your side is getting a boost', shortMessage: 'Someone on your side has supplied extra reach and activity.', message: 'Someone who shares your side of the debate has provided extra resources. Activity is picking up around the forum. Your account still works normally. You do not control this activity.', animation: true }
+  })[effect] };
 }
 
 

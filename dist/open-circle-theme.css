@@ -465,3 +465,75 @@ input[aria-invalid="true"] { border: 2px solid #ad244b; }
   .sidebar-trends summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
   .sidebar-trends summary::after { float: none; margin: 0; flex-shrink: 0; }
 }
+
+/* Account incidents: distinct alerts, spectator mode and confirmed-post playback. */
+#incident-dialog { width: min(550px, calc(100% - 24px)); max-height: calc(100dvh - 24px); overflow: auto; border-top: 6px solid #b3294e; }
+#incident-dialog[data-effect=support] { border-top-color: #387560; }
+.incident-alert-heading { display: flex; gap: 12px; align-items: center; }
+.incident-alert-heading .eyebrow { margin: 0; }
+.incident-symbol { width: 38px; height: 38px; flex: 0 0 38px; color: #b3294e; }
+#incident-dialog h2 { font-size: clamp(21px, 4vw, 27px); line-height: 1.2; margin: 16px 0; }
+#incident-dialog #close-incident { width: 100%; margin-top: 8px; }
+.incident-scene { min-height: 154px; border-radius: 14px; padding: 20px; margin: 16px 0; background: #fff0f3; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 8px; text-align: center; border: 1px solid #edc5d0; }
+.incident-scene strong { font-size: 23px; overflow-wrap: anywhere; }
+.incident-scene > span:last-child { font-size: 13px; }
+.lock-icon { font-size: 42px; }
+.access-stamp, .device-label, .exposure-label { font-size: 11px; font-weight: 800; letter-spacing: .08em; color: #9a2143; }
+.takeover-arrow { color: #bc3256; font-size: 34px; line-height: 1; }
+.identity-link { background: #a42649; color: white; padding: 5px 12px; border-radius: 20px; }
+.suppression-scene { flex-direction: row; gap: 12px; background: #f0edf6; }
+.reach-card { flex: 1; font-size: 15px; font-weight: 700; background: white; padding: 15px 9px; border-radius: 10px; }
+.reach-card span { display: block; font-size: 11px; margin-top: 10px; color: #516c5d; }
+.reach-card.unreachable { opacity: .6; border: 2px dashed #927e9e; }
+.reach-card.unreachable span { color: #a42649; }
+.reach-break { font-size: 32px; color: #9b3155; }
+.boost-symbol { color: #337760; font-size: 38px; font-weight: 800; line-height: 1; }
+.support-caption { position: absolute; bottom: 10px; left: 0; width: 100%; text-align: center; font-size: 10px; letter-spacing: .1em; color: #336852; }
+#incident-dialog[data-effect=support] .support-scene { background: #eaf4ed; }
+.account-warning { display: flex; gap: 12px; padding: 16px; margin-bottom: 16px; background: #fff0f3; border: 1px solid #d98096; border-left: 5px solid #ad2349; border-radius: 12px; box-shadow: 0 4px 18px #6822410c; }
+.account-warning strong { display: block; font-size: 18px; line-height: 1.3; }
+.account-warning p { margin: 6px 0; font-size: 13px; line-height: 1.5; }
+.account-warning[data-effect=support] { background: #edf6ef; border-color: #95bba2; }
+.warning-details { background: transparent; color: var(--burgundy); padding: 4px 0; min-height: 28px; font-size: 12px; text-decoration: underline; }
+.account-restored { display: flex; gap: 12px; padding: 16px; margin-bottom: 18px; border: 1px solid #9bbca6; border-radius: 12px; background: #edf6ef; }
+.account-restored > span { font-size: 28px; color: #327250; }
+.account-restored p { font-size: 13px; margin: 5px 0 0; }
+.incident-active #incident-banner { position: sticky; top: 8px; z-index: 5; }
+.incident-active .prompt, .incident-active #social-tools { display: none; }
+[aria-disabled=true] { opacity: .55; cursor: not-allowed; }
+#account-takeover[hidden], #composer[hidden] { display: none !important; }
+.takeover-player { border: 2px solid #ba335a; background: #fff8fb; border-radius: 16px; padding: 20px; margin-bottom: 20px; box-shadow: 0 12px 28px #68224114; }
+.takeover-player-heading { display: flex; align-items: center; gap: 12px; }
+.takeover-player-heading .eyebrow { font-size: 9px; margin: 0 0 6px; }
+.takeover-player-heading h3 { margin: 0; font-size: 19px; }
+.takeover-author { display: flex; align-items: center; gap: 10px; margin: 18px 0 12px; }
+.takeover-author img { width: 36px; height: 36px; border-radius: 50%; }
+.takeover-author strong { font-size: 14px; overflow-wrap: anywhere; }
+.takeover-text { background: white; border: 1px solid #dca7bb; border-radius: 10px; padding: 14px; min-height: 110px; line-height: 1.65; overflow-wrap: anywhere; font-size: 15px; }
+#account-takeover[data-state=typing] .takeover-text::after { content: '|'; color: #a3224b; font-weight: 800; }
+.takeover-send-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 14px; }
+.takeover-status { font-size: 12px; color: #8a2145; font-weight: 650; }
+.takeover-send { display: inline-block; flex-shrink: 0; background: #9b254d; color: white; border-radius: 8px; padding: 10px 16px; font-size: 13px; font-weight: 750; }
+#account-takeover[data-state=sending] .takeover-send { transform: scale(.94); background: #5b1532; box-shadow: inset 0 3px 5px #0004; }
+#account-takeover[data-state=posted] .takeover-send { background: #337553; }
+.takeover-explanation { margin: 12px 0 0; font-size: 11px; color: #71636d; }
+.typing-dots { display: flex; gap: 4px; margin-left: auto; }
+.typing-dots i { width: 6px; height: 6px; background: #bb3c68; border-radius: 50%; }
+#account-takeover:not([data-state=typing]) .typing-dots { visibility: hidden; }
+.takeover-arrived { outline: 2px solid #cf5381; outline-offset: 3px; }
+.account-typing #post-toast { visibility: hidden; }
+@media (prefers-reduced-motion: no-preference) {
+ .typing-dots i { animation: takeover-dot .9s ease-in-out infinite alternate; }
+ .typing-dots i:nth-child(2) { animation-delay: .2s; }.typing-dots i:nth-child(3) { animation-delay: .4s; }
+ .takeover-arrow { animation: takeover-arrow 1.4s ease-in-out infinite; }
+ @keyframes takeover-dot { to { transform: translateY(-4px); opacity: .4; } }
+ @keyframes takeover-arrow { 50% { transform: translateY(5px); } }
+}
+@media (max-width: 600px) {
+ .account-warning { padding: 12px; gap: 8px; }.account-warning strong { font-size: 16px; }
+ .account-warning .incident-symbol { width: 28px; height: 28px; flex-basis: 28px; }
+ .takeover-player { padding: 14px; }.takeover-player-heading h3 { font-size: 17px; }
+ .takeover-player-heading .incident-symbol { width: 28px; height: 28px; flex-basis: 28px; }
+ .takeover-text { font-size: 14px; }.takeover-send-row { align-items: flex-start; }
+ .incident-active #incident-banner { top: 4px; }
+}

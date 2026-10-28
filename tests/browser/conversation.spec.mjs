@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { roleCards } from '../../workshop/roles.mjs';
 
-test('profile browsing, reply drafts, interrupted sends and private saved responses work across reloads', async ({ browser, request }, info) => {
+test('profile browsing, reply drafts, interrupted sends and offline recovery work across reloads', async ({ browser, request }, info) => {
   await request.post('/api/host/login', { data: { password: 'browser-test-host-password-only' } });
   const sid = randomUUID();
   await request.post('/api/host/sessions', { data: { id: sid, label: 'Conversation resilience', scenario: 'legacy', kind: 'rehearsal', expiresAt: Date.now() + 86400000 } });
@@ -71,18 +71,14 @@ test('profile browsing, reply drafts, interrupted sends and private saved respon
   await expect(page.getByLabel('Your reason or reply')).toHaveValue('');
   await expect(page.locator('#threads .post')).toHaveCount(3);
   for (const action of ['exposure', 'forgery', 'reactions', 'reflection', 'reveal']) await release(action);
-  await page.getByLabel('Better privacy boundaries', { exact: true }).check();
-  await page.getByRole('button', { name: 'Save team response' }).click();
-  await expect(page.locator('#response-status')).toContainText('saved privately');
+  await expect(page.locator('#response-form')).toHaveCount(0);
+  await expect(page.locator('#notice')).toBeEmpty();
   await page.reload();
-  await expect(page.getByLabel('Better privacy boundaries', { exact: true })).toBeChecked();
-  await expect(page.locator('#response-status')).toContainText('saved privately');
-  const host = await (await request.get('/api/host/state?s=' + sid)).json();
-  expect(host.recovery.count).toBe(1);
+  await expect(page.locator('#response-form')).toHaveCount(0);
   await release('discussion'); await release('closing'); await release('end');
   await expect(page.getByRole('button', { name: 'Publish post' })).toBeDisabled();
   await expect(page.getByRole('button', { name: 'Edit profile', exact: true })).toBeDisabled();
-  await expect(page.getByRole('button', { name: 'Save team response' })).toBeDisabled();
+  await expect(page.locator('#response-form')).toHaveCount(0);
   expect(errors).toEqual([]);
   await context.close();
 });
