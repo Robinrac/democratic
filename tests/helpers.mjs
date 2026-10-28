@@ -7,7 +7,7 @@ export const paperProfile = (index = 0) => ({ name: roleCards[index].fullName, t
 export const password = 'test-only-host-password-very-long';
 export const secret = () => randomBytes(32).toString('hex');
 export async function workshop(t, options = {}) {
-  const server = await createWorkshopServer({ hostPassword: password, dataDir: ':memory:', databaseUrl: null, production: false, publicOrigin: null, ...options });
+  const server = await createWorkshopServer({ hostPassword: password, dataDir: ':memory:', databaseUrl: null, production: false, publicOrigin: null, incidentStepMs: 0, ...options });
   server.listen(0, '127.0.0.1'); await once(server, 'listening');
   let stopped = false;
   const stop = async () => { if (!stopped) { stopped = true; await server.shutdown(); } };

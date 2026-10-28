@@ -1,8 +1,8 @@
 // Parse plain text on the server. Client-supplied mention/tag metadata is ignored.
 export const starterTags = ['AffordableJourneys', 'ServiceFirst', 'FreeUnder25', 'KeepFares', 'FreeUnder20', 'FareCap'];
 export function socialText(text, roles) {
-  const handles = new Set([...text.matchAll(/(?<![\p{L}\p{N}_@])@([a-z0-9]+(?:-[a-z0-9]+)*)(?![\w-])/giu)].map(match => match[1].toLowerCase()));
-  const hashtags = [...new Set([...text.matchAll(/(?<![\p{L}\p{N}_])#([\p{L}\p{N}_]{1,32})(?![\p{L}\p{N}_])/gu)].map(match => match[1].toLowerCase()))];
+  const handles = new Set([...text.matchAll(/(?<![\p{L}\p{N}_@])@([\p{L}\p{M}\p{N}]+(?:-[\p{L}\p{M}\p{N}]+)*)(?![\p{L}\p{M}\p{N}_-])/giu)].map(match => match[1].normalize('NFC').toLowerCase()));
+  const hashtags = [...new Set([...text.matchAll(/(?<![\p{L}\p{N}_])#([\p{L}\p{N}_]{1,32})(?![\p{L}\p{N}_])/gu)].map(match => match[1].normalize('NFC').toLowerCase()))];
   return { mentions: roles.filter(role => role.claimed && handles.has(role.username)).map(role => role.id), hashtags };
 }
 export function trendingTags(posts, seeded = true) {

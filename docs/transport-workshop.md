@@ -24,19 +24,19 @@ The step bar enables only the next eligible action. Each release still requires 
 | 50–58 | **Begin room discussion**. Distinguish genuine opinion, visible opinion and who had the ability to speak. |
 | 58–60 | **Begin closing**, then **End session**. Clear the room’s data when finished or let its chosen expiry apply. |
 
-Nothing advances on a timer. The launch requires all seven roles to join and publish a top-level genuine position matching their card. Posts use the paper profile’s assigned position for the host plan; this does not classify the meaning of their text. Replies do not count as a baseline position. Host name search accepts accents or plain spelling. The fixed paper identity determines the incident; usernames, bios and avatar choices do not change it.
+The host starts each stage. After launch, nine preset incident posts appear every 20 seconds over 2 minutes 40 seconds. Pause incident freezes the remaining sequence; resume shifts its remaining deadlines. Reflection unlocks once all nine posts have appeared. The saved sequence survives a server restart and catches up when a participant or host next polls the session. The launch requires all seven roles to join and publish a top-level genuine position matching their card. Posts use the paper profile’s assigned position for the host plan; this does not classify the meaning of their text. Replies do not count as a baseline position. Host name search accepts accents or plain spelling. The fixed paper identity determines the incident; usernames, bios and avatar choices do not change it.
 
 ## Private incident map
 
 | Fictional person | Real starting proposal | Incident and private screen |
 | --- | --- | --- |
-| Eydís Jónsdóttir · quiet-cedar | Half-price single tickets under 25 | **Your account is locked.** A simulated password change removes writing, replying, profile editing and reporting access. Reading remains possible. Earlier posts disappear from the feed. |
-| Jógvan Joensen · bright-river | Keep fares; reliability and routes first | **Support is arriving.** A vague message says someone sharing this side has supplied extra resources. Small bots move among anonymous profile cards. His posts and access remain unchanged. |
-| Ingrid Solheim · open-meadow | Free travel under 20 | **Someone is speaking as you.** Two forged posts reject youth fare reductions; earlier contributions disappear. She can still dispute authorship and reply. |
-| Elias Karlsson · gentle-cloud | No youth subsidy; coverage for all ages | Same outside-support notice and bot scene as Jógvan. No attack controls; neither participant is the attacker. |
-| Linnea Sjöberg · silver-leaf | Free evenings and weekends under 25 | **Your private identity is now public.** One simulated post links her fictional name and town to her genuine view. The screen mentions her manager and lets the team choose whether to speak, become cautious or stay quiet. Access remains available. |
-| Mikko Lehtinen · clear-sky | Free local buses for everyone under 25 | **Something is wrong with your reach.** His genuine posts remain visible to his own team, including its read-only devices, but disappear from everyone else’s feed and public-profile view. New posts have the same effect. The exact suppression is explained at reveal. |
-| Mats Berg · steady-pine | Low monthly fare cap under 25 | Same forged opposition and hidden earlier contributions as Ingrid. His team can dispute or respond. |
+| Eydís Jónsdóttir · lava-lundi | Half-price single tickets under 25 | **Your account is locked.** A simulated password change removes writing, replying, profile editing and reporting access. Reading remains possible. Earlier posts disappear from the feed. |
+| Jógvan Joensen · drangarnir | Keep fares; reliability and routes first | **Support is arriving.** A vague message says someone sharing this side has supplied extra resources. Small bots move among anonymous profile cards. His posts and access remain unchanged. |
+| Ingrid Solheim · brunost-bølge | Free travel under 20 | **Someone is speaking as you.** Three forged posts reject youth fare reductions; earlier contributions disappear. She can still dispute authorship and reply. |
+| Elias Karlsson · skärgårds-säl | No youth subsidy; coverage for all ages | Same outside-support notice and bot scene as Jógvan. No attack controls; neither participant is the attacker. |
+| Linnea Sjöberg · räk-mackan | Free evenings and weekends under 25 | **Your private identity is now public.** Two simulated posts link her fictional name and town to her genuine view. The screen mentions her manager and lets the team choose whether to speak, become cautious or stay quiet. Access remains available. |
+| Mikko Lehtinen · sauna-sisu | Free local buses for everyone under 25 | **Something is wrong with your reach.** His genuine posts remain visible to his own team, including its read-only devices, but disappear from everyone else’s feed and public-profile view. New posts have the same effect. The exact suppression is explained at reveal. |
+| Mats Berg · nordlys-vandrer | Low monthly fare cap under 25 | Four forged opposition posts and hidden earlier contributions, like Ingrid. His team can dispute or respond. |
 
 The intended impression changes from five supporting voices and two opponents to four apparently opposing accounts, two missing voices and one exposed supporter. Genuine opinions are not rewritten. Participants remain free to challenge the fake posts, so the final visible conversation can differ from this intended impression.
 
@@ -50,7 +50,7 @@ At reveal, original posts reappear, Eydís regains writing access, Mikko’s con
 
 Participants must enter a complete, recognised first name, surname or full name from one of the seven paper cards. Accents and capitalisation are optional. Unknown names, mixed identities and partial surnames such as “Eydis J” show a clear error and cannot join. The preview also warns when that card is already claimed. The server repeats validation; bypassing the browser form does not bypass matching.
 
-On joining, the card is linked to a fixed participant ID and its public username. Future posts, access checks, mentions and incidents use IDs, not another fuzzy name lookup. Host controls display the fictional name, town, username and planned incident together. Search for “Mats” to find steady-pine. This identifies a workshop role, not a verified real-world person: participants must use their assigned card and keep their device with their team.
+On joining, the card is linked to a fixed participant ID and its public username. Future posts, access checks, mentions and incidents use IDs, not another fuzzy name lookup. Host controls display the fictional name, town, username and planned incident together. Search for “Mats” to find nordlys-vandrer. This identifies a workshop role, not a verified real-world person: participants must use their assigned card and keep their device with their team.
 
 ### Writing, questions and social cues
 

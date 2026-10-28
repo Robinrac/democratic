@@ -40,7 +40,8 @@ function phaseLabel(phase) {
 }
 function nextHelp() {
   if (sessionStorage.getItem(pendingKey())) return 'Confirm the pending release below before continuing.';
-  if (state.paused) return 'Resume when ready. Participants can still use the forum.';
+  if (state.paused) return state.incidentTimeline?.pending ? 'Incident paused. Resume to continue the scheduled posts.' : 'Resume when ready. Participants can still use the forum.';
+  if (state.incidentTimeline?.pending) return `${state.incidentTimeline.published}/${state.incidentTimeline.total} preset posts published · ${state.incidentTimeline.remainingSeconds}s remaining. Reflection unlocks when the sequence finishes.`;
   if (state.phase === 'opening') return 'Share the participant link and paper profiles. Open debate when the room is ready.';
   if (state.scenario === 'transport-v1' && state.phase === 'debate') {
     const ready = state.targets.filter(t => t.ready && t.matchesCard).length;
@@ -74,7 +75,7 @@ function render() {
   const focusedId = container.contains(document.activeElement) ? document.activeElement.id : null;
   const joinLink = location.origin + '/?s=' + encodeURIComponent(sid);
   container.innerHTML = `<section class="panel host-room"><div><span class="eyebrow">PRIVATE HOST · ${e(state.kind)}</span><h2>${e(state.label)}</h2><p>${state.scenario === 'transport-v1' ? 'Bus fares for young people' : 'Earlier workshop scenario'}</p></div><div class="host-links"><a href="${e(joinLink)}" target="_blank" rel="noopener">Participant link ↗</a><a href="${e(joinLink)}&presenter=1" target="_blank" rel="noopener">Open read-only projector ↗</a></div></section>
-  <section class="panel host-run"><div class="host-section-heading"><div><h2>Run the workshop</h2><p>${e(phaseLabel(state.phase))}${state.paused ? ' · Paused' : ''} · ${state.participants}/${state.capacity} joined</p></div><button id="pause" class="secondary" ${state.phase === 'ended' ? 'disabled' : ''}>${state.paused ? 'Resume' : 'Pause'} next release</button></div><ol class="host-steps" aria-label="Workshop steps">${state.actions.map((a, i) => {
+  <section class="panel host-run"><div class="host-section-heading"><div><h2>Run the workshop</h2><p>${e(phaseLabel(state.phase))}${state.paused ? ' · Paused' : ''} · ${state.participants}/${state.capacity} joined</p></div><button id="pause" class="secondary" ${state.phase === 'ended' ? 'disabled' : ''}>${state.paused ? 'Resume' : 'Pause'} ${state.incidentTimeline?.pending ? 'incident' : 'next release'}</button></div><ol class="host-steps" aria-label="Workshop steps">${state.actions.map((a, i) => {
     const current = state.actions.findIndex(step => step.from === state.phase);
     const done = state.phase === 'ended' || (current >= 0 && i < current);
     return `<li class="${done ? 'step-done' : a.from === state.phase ? 'step-current' : ''}"><span class="step-number" aria-hidden="true">${done ? '✓' : i + 1}</span><button id="action-${e(a.id)}" data-action="${e(a.id)}" aria-label="${e(a.label)}" ${a.enabled && !sessionStorage.getItem(pendingKey()) ? '' : 'disabled'}>${e(a.label)}</button><small>${done ? 'Done' : a.from === state.phase ? 'Next step' : 'Later'}</small></li>`;
@@ -128,7 +129,7 @@ async function confirmAction(id) {
   const payload = { action: id, version: state.version, requestId: uid(), includeFallback: [...includes] };
   const dialog = document.querySelector('#confirm-dialog');
   document.querySelector('#confirm-title').textContent = action.label;
-  document.querySelector('#confirm-copy').innerHTML = `<p><strong>${e(state.label)}</strong></p>${action.count ? `<p>${action.count} simulated posts will be published.</p><ul>${state.targets.map(t => `<li>${e(t.name || t.username)} — ${e(t.source)}</li>`).join('')}</ul>` : ''}<p>${id === 'reveal' ? 'Restore access and original posts, label the simulation, and open corrections.' : id === 'debate' ? 'Open posting for everyone who has joined.' : id === 'end' ? 'Close participation for this session.' : `Move the room to ${e(phaseLabel(action.to).toLowerCase())}.`}</p>`;
+  document.querySelector('#confirm-copy').innerHTML = `<p><strong>${e(state.label)}</strong></p>${action.count ? `<p>${action.count} simulated posts will be published${id === 'incident' ? ' over 2 minutes 40 seconds' : ''}.</p><ul>${state.targets.map(t => `<li>${e(t.name || t.username)} — ${e(t.source)}</li>`).join('')}</ul>` : ''}<p>${id === 'reveal' ? 'Restore access and original posts, label the simulation, and open corrections.' : id === 'debate' ? 'Open posting for everyone who has joined.' : id === 'end' ? 'Close participation for this session.' : `Move the room to ${e(phaseLabel(action.to).toLowerCase())}.`}</p>`;
   dialog.returnValue = ''; dialog.showModal();
   dialog.onclose = () => { if (dialog.returnValue === 'confirm') work(() => commit(payload)); };
 }

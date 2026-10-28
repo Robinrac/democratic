@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { roleCards } from './roles.mjs';
 import { identifyProfileByName } from './profile-matching.mjs';
-import { transportCards, transportQuestion, effectLabels, incidentNotice } from './transport.mjs';
+import { transportCards, transportUsernames, transportQuestion, effectLabels, incidentNotice, incidentScript } from './transport.mjs';
 import { socialText, trendingTags } from './social.mjs';
 
 const isTransport = state => state.scenario === 'transport-v1';
@@ -71,7 +71,7 @@ export function makeSession({ id, label, kind, expiresAt, scenario = 'transport-
   if (!Number.isSafeInteger(expiresAt) || expiresAt < Date.now() + 60000 || expiresAt > Date.now() + 7 * 86400000) fail(400, 'Choose a deletion deadline between one minute and seven days from now.');
   const state = { id: requestId(id), label: text(label, 80), kind, expiresAt, phase: 'opening', version: 0, paused: false, roles: [], accounts: [], posts: [], flags: [], targets: [], events: {}, credentials: [], responses: {}, createdAt: new Date().toISOString() };
   state.scenario = scenario;
-  state.roles = cardsFor(state).map((card, i) => ({ id: randomUUID(), card: card.card, username: usernames[i], bio: '', color: i, cover: i, claimed: false }));
+  state.roles = cardsFor(state).map((card, i) => ({ id: randomUUID(), card: card.card, username: (isTransport(state) ? transportUsernames : usernames)[i], bio: '', color: i, cover: i, claimed: false }));
   state.accounts = ['garden-visitor', 'river-reader', 'circle-team'].map(username => ({ id: randomUUID(), username, bio: 'Open Circle member', color: 1, cover: 1 }));
   return { state };
 }
@@ -149,7 +149,8 @@ export function hostView(state, includeFallback = []) {
     };
   }),
     targets: selected, postCount: state.posts.length,
-    actions: actionsFor(state).map(a => ({ ...a, enabled: !state.paused && state.phase === a.from && (a.id !== 'exposure' || selected.length > 0) && (a.id !== 'incident' || selected.every(t => t.ready && t.matchesCard)), count: a.id === 'incident' ? 5 : a.multiplier * selected.length, names: selected.map(t => t.username) })),
+    incidentTimeline: state.incidentQueue ? { total: state.incidentQueue.length, published: state.incidentQueue.filter(item => item.postId).length, pending: incidentPending(state), remainingSeconds: Math.max(0, Math.ceil((state.incidentQueue.at(-1).dueAt - (state.incidentPausedAt || Date.now())) / 1000)) } : null,
+    actions: actionsFor(state).map(a => ({ ...a, enabled: !state.paused && state.phase === a.from && (a.id !== 'exposure' || selected.length > 0) && (a.id !== 'incident' || selected.every(t => t.ready && t.matchesCard)) && (a.id !== 'reflection' || !incidentPending(state)), count: a.id === 'incident' ? 9 : a.multiplier * selected.length, names: selected.map(t => t.username) })),
     posts: state.posts.filter(p => p.origin === 'team').map(p => ({ ...publicPost(state, p), origin: p.origin })),
     recovery: revealed(state) ? { count: Object.keys(state.responses).length, choices: Object.entries(recoveryChoices).map(([id, label]) => ({ id, label, count: Object.values(state.responses).filter(choice => choice === id).length })) } : null,
     events: state.events };
@@ -165,7 +166,33 @@ function addPost(state, values) {
   const post = { id: randomUUID(), createdAt: new Date().toISOString(), ...values, ...socialText(values.text, state.roles) };
   state.posts.push(post); return post;
 }
-export function release(state, data) {
+export const incidentPending = state => (state.incidentQueue || []).filter(item => !item.postId).length;
+export function incidentDue(state, now = Date.now()) {
+  return state.phase === 'exposure' && !state.paused && (state.incidentQueue || []).some(item => !item.postId && item.dueAt <= now);
+}
+export function advanceIncident(state, now = Date.now()) {
+  if (!incidentDue(state, now)) return 0;
+  let count = 0;
+  for (const item of state.incidentQueue) {
+    if (item.postId || item.dueAt > now) continue;
+    const role = state.roles.find(role => role.card === item.card);
+    const post = addPost(state, { threadId: role.id, authorId: role.id, actor: 'workshop-host', origin: 'simulation', text: item.text, stance: item.stance || null, createdAt: new Date(item.dueAt).toISOString() });
+    item.postId = post.id; count++;
+  }
+  if (count) state.version++;
+  return count;
+}
+export function setPaused(state, paused, now = Date.now()) {
+  if (paused === state.paused) return;
+  if (paused && incidentPending(state)) state.incidentPausedAt = now;
+  if (!paused && state.incidentPausedAt) {
+    const elapsed = now - state.incidentPausedAt;
+    for (const item of state.incidentQueue || []) if (!item.postId) item.dueAt += elapsed;
+    delete state.incidentPausedAt;
+  }
+  state.paused = paused; state.version++;
+}
+export function release(state, data, { incidentStepMs = 20000 } = {}) {
   const key = requestId(data.requestId);
   if (state.events[key]) {
     if (state.events[key].action !== data.action) fail(409, 'This request identifier was already used for another action.');
@@ -179,21 +206,18 @@ export function release(state, data) {
     state.targets = targets(state, fallback);
     if (!state.targets.length) fail(409, 'Wait for a genuine first post or explicitly include a claimed role’s assigned leaning.');
   }
+  if (data.action === 'reflection' && incidentPending(state)) fail(409, 'Wait for the scheduled incident posts to finish before beginning reflection.');
   const before = state.posts.length;
   if (data.action === 'incident') {
     const planned = targets(state);
     if (!planned.every(t => t.ready && t.matchesCard)) fail(409, 'All seven profiles must publish a genuine position matching their paper card before the incident. The latest position counts. Check the private preview.');
     state.targets = planned;
     state.incidentId = randomUUID();
+    state.incidentQueue = incidentScript(state.roles).map((item, index) => ({ ...item, dueAt: Date.now() + index * incidentStepMs, postId: null }));
     for (const target of planned) {
       const role = state.roles.find(r => r.id === target.roleId);
-      const base = { threadId: role.id, authorId: role.id, actor: 'workshop-host', origin: 'simulation' };
       if (['lockout', 'forgery'].includes(target.effect)) for (const post of state.posts) if (post.authorId === role.id && post.origin === 'team') post.incidentHidden = true;
-      if (target.effect === 'forgery') {
-        addPost(state, { ...base, stance: 'keep-fares', text: 'I have changed my mind. I am against reducing youth fares or making buses free. Keep ticket prices as they are and put the money into the service instead. #KeepFares #ServiceFirst' });
-        addPost(state, { ...base, stance: 'keep-fares', text: 'Please disregard my earlier argument for cheaper travel. I no longer support youth fare reductions. #KeepFares' });
-      }
-      if (target.effect === 'exposure') addPost(state, { ...base, text: `I am ${privateDetails(role).name} from ${privateDetails(role).town}. I support free buses after 18:00 and at weekends for under-25s. This is the opinion behind my username. #EveningFreedom` });
+
     }
   }
   for (const target of state.targets) {
@@ -210,8 +234,10 @@ export function release(state, data) {
       "We are reviewing this account's recent posts. Please do not treat its latest position as settled until we check what happened."
     ].forEach((message, i) => addPost(state, { ...base, authorId: state.accounts[i].id, origin: 'scripted', text: `@${publicRole(role).username}: ${message}` }));
   }
-  state.phase = action.to; state.version++;
-  const event = { action: action.id, count: state.posts.length - before, phase: state.phase, version: state.version, waveId: randomUUID() };
+  state.phase = action.to;
+  if (data.action === 'incident') advanceIncident(state);
+  state.version++;
+  const event = { action: action.id, count: state.posts.length - before, phase: state.phase, version: state.version, waveId: randomUUID(), ...(data.action === 'incident' ? { scheduledCount: state.incidentQueue.length } : {}) };
   state.events[key] = event; return event;
 }
 export function joinPreview(state, data) {

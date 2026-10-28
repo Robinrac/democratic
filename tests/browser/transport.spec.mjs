@@ -49,7 +49,7 @@ test('transport host launch shows seven private outcomes on phone and desktop an
   }
   await release('Launch incident');
   await expect(host.locator('[data-role-card="1"] .access')).toHaveText('Read only');
-  await expect(host.locator('[data-role-card="3"]')).toContainText('2 simulated posts');
+  await expect(host.locator('[data-role-card="3"]')).toContainText('3 simulated posts');
   await expect(host.locator('[data-role-card="6"]')).toContainText('1 own contribution hidden');
   await host.screenshot({ path: info.outputPath('host-incident.png'), fullPage: true });
   await host.setViewportSize({ width: 390, height: 844 });
@@ -71,7 +71,7 @@ test('transport host launch shows seven private outcomes on phone and desktop an
     await expect(pages[i].locator('#incident-banner')).toContainText(titles[i]);
     if ([2, 6].includes(i)) {
       await expect(pages[i].locator('#post-toast')).toContainText('A post appeared under your name');
-      await expect(pages[i].locator('#post-toast')).toContainText('against reducing youth fares');
+      await expect(pages[i].locator('#post-toast')).toContainText(i === 2 ? 'against reducing youth fares' : 'fare-cap proposal');
     }
     await expect(pages[i].getByRole('button', { name: 'Publish post' }))[i === 0 ? 'toBeDisabled' : 'toBeEnabled']();
   }

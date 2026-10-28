@@ -44,11 +44,11 @@ test('transport incident is atomic, private, differentiated, persistent and reve
   assert.equal(preview.targets[6].name, 'Mats Berg');
   const payload = { action: 'incident', version: preview.version, requestId: randomUUID() };
   const launches = await Promise.all([1, 2, 3].map(() => w.call('host/action', payload, { sid, host: true })));
-  launches.forEach(r => { assert.equal(r.status, 200); assert.equal(r.count, 5); });
+  launches.forEach(r => { assert.equal(r.status, 200); assert.equal(r.count, 9); });
   assert.equal(new Set(launches.map(r => r.waveId)).size, 1);
   assert.equal((await w.action(sid, 'incident')).status, 409);
   const hostIncident = await w.state(sid);
-  assert.deepEqual(hostIncident.roles.map(r => r.activity.injected), [0, 0, 2, 0, 1, 0, 2]);
+  assert.deepEqual(hostIncident.roles.map(r => r.activity.injected), [0, 0, 3, 0, 2, 0, 4]);
   assert.equal(hostIncident.roles[0].postingAccess, 'locked');
   assert.equal(hostIncident.roles[2].activity.posts, 1);
   assert.equal(hostIncident.roles[5].activity.hidden, 1);
@@ -83,13 +83,13 @@ test('transport incident is atomic, private, differentiated, persistent and reve
   const fake = own.posts.find(p => p.author.id === teams[2].participant.id);
   assert.equal((await w.call('flags', { postId: fake.id }, { sid, token: teams[2].token })).status, 200);
   const stored = await w.server.store.read(sid);
-  assert.equal(stored.posts.filter(p => p.origin === 'simulation').length, 5);
+  assert.equal(stored.posts.filter(p => p.origin === 'simulation').length, 9);
   assert.equal(stored.posts.filter(p => p.incidentHidden).length, 5);
   assert.equal((await w.call('me', undefined, { sid, token: teams[1].token })).incident.id, notices[1].incident.id);
   await w.action(sid, 'reflection'); await w.action(sid, 'reveal');
   const restored = await w.call('feed', undefined, { sid, token: teams[1].token });
   originals.forEach(original => assert.equal(restored.posts.find(p => p.id === original.id).text, original.text));
-  assert.equal(restored.posts.filter(p => p.provenance === 'simulation').length, 5);
+  assert.equal(restored.posts.filter(p => p.provenance === 'simulation').length, 9);
   assert.equal(restored.posts.find(p => p.id === mistaken.post.id).hidden, true); // Reveal does not undo host moderation.
   assert.ok(restored.posts.some(p => p.id === suppressed.post.id));
   assert.equal((await w.call('me', undefined, { sid, token: teams[0].token })).canWrite, true);
@@ -104,7 +104,7 @@ test('transport incident is atomic, private, differentiated, persistent and reve
   const replied = await w.state(sid);
   assert.equal(replied.roles[2].activity.posts, 1);
   assert.equal(replied.roles[2].activity.replies, 1);
-  assert.equal(replied.roles[2].activity.injected, 2);
+  assert.equal(replied.roles[2].activity.injected, 3);
   assert.equal((await w.call('host/reset', { version: replied.version, confirmLabel: replied.label, expiresAt: Date.now() + 86400000 }, { sid, host: true })).status, 200);
   assert.ok((await w.state(sid)).roles.every(r => !r.claimed && r.activity.posts === 0 && r.activity.replies === 0 && r.activity.injected === 0 && r.incidentState === 'pending'));
 

@@ -298,7 +298,7 @@ export async function startParticipant() {
     const area = document.querySelector('#post-text');
     if (!area || area.disabled || pendingPost || sending || person?.canWrite === false) return;
     const start = area.selectionStart, end = area.selectionEnd;
-    const partial = value.startsWith('@') && area.value.slice(0, start).match(/(?:^|\s)(@[a-z0-9-]*)$/i);
+    const partial = value.startsWith('@') && area.value.slice(0, start).match(/(?:^|\s)(@[\p{L}\p{M}\p{N}-]*)$/iu);
     const from = partial ? start - partial[1].length : start;
     const prefix = from && !/\s/.test(area.value[from - 1]) ? ' ' : '';
     const insertion = prefix + value + ' ';
@@ -309,13 +309,13 @@ export async function startParticipant() {
   let mentionIndex = -1, mentionKey = '', dismissedMention = '';
   function renderMentionSuggestions() {
     const area = document.querySelector('#post-text'), target = document.querySelector('#mention-suggestions'); if (!area || !target) return;
-    const before = area.value.slice(0, area.selectionStart), match = before.match(/(?:^|\s)@([a-z0-9-]*)$/i);
+    const before = area.value.slice(0, area.selectionStart), match = before.match(/(?:^|\s)@([\p{L}\p{M}\p{N}-]*)$/iu);
     const key = match ? before : '';
     if (key !== mentionKey) { mentionIndex = -1; mentionKey = key; }
     const show = !!match && !area.disabled && currentView === 'feed' && document.activeElement === area && key !== dismissedMention;
     target.hidden = !show; area.setAttribute('aria-expanded', String(show));
     if (!show) { area.removeAttribute('aria-activedescendant'); return; }
-    const members = (data?.profiles || []).filter(p => p.username.startsWith(match[1].toLowerCase()));
+    const members = (data?.profiles || []).filter(p => p.username.startsWith(match[1].normalize('NFC').toLowerCase()));
     if (mentionIndex >= members.length) mentionIndex = -1;
     const html = members.map((p, index) => `<button type="button" role="option" tabindex="-1" id="mention-option-${index}" aria-selected="${index === mentionIndex}" data-insert-mention="${e(p.username)}"><img src="${e(p.avatar)}" alt=""><span>@${e(p.username)}</span></button>`).join('') || '<p>No matching members</p>';
     if (target.innerHTML !== html) target.innerHTML = html;

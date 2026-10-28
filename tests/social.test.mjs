@@ -22,7 +22,7 @@ test('unknown and partial names fail clearly, and profile release revokes only t
   assert.equal((await w.call('join-preview', { name: 'Eydis' }, { sid })).claimed, true);
   await w.action(sid, 'debate');
   const top = await w.call('posts', { text: 'First #AffordableJourneys', stance: 'lower-fares', requestId: randomUUID() }, { sid, token: a.token });
-  await w.call('posts', { text: 'Question @quiet-cedar', replyTo: top.post.id, requestId: randomUUID() }, { sid, token: b.token });
+  await w.call('posts', { text: 'Question @lava-lundi', replyTo: top.post.id, requestId: randomUUID() }, { sid, token: b.token });
   await w.call('posts', { text: 'Independent #ServiceFirst', stance: 'keep-fares', requestId: randomUUID() }, { sid, token: b.token });
   const before = await w.state(sid), body = { roleId: a.participant.id, confirmName: a.privateDetails.name, version: before.version };
   assert.equal((await w.call('host/clear-profile', body, { sid, token: b.token })).status, 401);
@@ -42,7 +42,7 @@ test('personal activity and hashtag ranks respect incident visibility, and a ful
   await w.action(sid, 'debate');
   const original = [];
   for (const [i, card] of transportCards.entries()) {
-    const post = await w.call('posts', { text: card.suggestedPost + ' @bright-river #AffordableJourneys #AffordableJourneys', stance: card.leaning, requestId: randomUUID(), mentions: [teams[3].participant.id], hashtags: ['fake'] }, { sid, token: teams[i].token });
+    const post = await w.call('posts', { text: card.suggestedPost + ' @drangarnir #AffordableJourneys #AffordableJourneys', stance: card.leaning, requestId: randomUUID(), mentions: [teams[3].participant.id], hashtags: ['fake'] }, { sid, token: teams[i].token });
     assert.equal(post.status, 200); original.push(post.post);
     assert.deepEqual(post.post.mentions, [teams[1].participant.id]); assert.ok(!post.post.hashtags.includes('fake'));
   }
@@ -52,10 +52,10 @@ test('personal activity and hashtag ranks respect incident visibility, and a ful
   await w.action(sid, 'incident');
   const after = await w.call('feed', undefined, { sid, token: teams[1].token });
   for (const i of [0, 2, 5, 6]) assert.ok(!after.activity.some(a => a.id === original[i].id));
-  assert.equal(after.trending[0].tag, 'keepfares');
+  assert.equal(after.trending[0].tag, 'servicefirst');
   const forged = await w.call('feed', undefined, { sid, token: teams[2].token });
-  assert.equal(forged.activity.filter(a => a.type === 'account-post').length, 2);
-  const suppressed = await w.call('posts', { text: '@bright-river Can you see me? #HiddenTopic', stance: 'lower-fares', requestId: randomUUID() }, { sid, token: teams[5].token });
+  assert.equal(forged.activity.filter(a => a.type === 'account-post').length, 3);
+  const suppressed = await w.call('posts', { text: '@drangarnir Can you see me? #HiddenTopic', stance: 'lower-fares', requestId: randomUUID() }, { sid, token: teams[5].token });
   const target = await w.call('feed', undefined, { sid, token: teams[1].token });
   assert.ok(!target.activity.some(a => a.id === suppressed.post.id)); assert.ok(!target.trending.some(tag => tag.tag === 'hiddentopic'));
   const own = await w.call('feed', undefined, { sid, token: teams[5].token }); assert.ok(own.activity.some(a => a.id === suppressed.post.id));

@@ -19,10 +19,10 @@ export function profileStats(posts, profileId, profiles) {
 }
 export function postText(post, profiles) {
   let html = '', offset = 0;
-  const tokens = /(?<![\p{L}\p{N}_@])(?:@([a-z0-9]+(?:-[a-z0-9]+)*)(?![\w-])|#([\p{L}\p{N}_]{1,32})(?![\p{L}\p{N}_]))/giu;
+  const tokens = /(?<![\p{L}\p{N}_@])(?:@([\p{L}\p{M}\p{N}]+(?:-[\p{L}\p{M}\p{N}]+)*)(?![\p{L}\p{M}\p{N}_-])|#([\p{L}\p{N}_]{1,32})(?![\p{L}\p{N}_]))/giu;
   for (const match of post.text.matchAll(tokens)) {
     html += escape(post.text.slice(offset, match.index));
-    const profile = match[1] && profiles.find(p => p.username.toLowerCase() === match[1].toLowerCase() && post.mentions?.includes(p.id));
+    const profile = match[1] && profiles.find(p => p.username.toLowerCase() === match[1].normalize('NFC').toLowerCase() && post.mentions?.includes(p.id));
     html += profile ? `<button class="inline-tag" data-profile="${escape(profile.id)}">${escape(match[0])}</button>`
       : match[2] && post.hashtags?.includes(match[2].toLowerCase()) ? `<button class="inline-tag" data-hashtag="${escape(match[2].toLowerCase())}">${escape(match[0])}</button>` : escape(match[0]);
     offset = match.index + match[0].length;
