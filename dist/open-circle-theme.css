@@ -320,6 +320,16 @@ input[aria-invalid="true"] { border: 2px solid #ad244b; }
 
 /* Keep member navigation small; artwork belongs on the full profile. */
 .sidebar-members { margin-bottom: 18px; }
+.mini-profile { display: block; width: 100%; padding: 0; overflow: hidden; background: white; color: var(--oc-ink); text-align: left; border: 1px solid var(--oc-border); border-radius: 12px; }
+.mini-profile:hover { border-color: #bfa8b5; }
+.mini-profile-banner { display: block; height: 64px; padding: 12px; }
+.mini-profile-banner .banner-caption { font-size: 12px; letter-spacing: -.2px; line-height: 1.15; }
+.mini-profile-banner .banner-shapes { width: 150px; height: 80px; right: -15px; }
+.mini-profile-body { display: block; position: relative; padding: 0 12px 12px; }
+.mini-profile-body img { display: block; position: relative; width: 44px; height: 44px; border: 3px solid white; border-radius: 50%; margin-top: -21px; }
+.mini-profile-body .eyebrow { margin: 6px 0 5px; font-size: 8px; letter-spacing: 1px; color: var(--oc-muted); }
+.mini-profile-body strong { display: block; font-size: 16px; font-weight: 650; line-height: 1.3; overflow-wrap: anywhere; }
+#sidebar-other-members { margin: -12px 0 20px; }
 .sidebar-names { list-style: none; padding: 0; margin: 0; }
 .sidebar-names li { margin: 0; }
 .sidebar-names .profile-link { display: block; width: 100%; min-height: 32px; padding: 5px 3px; font-size: 13px; line-height: 22px; }
@@ -329,6 +339,8 @@ input[aria-invalid="true"] { border: 2px solid #ad244b; }
   .social-layout { display: flex; flex-direction: column; gap: 0; }
   .social-layout .sidebar { display: contents; }
   .social-layout #team { order: 0; }
+  .social-layout #team { width: 100%; max-width: 280px; }
+  .social-layout #sidebar-other-members { order: 2; }
   .social-layout .social-nav { order: 1; }
   .social-layout .sidebar .session-note { order: 2; }
   .social-layout .conversation { order: 3; }

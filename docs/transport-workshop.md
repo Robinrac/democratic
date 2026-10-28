@@ -48,7 +48,7 @@ On joining, the card is linked to a fixed participant ID and its public username
 
 ### Writing, questions and social cues
 
-**Feed** shows the composer and live conversations. **Discover** shows cards for the other joined members, without the feed. The sidebar lists joined members by username only, with your own username first. Click a name to open that profile. **Edit profile** contains only profile editing. Paper-role notes remain defined in code and on the printed cards; they are not shown in the app. Participants cannot create read-only team links from the interface.
+**Feed** shows the composer and live conversations. **Discover** shows cards for the other joined members, without the feed. A miniature card with your selected banner, avatar and username sits above Feed in the sidebar. Click it to open your public profile. Other members remain a compact username list below the navigation; click a name to visit. **Edit profile** contains only profile editing. Paper-role notes remain defined in code and on the printed cards; they are not shown in the app. Participants cannot create read-only team links from the interface.
 
 - Participants write their post or question and publish. Use **Reply** to keep a question or answer in the original conversation; replies stay in that conversation.
 - Type `@` in the post to open the member menu; keep typing to filter it. Choose with a click/tap or the arrow keys and Enter; Escape closes it. Only public usernames identify mentions. A visible mention produces a notification for that team and appears under **Tagged posts** on its public profile. Click a mention to open that profile.

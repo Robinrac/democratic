@@ -40,8 +40,14 @@ test('name errors, mentions, post alerts, ranked tags and reset work together on
   await expect(a.locator('#post-form input[type=radio]')).toHaveCount(0);
   await expect(a.locator('.prompt')).toContainText('TODAY’S TOPIC');
   await expect(a.locator('#question')).toContainText('under-20s or under-25s');
-  await expect(a.locator('#team > .sidebar-names li')).toHaveCount(7);
-  await expect(a.locator('#team > .sidebar-names img, #team > .profile-banner, #team > .sidebar-bio')).toHaveCount(0);
+  await expect(a.locator('#sidebar-other-members li')).toHaveCount(6);
+  await expect(a.locator('#sidebar-other-members img, #team > .sidebar-bio')).toHaveCount(0);
+  await expect(a.locator('#team .mini-profile')).toContainText('@quiet-cedar');
+  await expect(a.locator('#team .mini-profile img')).toBeVisible();
+  const mini = await a.locator('#team .mini-profile').boundingBox();
+  const nav = await a.locator('.social-nav').boundingBox();
+  expect(mini.height).toBeLessThan(170);
+  expect(mini.y + mini.height).toBeLessThan(nav.y);
   await expect(a.locator('.sidebar #trending')).toHaveCount(1);
   const desktopTrends = await a.locator('#trending').boundingBox();
   const desktopFeed = await a.locator('#feed-view').boundingBox();

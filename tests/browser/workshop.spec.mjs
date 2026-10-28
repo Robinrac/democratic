@@ -37,10 +37,10 @@ test('host-paced seven-team rehearsal on phone and laptop, with cancel, reconnec
     await join.getByRole('group',{name:'Banner'}).getByRole('radio',{name:'Sage'}).check();
     await join.getByRole('button',{name:'Join the forum'}).click();
     await expect(page.locator('#team > .private-profile')).toHaveCount(0);
-    await expect(page.locator('#team > .sidebar-names').first()).toContainText('@');
-    await expect(page.locator('#team > .sidebar-names').first()).not.toContainText(roleCards[i].fullName);
-    await expect(page.locator('#team > .profile-banner')).toHaveCount(0);
-    await expect(page.locator('#team > .sidebar-names img')).toHaveCount(0);
+    await expect(page.locator('#team .mini-profile')).toContainText('@');
+    await expect(page.locator('#team .mini-profile')).not.toContainText(roleCards[i].fullName);
+    await expect(page.locator('#team .mini-profile-banner')).toHaveClass(/cover-4/);
+    await expect(page.locator('#team .mini-profile img')).toHaveAttribute('src', '/avatars/3.svg');
   }
   const phone=teams[0];
   const hostEntry=teams[1].getByRole('link',{name:'Host access'});
