@@ -248,3 +248,72 @@
 .post-toast .toast-dismiss { position: absolute; right: 10px; top: 8px; width: 36px; height: 36px; border: 0; background: transparent; color: #742547; font-size: 26px; padding: 0; }
 input[aria-invalid="true"] { border: 2px solid #ad244b; }
 @media (max-width: 480px) { .post-toast { top: 10px; right: 16px; padding: 18px; } .trending-list { grid-template-columns: 1fr; gap: 9px; } }
+/* Focused navigation and compact, separate feed/directory views. */
+#feed-view[hidden], #discover-view[hidden], #mention-suggestions[hidden], #trending[hidden], #phase[hidden] { display: none !important; }
+.social-layout .feed-heading { align-items: center; margin: 0 0 20px; }
+.social-layout .feed-heading h1 { margin: 0; }
+.social-layout .prompt { padding: 16px 20px; margin-bottom: 18px; }
+.social-layout .prompt h2 { font-size: 16px; margin: 0; }
+.social-layout .sidebar .compact-profile { padding: 0; overflow: hidden; }
+.social-layout .sidebar .compact-profile > .profile-banner { display: block; width: 100%; height: 104px; margin: 0; padding: 16px; border: 0; border-radius: 0; text-align: left; cursor: pointer; }
+.compact-profile > .profile-banner .banner-caption { display: block; font-size: 18px; line-height: 1.1; }
+.compact-profile > .profile-banner .banner-shapes { width: 220px; height: 120px; }
+.social-layout .sidebar .compact-profile > .identity { position: relative; z-index: 1; display: block; margin: -25px 16px 0; }
+.social-layout .sidebar .compact-profile > .identity .portrait { display: block; width: 62px; height: 62px; border: 4px solid white; }
+.compact-profile > .identity strong { display: block; margin: 5px 0 0; padding: 0; font-size: 14px; }
+.social-layout .sidebar .compact-profile > .sidebar-bio { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin: 4px 16px 12px; color: var(--muted); }
+.social-layout .sidebar .compact-profile > .sidebar-bio:empty { display: none; }
+.compact-profile .edit-profile-button { width: calc(100% - 32px); margin: 4px 16px 16px; }
+.social-layout .social-nav a { font-size: 15px; min-height: 46px; }
+.sidebar-trends { background: #f5edf2; color: #682241; padding: 20px 16px; border-radius: 16px; margin: 0 0 16px; }
+.sidebar-trends summary { list-style: none; cursor: pointer; }
+.sidebar-trends summary::-webkit-details-marker { display: none; }
+.sidebar-trends .eyebrow { display: block; color: #8d5470; font-size: 9px; }
+.trends-title { display: block; font-size: 17px; font-weight: 750; margin-top: 7px; }
+.sidebar-trends .trending-list { display: grid; grid-template-columns: 1fr; margin: 18px 0 0; gap: 14px; }
+.sidebar-trends .trending-list li { display: flex; align-items: flex-start; gap: 10px; }
+.sidebar-trends .trend-rank { font-size: 15px; font-weight: 800; color: #96637d; width: 16px; flex-shrink: 0; }
+.sidebar-trends .trending-list li div { min-width: 0; }
+.sidebar-trends .trending-list li div > span { display: block; font-size: 11px; margin-top: 3px; }
+.sidebar-trends .inline-tag { font-size: 12px; text-decoration: none; overflow-wrap: anywhere; min-height: 0; }
+#social-tools { margin: -8px 0 18px; font-size: 13px; }
+.member-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+.member-card { display: block; padding: 0; overflow: hidden; border: 1px solid var(--line); border-radius: 16px; text-align: left; background: white; color: var(--text, #29252a); box-shadow: 0 4px 18px #2b516506; }
+.member-card:hover { border-color: #ac728e; background: white; box-shadow: 0 7px 24px #68224114; }
+.member-card .member-cover { display: block; height: 104px; padding: 18px; }
+.member-cover .banner-caption { font-size: 20px; }
+.member-card-body { display: block; position: relative; padding: 0 20px 20px; }
+.member-card-body img { display: block; width: 64px; height: 64px; margin-top: -27px; border: 4px solid white; border-radius: 50%; position: relative; }
+.member-card-body strong { display: block; margin: 12px 0 8px; font-size: 16px; overflow-wrap: anywhere; }
+.member-card-body > span { display: block; font-weight: 400; line-height: 1.5; color: var(--muted); font-size: 13px; overflow-wrap: anywhere; }
+.mention-editor { position: relative; }
+.social-layout .composer .mention-editor textarea { margin: 12px 0 0; }
+.mention-menu { position: absolute; top: 100%; left: 0; right: 0; z-index: 20; padding: 6px; max-height: min(280px, 35vh); overflow-y: auto; background: white; border: 1px solid #d7c8d0; border-radius: 12px; box-shadow: 0 12px 32px #39233025; }
+.mention-menu [role="option"] { display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 12px; border: 0; border-radius: 7px; background: white; color: #482d3c; text-align: left; font-size: 14px; }
+.mention-menu [role="option"]:hover, .mention-menu [aria-selected="true"] { background: #fce5ef; }
+.mention-menu img { width: 30px; height: 30px; border-radius: 50%; }
+.mention-menu p { padding: 6px 12px; font-size: 13px; color: var(--muted); }
+#profile-dialog .role-card { margin-top: 18px; }
+#profile-dialog .role-portrait { width: 100px; height: 100px; }
+@media (max-width: 760px) {
+  .social-layout .sidebar .compact-profile { margin-bottom: 16px; }
+  .social-layout .sidebar .compact-profile > .profile-banner { height: 76px; }
+  .compact-profile > .profile-banner .banner-caption { font-size: 16px; }
+  .social-layout .sidebar .compact-profile > .identity { margin-top: -22px; display: flex; align-items: flex-end; gap: 10px; }
+  .social-layout .sidebar .compact-profile > .identity .portrait { width: 54px; height: 54px; }
+  .social-layout .sidebar .compact-profile > .sidebar-bio { margin-left: 80px; margin-bottom: 10px; }
+  .compact-profile .edit-profile-button { width: auto; margin-left: 80px; }
+  .sidebar-trends { padding: 12px 16px; }
+  .sidebar-trends .eyebrow { display: none; }
+  .trends-title { font-size: 14px; margin: 0; }
+  .sidebar-trends summary::after { content: '+'; float: right; margin-top: -22px; font-size: 20px; }
+  .sidebar-trends details[open] summary::after { content: '−'; }
+  .social-layout .sidebar .session-note { margin: 6px 4px 16px; }
+}
+@media (max-width: 480px) {
+  .member-grid { grid-template-columns: 1fr; gap: 16px; }
+  .social-layout .social-nav a { font-size: 12px; min-height: 52px; }
+}
+.member-card { display: flex; flex-direction: column; justify-content: flex-start; }
+.member-card .member-cover { width: 100%; flex-shrink: 0; }
+.member-card-body { width: 100%; }

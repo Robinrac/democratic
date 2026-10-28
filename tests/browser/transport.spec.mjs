@@ -22,7 +22,7 @@ test('transport host launch shows seven private outcomes on phone and desktop an
     await context.addInitScript(({ sid, token }) => localStorage.setItem('open-circle:' + sid, token), { sid, token });
     const page = await context.newPage(); pages.push(page); page.on('pageerror', error => errors.push(error.message));
     await page.goto('/?s=' + sid);
-    await expect(page.locator('#question')).toContainText('Cheaper tickets');
+    await expect(page.locator('#question')).toContainText('Youth fares');
   }
   async function release(name) {
     const button = host.getByRole('button', { name, exact: true });

@@ -86,7 +86,7 @@ export async function startProjector() {
     if (busy) return; busy = true;
     try {
       const data = await request('projector', { sid });
-      document.querySelector('#question').textContent = data.question;
+      document.querySelector('#question').textContent = data.scenario === 'transport-v1' ? 'Youth fares: cheaper, free or service first?' : data.question;
       document.querySelector('#phase').innerHTML = phaseHTML(data);
       document.querySelector('#progress').textContent = `${data.participants} / ${data.capacity} profiles joined · ${data.genuinePosts} contributions`;
       document.querySelector('#connection').textContent = ['localhost', '127.0.0.1'].includes(location.hostname) ? 'For phones, open the host screen using the computer’s network address before opening this projector link.' : 'Live updates connected';
@@ -107,7 +107,7 @@ export async function startParticipant() {
   const saved = suffix => { try { return JSON.parse(localStorage.getItem(key + suffix)); } catch { return null; } };
   let draft = saved(':composer') || { text: localStorage.getItem(key + ':draft') || '', stance: null, replyTo: null, correction: false };
   let pendingPost = saved(':pending-post');
-  let person = null, data = null, busy = false, sending = false, feedSignature = '', memberId = null, membershipChecked = false, activeHashtag = null;
+  let person = null, data = null, busy = false, sending = false, feedSignature = '', memberId = null, membershipChecked = false, activeHashtag = null, currentView = location.hash === '#discover' ? 'discover' : 'feed';
   function saveDraft() { localStorage.setItem(key + ':composer', JSON.stringify(draft)); }
   function forgetTeam() {
     if (person) {
@@ -128,7 +128,29 @@ export async function startParticipant() {
     draft = { text: '', stance: null, replyTo: null, correction: false }; pendingPost = null;
   }
   const api = (route, body) => request(route, { sid, token, body });
-  root.innerHTML = header() + `<main id="main" class="layout social-layout"><aside class="sidebar"><section class="panel join-card" id="team"></section><nav class="social-nav" aria-label="Forum navigation"><a href="#threads" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg><span>Feed</span></a><a href="#people"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="10.5" cy="10.5" r="7.5"/><path d="m16 16 5 5"/></svg><span>Discover</span></a><a href="#team"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="7" r="4"/><path d="M4 22v-3a8 8 0 0 1 16 0v3z"/></svg><span>My profile</span></a></nav><section class="panel people-panel" id="people"><details><summary>People in this circle</summary><div id="profiles"></div></details></section><div class="sidebar-about"><span class="eyebrow">ABOUT OPEN CIRCLE</span><h2>A little space.<br>A bigger conversation.</h2><p>Share an idea. Ask a question.<br>Make room for another view.</p></div><div class="session-note"><span class="dot"></span><span id="connection" role="status">Connecting…</span></div><p class="footnote">Your profile and posts are visible to other members.</p></aside><section class="conversation"><div class="feed-heading"><div><span class="eyebrow">THE CONVERSATION</span><h1>Your feed.</h1></div><span id="counts" class="people"></span></div><div class="panel prompt"><span class="prompt-icon" aria-hidden="true">↗</span><div><span class="eyebrow">TODAY’S CONVERSATION</span><h2 id="question">How should we improve youth transport?</h2></div></div><div class="phase" id="phase" aria-live="polite"></div><p id="error" role="alert"></p><section id="notice"></section><section id="incident-banner" aria-live="polite"></section><section id="social-tools" class="panel social-tools"><div id="trending"></div><div id="activity-history"></div></section><section id="composer"></section><div id="tag-filter"></div><div class="feed-label"><h3>The conversation</h3><span>Latest activity</span></div><div id="threads"></div></section></main>`;
+  root.innerHTML = header() + `<main id="main" class="layout social-layout">
+    <aside class="sidebar">
+      <section class="panel join-card" id="team"></section>
+      <nav class="social-nav" aria-label="Forum navigation">
+        <a href="#feed" data-view="feed" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg><span>Feed</span></a>
+        <a href="#discover" data-view="discover"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="10.5" cy="10.5" r="7.5"/><path d="m16 16 5 5"/></svg><span>Discover</span></a>
+      </nav>
+      <section class="sidebar-trends" id="trending" aria-label="Top five hashtags"></section>
+      <section class="sidebar-about"><span class="eyebrow">ABOUT OPEN CIRCLE</span><h2>Different voices.<br>Shared space.</h2><p>Share an idea. Hear another view.</p></section>
+      <div class="session-note"><span class="dot"></span><span id="connection" role="status">Connecting…</span></div>
+    </aside>
+    <section class="conversation" id="feed-view" aria-labelledby="feed-title">
+      <div class="feed-heading"><h1 id="feed-title">Feed</h1><span id="counts" class="people"></span></div>
+      <div class="panel prompt"><h2 id="question">Youth transport</h2></div>
+      <div class="phase" id="phase" aria-live="polite"></div><p id="error" role="alert"></p>
+      <section id="notice"></section><section id="incident-banner" aria-live="polite"></section>
+      <section id="composer"></section><section id="social-tools"><div id="activity-history"></div></section>
+      <div id="tag-filter"></div><div id="threads"></div>
+    </section>
+    <section class="conversation" id="discover-view" aria-labelledby="discover-title" hidden>
+      <div class="feed-heading"><h1 id="discover-title">Discover</h1></div><div id="profiles" class="member-grid"></div>
+    </section>
+  </main>`;
   const activity = createActivity(root, key);
   root.insertAdjacentHTML('beforeend', `<dialog id="join-dialog" class="join-dialog" aria-labelledby="join-title"><form id="join-form"><h2 id="join-title">Create your profile.</h2><div class="profile-preview"><div class="profile-preview-banner banner-art cover-0">${bannerArtwork(0)}</div><div class="profile-preview-content"><img id="preview-picture" src="/avatars/0.svg" alt="Selected profile picture"><span class="eyebrow">YOUR PUBLIC PROFILE</span><strong id="preview-name" aria-live="polite">@your-username</strong><p id="preview-bio">Your bio</p><small id="preview-hint">Username assigned from your paper profile.</small></div></div>${profileFields('join')}<p id="join-error" class="error" role="alert"></p><div class="join-actions"><button class="primary" type="submit">Join the forum</button></div></form></dialog>`);
   root.insertAdjacentHTML('beforeend', '<dialog id="incident-dialog" class="join-dialog incident-dialog" aria-labelledby="incident-title"><div id="incident-content"></div><button id="close-incident" class="primary">Back to the feed</button></dialog>');
@@ -195,11 +217,20 @@ export async function startParticipant() {
       person = await api('join', { name: fields.get('name'), town: fields.get('town'), bio: fields.get('bio'), color: Number(fields.get('color')), cover: Number(fields.get('cover')) });
       membershipChecked = true; joinDialog.close(); renderTeam(); renderComposer(); await refresh();
       document.querySelector('#announcer').textContent = 'Your profile is ready.';
-    } catch (err) { document.querySelector('#join-error').textContent = err.message; if (!err.status || err.status >= 500) membershipChecked = false, activeHashtag = null; }
+    } catch (err) { document.querySelector('#join-error').textContent = err.message; if (!err.status || err.status >= 500) membershipChecked = false; }
     finally { button.disabled = false; }
   };
-  document.querySelector('#people details').open = matchMedia('(min-width: 761px)').matches;
-  document.querySelectorAll('.social-nav a').forEach(link => link.addEventListener('click', event => { if (link.hash === '#team' && person) { event.preventDefault(); openMember(person.participant.id); } if (link.hash === '#people') document.querySelector('#people details').open = true; document.querySelectorAll('.social-nav a').forEach(item => item.removeAttribute('aria-current')); link.setAttribute('aria-current', 'page'); }));
+  function setView(view, scroll = false) {
+    currentView = view === 'discover' ? 'discover' : 'feed';
+    document.querySelector('#feed-view').hidden = currentView !== 'feed';
+    document.querySelector('#discover-view').hidden = currentView !== 'discover';
+    document.querySelectorAll('[data-view]').forEach(link => { if (link.dataset.view === currentView) link.setAttribute('aria-current', 'page'); else link.removeAttribute('aria-current'); });
+    history.replaceState(null, '', location.pathname + location.search + '#' + currentView);
+    if (scroll) { if (matchMedia('(min-width: 761px)').matches) window.scrollTo({ top: 0 }); else document.querySelector('#' + currentView + '-view').scrollIntoView({ block: 'start' }); }
+    renderMentionSuggestions();
+  }
+  document.querySelectorAll('[data-view]').forEach(link => link.onclick = event => { event.preventDefault(); setView(link.dataset.view, true); });
+  setView(currentView);
   const error = message => { const target = document.querySelector('#profile-dialog[open] #profile-error') || document.querySelector('#error'); target.textContent = message; };
   async function act(button, fn) {
     button.disabled = true; error('');
@@ -216,7 +247,7 @@ export async function startParticipant() {
     }
     const p = person.participant, card = person.privateRole, details = person.privateDetails;
     target.className = 'panel compact-profile theme-' + p.cover;
-    target.innerHTML = `${person.scope === 'viewer' ? '<span class="eyebrow">TEAM VIEWER · READ ONLY</span>' : ''}<div class="profile-banner banner-art cover-${p.cover}" aria-hidden="true">${bannerArtwork(p.cover)}</div>${identity(p)}${card ? `<details class="private-profile"><summary>Private details</summary><dl><dt>Name</dt><dd>${e(details.name)}</dd><dt>Home town</dt><dd>${e(details.town)}</dd></dl><details class="role-card"><summary>Your profile notes</summary><p>A little background for your conversations.</p><img class="portrait role-portrait" src="${e(card.portrait)}" alt="Portrait of ${e(card.fullName)}"><h3>${e(card.fullName)}</h3><p>${e(card.ageGender)}</p><p>${e(card.backstory)}</p><p><strong>Starting view:</strong> ${e(card.proposal || (card.leaning === 'usernames' ? 'Public usernames' : 'Public real names'))}</p><p>${e(card.reason)}</p><p><strong>Also consider:</strong> ${e(card.worry)}</p><p><strong>${card.proposal ? 'Your priority' : 'What might persuade you'}:</strong> ${e(card.persuade)}</p><details><summary>Optional words to get started</summary><p><strong>Bio:</strong> ${e(card.suggestedBio)}</p><p><strong>First post:</strong> ${e(card.suggestedPost)}</p><p>${e(card.question)}</p></details></details><details><summary>Add a read-only team device</summary><p>This link shows your team’s feed, without posting access or the private card.</p><button id="viewer-link" class="secondary">Make viewer link</button><p id="viewer-url"></p></details></details><button id="edit-profile" class="secondary edit-profile-button">Edit profile</button><dialog id="profile-dialog" class="join-dialog" aria-labelledby="edit-title"><h2 id="edit-title">Your profile.</h2><form id="profile-form"><div class="profile-preview"><div class="profile-preview-banner banner-art cover-${p.cover}">${bannerArtwork(p.cover)}</div><div class="profile-preview-content"><img class="edit-preview-picture" src="${e(p.avatar)}" alt="Selected profile picture"><span class="eyebrow">YOUR PUBLIC PROFILE</span><strong>@${e(p.username)}</strong><p class="edit-preview-bio">${e(p.bio || 'Your bio')}</p></div></div><p id="profile-error" class="error" role="alert"></p>${profileFields('edit', { ...p, ...details })}<div class="join-actions"><button class="primary">Save profile</button><button type="button" id="close-profile" class="secondary">Cancel</button></div></form></dialog>` : '<p>This device can read the feed but cannot post or open the private role card.</p>'}`;
+    target.innerHTML = `${person.scope === 'viewer' ? '<span class="eyebrow">TEAM VIEWER · READ ONLY</span>' : ''}<button class="profile-banner banner-art cover-${p.cover}" data-profile="${e(p.id)}" aria-label="Open your profile">${bannerArtwork(p.cover)}</button>${identity(p, true)}<p class="sidebar-bio">${e(p.bio)}</p>${card ? `<button id="edit-profile" class="secondary edit-profile-button">Edit profile</button><dialog id="profile-dialog" class="join-dialog" aria-labelledby="edit-title"><h2 id="edit-title">Your profile.</h2><form id="profile-form"><div class="profile-preview"><div class="profile-preview-banner banner-art cover-${p.cover}">${bannerArtwork(p.cover)}</div><div class="profile-preview-content"><img class="edit-preview-picture" src="${e(p.avatar)}" alt="Selected profile picture"><span class="eyebrow">YOUR PUBLIC PROFILE</span><strong>@${e(p.username)}</strong><p class="edit-preview-bio">${e(p.bio || 'Your bio')}</p></div></div><p id="profile-error" class="error" role="alert"></p>${profileFields('edit', { ...p, ...details })}<div class="join-actions"><button class="primary">Save profile</button><button type="button" id="close-profile" class="secondary">Cancel</button></div></form><details class="role-card"><summary>Your profile notes</summary><p>A little background for your conversations.</p><img class="portrait role-portrait" src="${e(card.portrait)}" alt="Portrait of ${e(card.fullName)}"><h3>${e(card.fullName)}</h3><p>${e(card.ageGender)}</p><p>${e(card.backstory)}</p><p><strong>Starting view:</strong> ${e(card.proposal || (card.leaning === 'usernames' ? 'Public usernames' : 'Public real names'))}</p><p>${e(card.reason)}</p><p><strong>Also consider:</strong> ${e(card.worry)}</p><p><strong>${card.proposal ? 'Your priority' : 'What might persuade you'}:</strong> ${e(card.persuade)}</p><details><summary>Optional words to get started</summary><p><strong>Bio:</strong> ${e(card.suggestedBio)}</p><p><strong>First post:</strong> ${e(card.suggestedPost)}</p><p>${e(card.question)}</p></details></details><details><summary>Add a read-only team device</summary><p>This link shows your team’s feed, without posting access or the private card.</p><button id="viewer-link" class="secondary">Make viewer link</button><p id="viewer-url"></p></details></dialog>` : '<span class="muted">Read-only</span>'}`;
     if (card) {
       const editDialog = document.querySelector('#profile-dialog');
       setupProfileTabs(document.querySelector('#profile-form'));
@@ -236,7 +267,7 @@ export async function startParticipant() {
   function renderComposer() {
     const composer = document.querySelector('#composer');
     if (person?.scope !== 'poster') { composer.innerHTML = ''; return; }
-    composer.innerHTML = `<section class="panel composer"><div class="composer-person">${identity(person.participant)}<span class="you-tag">YOU</span></div><form id="post-form"><p id="reply-label" class="reply-label"></p><button type="button" id="cancel-reply" class="secondary" hidden>Cancel reply</button><fieldset id="stance">${person.scenario === 'transport-v1' ? '<legend>Where does your proposal stand?</legend><label><input type="radio" name="stance" value="lower-fares" required>Lower youth fares, including free travel</label><label><input type="radio" name="stance" value="keep-fares" required>Keep fares unchanged; improve service first</label>' : '<legend>Which rule do you support?</legend><label><input type="radio" name="stance" value="usernames" required>Allow public usernames</label><label><input type="radio" name="stance" value="real-names" required>Require public real names</label>'}</fieldset><label class="sr-only" for="post-text">Your reason or reply</label><textarea id="post-text" maxlength="500" required aria-describedby="social-help" placeholder="Share a view or ask a question… use @ to tag someone and # for a topic"></textarea><p id="social-help" class="muted">Ask a question or share your view. Use @username to tag someone and #hashtag to join a topic. Tags use public usernames, never private names.</p><label for="mention-person">Tag someone (@)</label><select id="mention-person"><option value="">Choose a member</option></select><div id="mention-suggestions" class="social-chips" role="group" aria-label="Suggested mentions"></div><div class="social-chips">${['AffordableJourneys','ServiceFirst','FreeUnder25','KeepFares','FreeUnder20','FareCap'].map(tag => `<button type="button" class="secondary" data-insert-tag="${tag}">#${tag}</button>`).join('')}</div><label id="correction-label" hidden><input type="checkbox" id="correction">Publish this as a correction</label><div class="composer-bottom"><span id="counter">0 / 500</span><button class="primary" id="send-post">Publish post <span aria-hidden="true">↑</span></button></div><p id="post-help" class="muted" role="status"></p></form></section>`;
+    composer.innerHTML = `<section class="panel composer"><div class="composer-person">${identity(person.participant)}<span class="you-tag">YOU</span></div><form id="post-form"><p id="reply-label" class="reply-label"></p><button type="button" id="cancel-reply" class="secondary" hidden>Cancel reply</button><fieldset id="stance">${person.scenario === 'transport-v1' ? '<legend>Your position</legend><label><input type="radio" name="stance" value="lower-fares" aria-label="Lower youth fares, including free travel" required>Lower youth fares</label><label><input type="radio" name="stance" value="keep-fares" aria-label="Keep fares unchanged; improve service first" required>Keep fares unchanged</label>' : '<legend>Which rule do you support?</legend><label><input type="radio" name="stance" value="usernames" required>Allow public usernames</label><label><input type="radio" name="stance" value="real-names" required>Require public real names</label>'}</fieldset><label class="sr-only" for="post-text">Your reason or reply</label><div class="mention-editor"><textarea id="post-text" maxlength="500" required aria-describedby="social-help" aria-autocomplete="list" aria-controls="mention-suggestions" aria-expanded="false" placeholder="Share a thought or ask a question…"></textarea><div id="mention-suggestions" class="mention-menu" role="listbox" aria-label="Members to tag" hidden></div></div><p id="social-help" class="muted">@ mention someone · # add a topic</p><label id="correction-label" hidden><input type="checkbox" id="correction">Publish this as a correction</label><div class="composer-bottom"><span id="counter">0 / 500</span><button class="primary" id="send-post">Publish post <span aria-hidden="true">↑</span></button></div><p id="post-help" class="muted" role="status"></p></form></section>`;
     document.querySelector('#post-text').value = draft.text;
     document.querySelectorAll('input[name=stance]').forEach(input => { input.checked = input.value === draft.stance; });
     document.querySelector('#correction').checked = !!draft.correction;
@@ -249,8 +280,20 @@ export async function startParticipant() {
     };
     document.querySelector('#cancel-reply').onclick = () => selectReply(null);
     form.onsubmit = event => { event.preventDefault(); sendPost(); };
-    document.querySelector('#mention-person').onchange = event => { if (event.target.value) insertToken('@' + event.target.value); event.target.value = ''; };
-    updateMentionChoices();
+    const area = document.querySelector('#post-text');
+    area.onkeydown = event => {
+      const menu = document.querySelector('#mention-suggestions');
+      if (menu.hidden) return;
+      const options = [...menu.querySelectorAll('[data-insert-mention]')];
+      if (event.key === 'Escape') { event.preventDefault(); dismissedMention = mentionKey; menu.hidden = true; area.setAttribute('aria-expanded', 'false'); area.removeAttribute('aria-activedescendant'); }
+      if (['ArrowDown', 'ArrowUp'].includes(event.key) && options.length) { event.preventDefault(); mentionIndex = mentionIndex < 0 ? (event.key === 'ArrowDown' ? 0 : options.length - 1) : (mentionIndex + (event.key === 'ArrowDown' ? 1 : -1) + options.length) % options.length; renderMentionSuggestions(); options[mentionIndex]?.scrollIntoView({ block: 'nearest' }); }
+      if (event.key === 'Enter' && mentionIndex >= 0 && options[mentionIndex]) { event.preventDefault(); insertToken('@' + options[mentionIndex].dataset.insertMention); }
+    };
+    area.addEventListener('input', () => { dismissedMention = ''; renderMentionSuggestions(); });
+    area.addEventListener('click', renderMentionSuggestions);
+    area.addEventListener('focus', renderMentionSuggestions);
+    area.addEventListener('blur', () => { document.querySelector('#mention-suggestions').hidden = true; area.setAttribute('aria-expanded', 'false'); area.removeAttribute('aria-activedescendant'); });
+    document.querySelector('#mention-suggestions').onpointerdown = event => event.preventDefault();
     updateComposer();
   }
   function insertToken(value) {
@@ -265,21 +308,23 @@ export async function startParticipant() {
     area.setRangeText(insertion, from, end, 'end');
     area.dispatchEvent(new Event('input', { bubbles: true })); area.focus();
   }
-  function updateMentionChoices() {
-    const select = document.querySelector('#mention-person'); if (!select) return;
-    const html = '<option value="">Choose a member</option>' + (data?.profiles || []).map(p => `<option value="${e(p.username)}">@${e(p.username)}</option>`).join('');
-    if (select.innerHTML !== html) select.innerHTML = html;
-    select.disabled = person?.canWrite === false || sending || !!pendingPost;
-    document.querySelectorAll('[data-insert-tag]').forEach(button => { button.disabled = select.disabled; });
-  }
+  let mentionIndex = -1, mentionKey = '', dismissedMention = '';
   function renderMentionSuggestions() {
     const area = document.querySelector('#post-text'), target = document.querySelector('#mention-suggestions'); if (!area || !target) return;
-    const match = area.value.slice(0, area.selectionStart).match(/(?:^|\s)@([a-z0-9-]*)$/i);
-    target.innerHTML = match && !area.disabled ? (data?.profiles || []).filter(p => p.username.startsWith(match[1].toLowerCase())).map(p => `<button type="button" class="secondary" data-insert-mention="${e(p.username)}">@${e(p.username)}</button>`).join('') : '';
+    const before = area.value.slice(0, area.selectionStart), match = before.match(/(?:^|\s)@([a-z0-9-]*)$/i);
+    const key = match ? before : '';
+    if (key !== mentionKey) { mentionIndex = -1; mentionKey = key; }
+    const show = !!match && !area.disabled && currentView === 'feed' && document.activeElement === area && key !== dismissedMention;
+    target.hidden = !show; area.setAttribute('aria-expanded', String(show));
+    if (!show) { area.removeAttribute('aria-activedescendant'); return; }
+    const members = (data?.profiles || []).filter(p => p.username.startsWith(match[1].toLowerCase()));
+    if (mentionIndex >= members.length) mentionIndex = -1;
+    const html = members.map((p, index) => `<button type="button" role="option" tabindex="-1" id="mention-option-${index}" aria-selected="${index === mentionIndex}" data-insert-mention="${e(p.username)}"><img src="${e(p.avatar)}" alt=""><span>@${e(p.username)}</span></button>`).join('') || '<p>No matching members</p>';
+    if (target.innerHTML !== html) target.innerHTML = html;
+    if (mentionIndex >= 0) area.setAttribute('aria-activedescendant', 'mention-option-' + mentionIndex); else area.removeAttribute('aria-activedescendant');
   }
   function updateComposer() {
     if (person?.scope !== 'poster') return;
-    updateMentionChoices();
     const closed = !data || person.canWrite === false || ['opening', 'closing', 'ended'].includes(data.phase);
     const locked = sending || !!pendingPost;
     const reply = data?.posts?.find(post => post.id === draft.replyTo);
@@ -296,7 +341,7 @@ export async function startParticipant() {
     const button = document.querySelector('#send-post');
     button.textContent = sending ? 'Publishing…' : pendingPost ? 'Retry publish' : 'Publish post ↑';
     button.disabled = person.canWrite === false || sending || (!pendingPost && (closed || missingReply));
-    document.querySelector('#post-help').textContent = person.canWrite === false ? 'Account locked. You can watch the feed. Your draft is saved for recovery.' : pendingPost ? 'Waiting for confirmation. Your contribution is saved here; retrying will not publish it twice.' : data?.phase === 'opening' ? 'Posting opens soon. Your draft stays here.' : closed ? 'The discussion is closed. Your draft stays here.' : 'Up to 500 characters. Draft saved on this device.';
+    document.querySelector('#post-help').textContent = person.canWrite === false ? 'Account locked. You can watch the feed. Your draft is saved for recovery.' : pendingPost ? 'Waiting for confirmation. Your contribution is saved here; retrying will not publish it twice.' : data?.phase === 'opening' ? 'Posting opens soon. Your draft stays here.' : closed ? 'The discussion is closed. Your draft stays here.' : 'Draft saved';
     renderMentionSuggestions();
   }
   function published(post) {
@@ -331,6 +376,7 @@ export async function startParticipant() {
   }
   function selectReply(post) {
     if (pendingPost || sending || person?.scope !== 'poster' || person?.canWrite === false) return;
+    setView('feed');
     draft.replyTo = post?.id || null; saveDraft(); updateComposer();
     document.querySelector('#post-text').focus();
   }
@@ -359,13 +405,13 @@ export async function startParticipant() {
     if (!button || !data?.posts) return;
     if (button.dataset.insertTag) { insertToken('#' + button.dataset.insertTag); return; }
     if (button.dataset.insertMention) { insertToken('@' + button.dataset.insertMention); return; }
-    if (button.dataset.hashtag) { if (memberDialog.open) memberDialog.close(); activeHashtag = button.dataset.hashtag; renderFeed(); document.querySelector('#tag-filter').scrollIntoView({ block: 'center' }); }
+    if (button.dataset.hashtag) { if (memberDialog.open) memberDialog.close(); activeHashtag = button.dataset.hashtag; setView('feed'); renderFeed(); document.querySelector('#tag-filter').scrollIntoView({ block: 'center' }); }
     if (button.hasAttribute('data-clear-tag')) { activeHashtag = null; renderFeed(); }
     if (button.dataset.profile) openMember(button.dataset.profile);
     if (button.dataset.reply) { if (memberDialog.open) memberDialog.close(); selectReply(data.posts.find(post => post.id === button.dataset.reply)); }
     if (button.dataset.flag) act(button, () => api('flags', { postId: button.dataset.flag }));
     if (button.dataset.jump) {
-      activeHashtag = null; renderFeed();
+      activeHashtag = null; setView('feed'); renderFeed();
       if (memberDialog.open) memberDialog.close();
       const post = document.getElementById('post-' + button.dataset.jump);
       if (post) { post.closest('details').open = true; post.focus(); }
@@ -382,11 +428,11 @@ export async function startParticipant() {
     const activity = new Map(data.posts.map((post, index) => [post.id, index]));
     document.querySelector('#tag-filter').innerHTML = activeHashtag ? `<p>Posts tagged <strong>#${e(activeHashtag)}</strong> <button class="secondary" data-clear-tag>Show all posts</button></p>` : '';
     const filtered = activeHashtag ? data.threads.map(thread => ({ ...thread, posts: thread.posts.filter(post => post.hashtags?.includes(activeHashtag)) })).filter(thread => thread.posts.length) : data.threads;
-    const ordered = [...filtered].sort((a, b) => Number(b.id === person?.participant.id) - Number(a.id === person?.participant.id) || activity.get(b.posts.at(-1).id) - activity.get(a.posts.at(-1).id));
-    container.innerHTML = ordered.length ? ordered.map(thread => `<details class="thread ${thread.id === person?.participant.id ? 'mine' : ''}" data-thread="${e(thread.id)}" ${!!activeHashtag || (expanded.get(thread.id) ?? (thread.id === person?.participant.id || ordered.length === 1)) ? 'open' : ''}><summary>@${e(thread.username)}${thread.id === person?.participant.id ? ' · Your conversation' : ''}<span>${thread.posts.length} posts · ${e(thread.posts.at(-1).text.slice(0, 90))}</span></summary>${thread.posts.map(post => renderPost(post)).join('')}</details>`).join('') : `<p class="empty">${activeHashtag ? 'No visible posts use this hashtag yet. Add it to your own post to start the conversation.' : 'No posts yet. Start a conversation when posting opens.'}</p>`;
+    const ordered = [...filtered].sort((a, b) => activity.get(b.posts.at(-1).id) - activity.get(a.posts.at(-1).id));
+    container.innerHTML = ordered.length ? ordered.map(thread => `<details class="thread ${thread.id === person?.participant.id ? 'mine' : ''}" data-thread="${e(thread.id)}" ${!!activeHashtag || (expanded.get(thread.id) ?? true) ? 'open' : ''}><summary>@${e(thread.username)}${thread.id === person?.participant.id ? ' · Your conversation' : ''}<span>${thread.posts.length} ${thread.posts.length === 1 ? 'post' : 'posts'}</span></summary>${thread.posts.map(post => renderPost(post)).join('')}</details>`).join('') : `<p class="empty">${activeHashtag ? 'No posts with this hashtag yet.' : 'No posts yet.'}</p>`;
     container.querySelectorAll('.post').forEach(post => { if (!existingPosts.has(post.id)) post.classList.add('post-enter'); });
     if (focus) container.querySelector(`[data-${focus[0]}="${focus[1]}"]`)?.focus({ preventScroll: true });
-    document.querySelector('#profiles').innerHTML = data.profiles.map(p => `<div class="theme-${p.cover}"><div class="profile-banner banner-art cover-${p.cover}" aria-hidden="true">${bannerArtwork(p.cover)}</div>${identity(p, true)}<p>${e(p.bio)}</p></div>`).join('');
+    document.querySelector('#profiles').innerHTML = data.profiles.filter(p => p.id !== person.participant.id).map(p => `<button class="member-card theme-${p.cover}" data-profile="${e(p.id)}" aria-label="Visit @${e(p.username)}"><span class="member-cover banner-art cover-${p.cover}" aria-hidden="true">${bannerArtwork(p.cover)}</span><span class="member-card-body"><img src="${e(p.avatar)}" alt=""><strong>@${e(p.username)}</strong><span>${e(p.bio || 'Open Circle member')}</span></span></button>`).join('') || '<p class="empty">Other members will appear here when they join.</p>';
   }
   async function refresh() {
     if (busy) return; busy = true;
@@ -409,10 +455,10 @@ export async function startParticipant() {
         joinForm.querySelector('[type=submit]').disabled = closed;
         if (closed) document.querySelector('#join-error').textContent = 'Joining has closed. Use your team’s original device.';
       }
-      document.querySelector('#question').textContent = data.question;
-      const phase = document.querySelector('#phase'), next = phaseHTML(data); if (phase.innerHTML !== next) phase.innerHTML = next;
+      document.querySelector('#question').textContent = data.scenario === 'transport-v1' ? 'Youth fares: cheaper, free or service first?' : data.question;
+      const phase = document.querySelector('#phase'), next = phaseHTML(data); if (phase.innerHTML !== next) phase.innerHTML = next; phase.hidden = ['debate', 'exposure', 'forgery', 'reactions', 'discussion'].includes(data.phase) && !data.paused;
       document.querySelector('#counts').textContent = data.participants + (data.participants === 1 ? ' member' : ' members');
-      document.querySelector('#connection').textContent = 'Live updates connected';
+      document.querySelector('#connection').textContent = 'Connected';
       const notice = document.querySelector('#notice');
       if (data.notice && !notice.innerHTML) {
         notice.innerHTML = `<section class="panel notice"><h2>What happened in Open Circle</h2><p>${e(data.notice)}</p>${person?.scope === 'poster' ? `<form id="response-form" class="recovery-options"><fieldset><legend>What would help your team participate again?</legend>${[['correct-record','A visible correction'],['protect-privacy','Better privacy boundaries'],['review-access','Review who can use the account'],['moderation','Clear moderation and reporting'],['take-a-break','Time away from the discussion']].map(([value,label]) => `<label><input name="response" type="radio" value="${value}" ${person.response === value ? 'checked' : ''} required>${label}</label>`).join('')}</fieldset><button>Save team response</button><p id="response-status" role="status">${person.response ? 'Team response saved privately.' : ''}</p></form>` : ''}</section>`;
@@ -421,16 +467,18 @@ export async function startParticipant() {
       renderIncident();
       updateComposer();
       document.querySelectorAll('#response-form input, #response-form button, #edit-profile, #viewer-link').forEach(control => { control.disabled = data.phase === 'ended' || person?.canWrite === false; });
-      document.querySelector('#social-tools').hidden = !person;
+      document.querySelector('#social-tools').hidden = !person; document.querySelector('#trending').hidden = !person;
       if (person) {
-        const trendingHTML = `<h2>Trending hashtags</h2><p class="muted">Ranked by posts visible in this feed. Starter topics begin at zero; ties keep their starter order.</p><ol class="trending-list">${(data.trending || []).map(tag => `<li><button class="inline-tag" data-hashtag="${e(tag.tag)}"><strong>#${tag.rank}</strong> #${e(tag.label)}</button><span>${tag.count} ${tag.count === 1 ? 'post' : 'posts'}${tag.starter ? ' · Starter topic' : ''}</span></li>`).join('')}</ol>`;
-        if (document.querySelector('#trending').innerHTML !== trendingHTML) document.querySelector('#trending').innerHTML = trendingHTML;
+        const trends = document.querySelector('#trending');
+        const expanded = trends.querySelector('details')?.open ?? matchMedia('(min-width: 761px)').matches;
+        const trendingHTML = `<details ${expanded ? 'open' : ''}><summary><span class="eyebrow">IN THIS CIRCLE</span><span class="trends-title">Trending hashtags</span></summary><ol class="trending-list">${(data.trending || []).slice(0, 5).map(tag => `<li><span class="trend-rank">${tag.rank}</span><div><button class="inline-tag" data-hashtag="${e(tag.tag)}">#${e(tag.label)}</button><span>${tag.count} ${tag.count === 1 ? 'post' : 'posts'}${tag.starter ? ' · Starter' : ''}</span></div></li>`).join('')}</ol></details>`;
+        if (trends.innerHTML !== trendingHTML) trends.innerHTML = trendingHTML;
         activity.observe(data.activity);
       }
       renderFeed(); if (memberId) renderMember();
     } catch (err) {
       document.querySelector('#connection').textContent = err.message;
-      if (err.status === 410) { activity.clear(); document.querySelector('#social-tools').hidden = true; document.querySelector('#tag-filter').replaceChildren(); person = null; data = null; pendingPost = null; if (incidentDialog.open) incidentDialog.close(); document.querySelector('#incident-banner').replaceChildren(); if (memberDialog.open) memberDialog.close(); if (joinDialog.open) joinDialog.close(); [key,key+':draft',key+':post-id',key+':composer',key+':pending-post'].forEach(k=>localStorage.removeItem(k)); document.querySelector('#team').innerHTML = '<p>This session has been cleared or expired.</p>'; document.querySelector('#composer').innerHTML = ''; document.querySelector('#threads').innerHTML = ''; document.querySelector('#profiles').innerHTML = ''; document.querySelector('#notice').innerHTML = ''; document.querySelector('#phase').textContent = 'This session has been cleared or expired.'; }
+      if (err.status === 410) { activity.clear(); document.querySelector('#social-tools').hidden = true; document.querySelector('#trending').hidden = true; document.querySelector('#tag-filter').replaceChildren(); person = null; data = null; pendingPost = null; if (incidentDialog.open) incidentDialog.close(); document.querySelector('#incident-banner').replaceChildren(); if (memberDialog.open) memberDialog.close(); if (joinDialog.open) joinDialog.close(); [key,key+':draft',key+':post-id',key+':composer',key+':pending-post'].forEach(k=>localStorage.removeItem(k)); document.querySelector('#team').innerHTML = '<p>This session has been cleared or expired.</p>'; document.querySelector('#composer').innerHTML = ''; document.querySelector('#threads').innerHTML = ''; document.querySelector('#profiles').innerHTML = ''; document.querySelector('#notice').innerHTML = ''; document.querySelector('#phase').textContent = 'This session has been cleared or expired.'; }
     } finally { busy = false; }
   }
   try { person = await api('me'); membershipChecked = true; } catch (err) { if (err.status === 401) { membershipChecked = true; forgetTeam(); } }

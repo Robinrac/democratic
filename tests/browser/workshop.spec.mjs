@@ -36,7 +36,7 @@ test('host-paced seven-team rehearsal on phone and laptop, with cancel, reconnec
     await join.getByRole('group',{name:'Profile picture'}).getByRole('radio',{name:'Ocean'}).check();
     await join.getByRole('group',{name:'Banner'}).getByRole('radio',{name:'Sage'}).check();
     await join.getByRole('button',{name:'Join the forum'}).click();
-    await expect(page.getByText('Private details',{exact:true}).first()).toBeVisible();
+    await expect(page.locator('#team > .private-profile')).toHaveCount(0);
     await expect(page.locator('#team > .identity')).toContainText('@');
     await expect(page.locator('#team > .identity')).not.toContainText(roleCards[i].fullName);
     await expect(page.locator('#team .profile-banner')).toHaveClass(/cover-4/);
@@ -49,15 +49,16 @@ test('host-paced seven-team rehearsal on phone and laptop, with cancel, reconnec
   await hostEntry.hover();
   expect(await hostEntry.locator('span').evaluate(el=>getComputedStyle(el).opacity)).toBe('1');
   await expect(teams[1].locator('.social-nav')).toContainText('Discover');
-  await phone.locator('.private-profile > summary').click();
-  await expect(phone.locator('.private-profile')).toContainText(roleCards[0].fullName);
+  await phone.getByRole('button',{name:'Edit profile',exact:true}).click();
+  await expect(phone.locator('#profile-dialog input[name=name]')).toHaveValue(roleCards[0].fullName);
   await phone.getByText('Your profile notes',{exact:true}).click(); await expect(phone.getByRole('heading',{name:'Eydís Jónsdóttir'})).toBeVisible();
   await phone.getByText('Your profile notes',{exact:true}).click();
-  await phone.locator('.private-profile > summary').click();
+  await phone.getByRole('button',{name:'Cancel',exact:true}).click();
   await phone.getByText('Edit profile',{exact:true}).click(); await phone.locator('#profile-form').getByLabel('Bio',{exact:true}).fill('Listening and exploring new ideas.'); await phone.getByRole('button',{name:'Save profile'}).click();
   await expect(phone.getByRole('dialog',{name:'Your profile.'})).not.toBeVisible();
   await phone.getByRole('link',{name:'Discover',exact:true}).click();
-  await expect(phone.locator('#profiles').getByText('Listening and exploring new ideas.',{exact:true})).toBeVisible();
+  await expect(phone.locator('#profiles .member-card')).toHaveCount(6);
+  await expect(phone.locator('#profiles')).not.toContainText('Listening and exploring new ideas.');
   await phone.getByRole('link',{name:'Feed',exact:true}).click();
   const unjoined=await browser.newPage(); await unjoined.goto('/?s='+sid);
   await expect(unjoined.getByRole('dialog')).toBeVisible();
@@ -65,14 +66,14 @@ test('host-paced seven-team rehearsal on phone and laptop, with cancel, reconnec
   await expect(unjoined.locator('.post')).toHaveCount(0);
   await expect(unjoined.getByRole('button',{name:'Continue as observer'})).toHaveCount(0);
   // A second team device uses an explicit, scoped link from its posting device.
-  await phone.locator('.private-profile > summary').click();
+  await phone.getByRole('button',{name:'Edit profile',exact:true}).click();
   await phone.getByText('Add a read-only team device',{exact:true}).click();
   await phone.getByRole('button',{name:'Make viewer link'}).click();
   const viewerLink=phone.locator('#viewer-url a'); await expect(viewerLink).toBeVisible();
   const viewer=await browser.newPage(); await viewer.goto(await viewerLink.getAttribute('href'));
   await expect(viewer.getByRole('dialog')).not.toBeVisible();
   await expect(viewer.getByText('Your profile notes',{exact:true})).toHaveCount(0);
-  await phone.locator('.private-profile > summary').click();
+  await phone.getByRole('button',{name:'Cancel',exact:true}).click();
   const projector=await browser.newPage(); await projector.goto('/?s='+sid+'&presenter=1'); await expect(projector.locator('#qr svg')).toBeVisible();
   await expect(projector.locator('button')).toHaveCount(0); await expect(projector.locator('body')).not.toContainText('Eydís');
   await expect(projector.getByRole('link',{name:'Host access'})).toHaveCount(0);
