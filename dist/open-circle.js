@@ -154,6 +154,8 @@ export async function startParticipant() {
   </main>`;
   const activity = createActivity(root, key);
   root.insertAdjacentHTML('beforeend', `<dialog id="join-dialog" class="join-dialog" aria-labelledby="join-title"><form id="join-form"><h2 id="join-title">Create your profile.</h2><div class="profile-preview"><div class="profile-preview-banner banner-art cover-0">${bannerArtwork(0)}</div><div class="profile-preview-content"><img id="preview-picture" src="/avatars/0.svg" alt="Selected profile picture"><span class="eyebrow">YOUR PUBLIC PROFILE</span><strong id="preview-name" aria-live="polite">@your-username</strong><p id="preview-bio">Your bio</p><small id="preview-hint">Username assigned from your paper profile.</small></div></div>${profileFields('join')}<p id="join-error" class="error" role="alert"></p><div class="join-actions"><button class="primary" type="submit">Join the forum</button></div></form></dialog>`);
+  root.insertAdjacentHTML('beforeend', '<dialog id="workshop-intro-dialog" class="join-dialog welcome-dialog" aria-labelledby="welcome-title"><span class="eyebrow">YOUR PROFILE IS READY</span><h2 id="welcome-title">Today’s topic</h2><p id="welcome-topic"></p><h3>Your anonymous forum</h3><p>Share your paper character’s views using an anonymous username. Read, reply and @tag others.</p><form method="dialog"><button class="primary" autofocus>Enter the forum</button></form></dialog>');
+  const welcomeDialog = document.querySelector('#workshop-intro-dialog');
   root.insertAdjacentHTML('beforeend', '<dialog id="incident-dialog" class="join-dialog incident-dialog" aria-labelledby="incident-title"><div id="incident-content"></div><button id="close-incident" class="primary">Back to the feed</button></dialog>');
   const incidentDialog = document.querySelector('#incident-dialog');
   document.querySelector('#close-incident').onclick = () => incidentDialog.close();
@@ -207,7 +209,7 @@ export async function startParticipant() {
   });
   joinForm.addEventListener('input', updateJoinPreview);
   joinForm.addEventListener('change', updateJoinPreview);
-  function showJoinDialog() { if (!joinDialog.open) joinDialog.showModal(); }
+  function showJoinDialog() { if (welcomeDialog.open) welcomeDialog.close(); if (!joinDialog.open) joinDialog.showModal(); }
   joinDialog.addEventListener('cancel', event => event.preventDefault());
   joinDialog.addEventListener('close', () => { if (!person && data) showJoinDialog(); });
   joinForm.onsubmit = async event => {
@@ -216,7 +218,12 @@ export async function startParticipant() {
     button.disabled = true; document.querySelector('#join-error').textContent = '';
     try {
       person = await api('join', { name: fields.get('name'), town: fields.get('town'), bio: fields.get('bio'), color: Number(fields.get('color')), cover: Number(fields.get('cover')) });
-      membershipChecked = true; joinDialog.close(); renderTeam(); renderComposer(); await refresh();
+      membershipChecked = true; joinDialog.close(); renderTeam(); renderComposer();
+      document.querySelector('#welcome-topic').textContent = person.scenario === 'transport-v1'
+        ? 'Should buses be cheaper or free for under-20s or under-25s—or should we keep fares and improve services?'
+        : data.question;
+      welcomeDialog.showModal();
+      await refresh();
       document.querySelector('#announcer').textContent = 'Your profile is ready.';
     } catch (err) { document.querySelector('#join-error').textContent = err.message; if (!err.status || err.status >= 500) membershipChecked = false; }
     finally { button.disabled = false; }
@@ -488,7 +495,7 @@ export async function startParticipant() {
       renderFeed(); if (memberId) renderMember();
     } catch (err) {
       document.querySelector('#connection').textContent = err.message;
-      if (err.status === 410) { activity.clear(); document.querySelector('#social-tools').hidden = true; document.querySelector('#trending').hidden = true; document.querySelector('#tag-filter').replaceChildren(); person = null; data = null; pendingPost = null; if (incidentDialog.open) incidentDialog.close(); document.querySelector('#incident-banner').replaceChildren(); if (memberDialog.open) memberDialog.close(); if (joinDialog.open) joinDialog.close(); [key,key+':draft',key+':post-id',key+':composer',key+':pending-post'].forEach(k=>localStorage.removeItem(k)); document.querySelector('#team').innerHTML = '<p>This session has been cleared or expired.</p>'; document.querySelector('#composer').innerHTML = ''; document.querySelector('#threads').innerHTML = ''; document.querySelector('#profiles').innerHTML = ''; document.querySelector('#sidebar-other-members').replaceChildren(); document.querySelector('#notice').innerHTML = ''; document.querySelector('#phase').textContent = 'This session has been cleared or expired.'; }
+      if (err.status === 410) { welcomeDialog.close(); activity.clear(); document.querySelector('#social-tools').hidden = true; document.querySelector('#trending').hidden = true; document.querySelector('#tag-filter').replaceChildren(); person = null; data = null; pendingPost = null; if (incidentDialog.open) incidentDialog.close(); document.querySelector('#incident-banner').replaceChildren(); if (memberDialog.open) memberDialog.close(); if (joinDialog.open) joinDialog.close(); [key,key+':draft',key+':post-id',key+':composer',key+':pending-post'].forEach(k=>localStorage.removeItem(k)); document.querySelector('#team').innerHTML = '<p>This session has been cleared or expired.</p>'; document.querySelector('#composer').innerHTML = ''; document.querySelector('#threads').innerHTML = ''; document.querySelector('#profiles').innerHTML = ''; document.querySelector('#sidebar-other-members').replaceChildren(); document.querySelector('#notice').innerHTML = ''; document.querySelector('#phase').textContent = 'This session has been cleared or expired.'; }
     } finally { busy = false; }
   }
   try { person = await api('me'); membershipChecked = true; } catch (err) { if (err.status === 401) { membershipChecked = true; forgetTeam(); } }

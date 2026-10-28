@@ -32,6 +32,18 @@ test('name errors, mentions, post alerts, ranked tags and reset work together on
   await expect(join.locator('#join-error')).toBeEmpty();
   await join.getByRole('button', { name: 'Join the forum' }).click();
   await expect(join).not.toBeVisible();
+  const welcome = a.getByRole('dialog', { name: 'Today’s topic', exact: true });
+  await expect(welcome).toContainText('under-20s or under-25s');
+  await expect(welcome).toContainText('anonymous username');
+  await a.screenshot({ path: info.outputPath('welcome-desktop.png') });
+  await a.setViewportSize({ width: 390, height: 844 });
+  expect(await welcome.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
+  await a.screenshot({ path: info.outputPath('welcome-phone.png') });
+  await welcome.getByRole('button', { name: 'Enter the forum' }).click();
+  await a.reload();
+  await expect(a.getByRole('button', { name: 'Open your profile', exact: true })).toBeVisible();
+  await expect(welcome).not.toBeVisible();
+  await a.setViewportSize({ width: 1280, height: 1000 });
   await expect(a.locator('#trending')).toContainText('1#AffordableJourneys');
   await expect(a.locator('#trending')).toContainText('0 posts · Starter');
   await expect(a.locator('#mention-person')).toHaveCount(0);
@@ -165,6 +177,8 @@ test('name errors, mentions, post alerts, ranked tags and reset work together on
   await a.locator('#join-name').fill('Eydis'); await a.locator('#join-town').fill('Reykjavík');
   await a.getByRole('button', { name: 'Join the forum' }).click();
   await expect(a.locator('#join-dialog')).not.toBeVisible();
+  await expect(welcome).toBeVisible();
+  await welcome.getByRole('button', { name: 'Enter the forum' }).click();
   await expect(a.locator('#incident-banner')).toBeEmpty();
   await expect(a.locator('#trending li').first()).toContainText('0 posts');
   expect(errors).toEqual([]);

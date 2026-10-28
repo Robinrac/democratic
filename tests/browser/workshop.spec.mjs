@@ -36,6 +36,7 @@ test('host-paced seven-team rehearsal on phone and laptop, with cancel, reconnec
     await join.getByRole('group',{name:'Profile picture'}).getByRole('radio',{name:'Ocean'}).check();
     await join.getByRole('group',{name:'Banner'}).getByRole('radio',{name:'Sage'}).check();
     await join.getByRole('button',{name:'Join the forum'}).click();
+    await page.getByRole('button',{name:'Enter the forum',exact:true}).click();
     await expect(page.locator('#team > .private-profile')).toHaveCount(0);
     await expect(page.locator('#team .mini-profile')).toContainText('@');
     await expect(page.locator('#team .mini-profile')).not.toContainText(roleCards[i].fullName);

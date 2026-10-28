@@ -212,6 +212,10 @@
 }
 /* Private incident updates preserve the Open Circle card and colour system. */
 .incident-dialog { max-width: 540px; }
+.welcome-dialog { max-width: 480px; }
+.welcome-dialog h3 { margin: 24px 0 8px; font-size: 16px; }
+.welcome-dialog p { line-height: 1.6; }
+.welcome-dialog form { margin-top: 24px; }
 .incident-dialog h2 { margin: 12px 0; }
 .incident-dialog p, .incident-notice p { line-height: 1.65; }
 .incident-notice { border-left: 4px solid #742547; margin-bottom: 20px; }
