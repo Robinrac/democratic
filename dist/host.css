@@ -13,6 +13,12 @@
 #sessions { padding: 4px 20px; background: #f5edf2; }
 #session-options > summary { font-weight: 600; font-size: 14px; }
 .host-room { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+.host-layout > h1:empty { display:none; }
+.host-room { flex-wrap:wrap; }
+.host-incident-launch { flex-basis:100%; display:flex; align-items:center; gap:18px; }
+.host-layout .launch-incident { min-height:66px; min-width:280px; padding:18px 32px; font-size:22px; font-weight:750; background:#a92b61; color:white; box-shadow:0 4px 12px #a92b6120; }
+.host-incident-launch span { font-size:13px; color:#625a65; }
+@media(max-width:760px) { .host-incident-launch { flex-direction:column; align-items:stretch; gap:8px; }.host-layout .launch-incident { min-width:0; width:100%; } }
 .host-room .eyebrow { margin-bottom: 8px; font-size: 10px; }
 .host-room p { margin: 0; color: #625a65; font-size: 14px; }
 .host-links { display: flex; flex-wrap: wrap; gap: 12px 24px; font-size: 14px; }
@@ -20,7 +26,6 @@
 .host-section-heading p { margin: 0; color: #625a65; font-size: 13px; }
 .host-steps { display: flex; list-style: none; gap: 8px; margin: 0; padding: 0; overflow-x: auto; }
 .host-steps li { flex: 1 0 100px; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 8px; position: relative; }
-.host-steps li:not(:last-child)::after { content: ''; height: 2px; background: #eadde5; position: absolute; top: 14px; left: calc(50% + 20px); width: calc(100% - 32px); }
 .step-number { display: grid; place-items: center; border: 1px solid #d7cbd3; color: #766f79; background: white; border-radius: 50%; width: 28px; height: 28px; font-size: 12px; }
 .step-current .step-number { background: #682241; border-color: #682241; color: white; }
 .step-done .step-number { background: #e4f2e9; border-color: #a0c8ad; color: #226b3d; }

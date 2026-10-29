@@ -11,6 +11,12 @@ test('transport host launch shows seven private outcomes on phone and desktop an
   await host.getByRole('button', { name: 'Create room', exact: true }).click();
   await expect(host.getByRole('heading', { name: 'Transport browser rehearsal', exact: true })).toBeVisible();
   const sid = new URL(host.url()).searchParams.get('s');
+  const launch = host.getByRole('button', { name: 'Launch incident', exact: true });
+  await expect(launch).toHaveCount(1); await expect(launch).toBeDisabled();
+  expect(await launch.evaluate(el => el.closest('.host-room') !== null)).toBe(true);
+  await expect(host.locator('#controls')).not.toContainText('PRIVATE HOST ·');
+  await expect(host.locator('#controls')).not.toContainText('Share the participant link');
+  expect(await launch.evaluate(el => el.getBoundingClientRect().height)).toBeGreaterThanOrEqual(60);
   await host.setViewportSize({ width: 1440, height: 1000 });
   await expect(host.locator('.host-table tbody tr')).toHaveCount(7);
   await expect(host.locator('.host-table .join-dot.joined')).toHaveCount(0);
