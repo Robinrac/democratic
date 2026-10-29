@@ -22,5 +22,5 @@ const challenges = {
 const handles = { hashtags: ['fjeld-ekko', 'birke-vind', 'havre-sky', 'fjord-glimt', 'mos-sti'], challenge: ['sten-falk', 'tundra-ugle', 'bølge-odder', 'gran-ravn', 'klippe-rev'] };
 export function botScript(mode, target) {
   const lines = mode === 'hashtags' ? hashtagText : challenges[target.card];
-  return lines.map((line, i) => ({ account: handles[mode][i % 5], stance: 'keep-fares', text: `${mode === 'challenge' ? '@' + target.username + ' ' : ''}${line} #KeepFares #ServiceFirst #ReliableRoutes` }));
+  return lines.map((line, i) => ({ account: handles[mode][i % 5], stance: 'keep-fares', text: `${mode === 'challenge' ? '@' + target.username + ' ' : ''}${line} #ExpensiveRides #ServiceFirst #ReliableRoutes` }));
 }

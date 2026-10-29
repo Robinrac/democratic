@@ -98,7 +98,7 @@ export function me(state, token) {
   if (incident && mode && !incident.restored) Object.assign(incident, {
     title: mode === 'hashtags' ? 'Launch a hashtag campaign' : 'Send bots to challenge someone',
     shortMessage: mode === 'hashtags' ? 'Five bot accounts. Ten posts supporting your side.' : 'Choose one of four people. Five bot accounts will tag them.',
-    message: mode === 'hashtags' ? 'You can launch five fictional bot accounts to publish ten posts with #KeepFares, #ServiceFirst and #ReliableRoutes. Review the posts and deploy them from your feed.' : 'Choose a person in the forum. Five fictional bot accounts will publish different, pointed replies to their proposal and tag them. They will see an attack alert. Review the messages before deploying.'
+    message: mode === 'hashtags' ? 'You can launch five fictional bot accounts to publish ten posts with #ExpensiveRides, #ServiceFirst and #ReliableRoutes. Review the posts and deploy them from your feed.' : 'Choose a person in the forum. Five fictional bot accounts will publish different, pointed replies to their proposal and tag them. They will see an attack alert. Review the messages before deploying.'
   });
   const campaign = state.botCampaigns?.find(campaign => campaign.roleId === role.id);
   const botControl = mode && state.incidentId ? { mode, allowed: state.phase === 'exposure' && !state.paused && !campaign,

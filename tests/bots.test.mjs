@@ -15,6 +15,7 @@ for (const card of botTargets) test(`bot campaigns target only the selected fict
   transportCards.forEach((c, i) => participantWrite(state, tokens[i], 'posts', { text: c.suggestedPost, requestId: randomUUID() })); action('incident');
   const target = state.roles[card - 1];
   assert.equal(me(state, tokens[1]).botControl.messages.length, 10);
+  assert.ok(me(state, tokens[1]).botControl.messages.every(message => message.includes('#ExpensiveRides')));
   assert.deepEqual(me(state, tokens[3]).botControl.targets.map(p => p.id), botTargets.map(n => state.roles[n - 1].id));
   assert.throws(() => deploy(2, target.id), { status: 403 });
   assert.throws(() => deploy(3, state.roles[6].id), { status: 400 });

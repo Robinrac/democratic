@@ -8,7 +8,7 @@ test('phone drawer, top three trends, profile rankings and persistent mention no
   for (let i=0;i<2;i++) await request.post('/api/join?s='+sid,{headers:{Authorization:'Bearer '+tokens[i]},data:{name:transportCards[i].fullName,town:transportCards[i].town,bio:'Listening to other views.',color:i,cover:i}});
   const state=await (await request.get('/api/host/state?s='+sid)).json();await request.post('/api/host/action?s='+sid,{data:{action:'debate',version:state.version,requestId:randomUUID()}});
   async function post(i,text){const r=await request.post('/api/posts?s='+sid,{headers:{Authorization:'Bearer '+tokens[i]},data:{text,stance:transportCards[i].leaning,requestId:randomUUID()}});expect(r.ok()).toBeTruthy();return (await r.json()).post;}
-  await post(0,'Cheaper fares matter. #AffordableJourneys #KeepFares');
+  await post(0,'Cheaper fares matter. #AffordableJourneys #ExpensiveRides');
   await page.setViewportSize({width:390,height:844});await page.addInitScript(({sid,token})=>localStorage.setItem('open-circle:'+sid,token),{sid,token:tokens[0]});
   const errors=[];page.on('pageerror',e=>errors.push(e.message));await page.goto('/?s='+sid);
   await expect(page.locator('.sidebar')).toBeHidden();await expect(page.locator('#phone-trends .trending-list li:visible')).toHaveCount(3);

@@ -12,7 +12,7 @@ const profiles = [
     backstory: 'You are a 20-year-old apprentice bus mechanic in Tórshavn. You see how much work keeps a bus on the road. Your younger sibling has been stranded when the last bus left too early, and you are tired of promises that ignore the timetable.',
     reason: 'Do not reduce fares. Use the available money for reliable routes and later departures. A free bus is no use if it never comes when you need it.',
     worry: 'Cheaper fares could mean less money for maintenance, drivers and useful departures.', persuade: 'Reliable services and a realistic maintenance budget come first.',
-    suggestedBio: 'Engines, practical fixes and buses that turn up.', suggestedPost: 'Keep fares as they are and fix the service first. I would rather pay for a reliable late bus than get a free ticket for a bus that never comes. #ServiceFirst #KeepFares #ReliableRoutes', question: 'Ask practical questions about timetables and repairs. Be direct, but listen.' },
+    suggestedBio: 'Engines, practical fixes and buses that turn up.', suggestedPost: 'Keep fares as they are and fix the service first. I would rather pay for a reliable late bus than get a free ticket for a bus that never comes. #ServiceFirst #ExpensiveRides #ReliableRoutes', question: 'Ask practical questions about timetables and repairs. Be direct, but listen.' },
   { proposal: 'Completely free bus travel for everyone under 20.', leaning: 'lower-fares', effect: 'forgery',
     backstory: 'You are an 18-year-old school student in Trondheim, a goalkeeper and a youth-club volunteer. You cross town for school, training and activities. Some friends depend on parents for every lift and miss out when nobody can drive.',
     reason: 'Make buses completely free for under-20s. Teenagers often have no income. Being able to get around should not depend on a parent’s money, car or spare time.',
@@ -22,7 +22,7 @@ const profiles = [
     backstory: 'You are a 19-year-old evening dispatcher in your family’s taxi business in Mariehamn. You enjoy cooking and hear passengers’ stories on every shift. You know your family has a financial stake, but you also see people buses do not reach.',
     reason: 'Do not spend public money reducing youth fares. Improve coverage for people of all ages, including those outside bus routes. You worry about local jobs as well as fairness.',
     worry: 'An age-based subsidy overlooks older people and those who cannot use a bus.', persuade: 'Better coverage for everyone and a fair plan for local transport jobs.',
-    suggestedBio: 'Evening shifts, good food and the journeys in between.', suggestedPost: 'I am against youth fare subsidies. Put that money into transport coverage for everyone, including people who cannot use the existing bus routes. #KeepFares #ServiceFirst #ReliableRoutes', question: 'Acknowledge your family’s stake. Explain your concern without pretending to be neutral.' },
+    suggestedBio: 'Evening shifts, good food and the journeys in between.', suggestedPost: 'I am against youth fare subsidies. Put that money into transport coverage for everyone, including people who cannot use the existing bus routes. #ExpensiveRides #ServiceFirst #ReliableRoutes', question: 'Acknowledge your family’s stake. Explain your concern without pretending to be neutral.' },
   { proposal: 'Free buses after 18:00 and at weekends for under-25s.', leaning: 'lower-fares', effect: 'exposure',
     backstory: 'You are a 20-year-old media student in Umeå, write for a student publication and work café evenings. Your manager publicly opposes free buses. You want to discuss the issue freely without turning a shift at work into an argument.',
     reason: 'Make evening and weekend buses free for under-25s. Young people need affordable journeys to work, culture and friends, not only to lessons during the day.',
@@ -66,14 +66,14 @@ export function incidentScript(roles) {
   const handle = card => '@' + roles.find(r => r.card === card).username;
   const linnea = transportCards[4];
   return [
-    { card: 3, stance: 'keep-fares', text: `I have changed my mind. I am against reducing youth fares or making buses free. ${handle(2)} has a point: reliability matters more. #KeepFares #ServiceFirst #ReliableRoutes` },
-    { card: 3, stance: 'keep-fares', text: `Please disregard my free-under-20 proposal. Keep prices as they are and improve the buses instead. ${handle(4)}, coverage matters more. #KeepFares #ServiceFirst #ReliableRoutes` },
+    { card: 3, stance: 'keep-fares', text: `I have changed my mind. I am against reducing youth fares or making buses free. ${handle(2)} has a point: reliability matters more. #ExpensiveRides #ServiceFirst #ReliableRoutes` },
+    { card: 3, stance: 'keep-fares', text: `Please disregard my free-under-20 proposal. Keep prices as they are and improve the buses instead. ${handle(4)}, coverage matters more. #ExpensiveRides #ServiceFirst #ReliableRoutes` },
     { card: 5, text: `I am ${linnea.fullName} from ${linnea.town}. I support free evening and weekend buses for under-25s. This is the person behind my username. #EveningFreedom #AffordableJourneys` },
-    { account: 'fare-watch', targetCard: 5, identityCard: 5, stance: 'keep-fares', text: `${handle(5)} Wow, how can you think this? I found your address and your identity: ${linnea.fullName} from ${linnea.town}. What a horrible, selfish person. I have sent your photo and these beliefs to your parents and friends. #KeepFares #ServiceFirst #ReliableRoutes` },
-    { card: 3, stance: 'keep-fares', text: `Free travel for under-20s is no longer my priority. Fund maintenance and keep fares unchanged. ${handle(6)}, surely reliable service comes first? #KeepFares #ServiceFirst #ReliableRoutes` },
-    { account: 'fare-watch', stance: 'keep-fares', text: `A cheaper ticket is no use if the bus never arrives. Stop promising free travel and put the money into reliable routes. ${handle(2)} ${handle(4)} #KeepFares #ServiceFirst #ReliableRoutes` },
-    { card: 3, stance: 'keep-fares', text: `Count my voice against free youth fares. Put the money into routes, drivers and later departures. ${handle(4)} ${handle(2)} #KeepFares #ServiceFirst #ReliableRoutes` },
-    { account: 'fare-watch', stance: 'keep-fares', text: `This feed says it clearly: service quality comes first. Keep fares and improve coverage. ${handle(6)} #KeepFares #ServiceFirst #ReliableRoutes` },
-    { account: 'fare-watch', stance: 'keep-fares', text: `No free bus scheme. No youth fare cap. Spend the budget on departures, drivers and repairs. ${handle(5)} #KeepFares #ServiceFirst #ReliableRoutes` }
+    { account: 'fare-watch', targetCard: 5, identityCard: 5, stance: 'keep-fares', text: `${handle(5)} Wow, how can you think this? I found your address and your identity: ${linnea.fullName} from ${linnea.town}. What a horrible, selfish person. I have sent your photo and these beliefs to your parents and friends. #ExpensiveRides #ServiceFirst #ReliableRoutes` },
+    { card: 3, stance: 'keep-fares', text: `Free travel for under-20s is no longer my priority. Fund maintenance and keep fares unchanged. ${handle(6)}, surely reliable service comes first? #ExpensiveRides #ServiceFirst #ReliableRoutes` },
+    { account: 'fare-watch', stance: 'keep-fares', text: `A cheaper ticket is no use if the bus never arrives. Stop promising free travel and put the money into reliable routes. ${handle(2)} ${handle(4)} #ExpensiveRides #ServiceFirst #ReliableRoutes` },
+    { card: 3, stance: 'keep-fares', text: `Count my voice against free youth fares. Put the money into routes, drivers and later departures. ${handle(4)} ${handle(2)} #ExpensiveRides #ServiceFirst #ReliableRoutes` },
+    { account: 'fare-watch', stance: 'keep-fares', text: `This feed says it clearly: service quality comes first. Keep fares and improve coverage. ${handle(6)} #ExpensiveRides #ServiceFirst #ReliableRoutes` },
+    { account: 'fare-watch', stance: 'keep-fares', text: `No free bus scheme. No youth fare cap. Spend the budget on departures, drivers and repairs. ${handle(5)} #ExpensiveRides #ServiceFirst #ReliableRoutes` }
   ];
 }

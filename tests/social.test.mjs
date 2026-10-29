@@ -39,6 +39,7 @@ test('personal activity and hashtag ranks respect incident visibility, and a ful
   const teams = []; for (let i = 0; i < 7; i++) teams.push(await w.claim(sid, i));
   let feed = await w.call('feed', undefined, { sid, token: teams[1].token });
   assert.equal(feed.trending[0].label, 'AffordableJourneys'); assert.ok(feed.trending.every(tag => tag.count === 0));
+  assert.ok(feed.trending.some(tag => tag.label === 'ExpensiveRides'));
   await w.action(sid, 'debate');
   const original = [];
   for (const [i, card] of transportCards.entries()) {
