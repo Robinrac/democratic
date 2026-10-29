@@ -51,7 +51,7 @@ test('transport host launch shows seven private outcomes on phone and desktop an
   for (let i = 0; i < 7; i++) {
     await pages[i].getByLabel('Your reason or reply').fill(transportCards[i].suggestedPost);
     await pages[i].getByRole('button', { name: 'Publish post' }).click();
-    await expect(pages[i].locator('.thread.mine')).toContainText(transportCards[i].suggestedPost);
+    await expect(pages[i].locator('#threads')).toContainText(transportCards[i].suggestedPost);
   }
   await pages[2].getByLabel('Your reason or reply').fill('Keep this unfinished thought.');
   await pages[2].getByRole('link', { name: 'Discover', exact: true }).click();
@@ -128,7 +128,7 @@ test('transport host launch shows seven private outcomes on phone and desktop an
   }
   await pages[0].getByLabel('Your reason or reply').fill('I can speak again. My view has not changed.');
   await pages[0].getByRole('button', { name: 'Publish post' }).click();
-  await expect(pages[0].locator('.thread.mine')).toContainText('I can speak again.');
+  await expect(pages[0].locator('#threads')).toContainText('I can speak again.');
   expect(errors).toEqual([]);
   for (const context of contexts) await context.close();
 });

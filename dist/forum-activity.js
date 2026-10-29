@@ -1,3 +1,8 @@
+export function newestPosts(posts) {
+  return posts.map((post, index) => ({ post, index })).sort((a, b) =>
+    (Date.parse(b.post.createdAt) || 0) - (Date.parse(a.post.createdAt) || 0) || b.index - a.index
+  ).map(item => item.post);
+}
 const escape = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 export function profileStats(posts, profileId, profiles) {
   const visible = posts.filter(post => !post.hidden);

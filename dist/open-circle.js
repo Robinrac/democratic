@@ -1,6 +1,6 @@
 import { createIncidentExperience } from './incident-experience.js';
 import { PROFILE_THEMES } from './profile-themes.js';
-import { createActivity, postText, profileStats } from './forum-activity.js';
+import { createActivity, postText, profileStats, newestPosts } from './forum-activity.js';
 
 export const e = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 export const uid = () => [...crypto.getRandomValues(new Uint8Array(32))].map(v => v.toString(16).padStart(2, '0')).join('');
@@ -45,7 +45,7 @@ function appearanceChoices(field, selected) {
   return `<fieldset class="appearance-group"><legend>${picture ? 'Profile picture' : 'Banner'}</legend><div class="appearance-options ${picture ? '' : 'banner-options'}">${PROFILE_THEMES.map((theme, index) => `<label class="appearance-option"><input type="radio" name="${field}" value="${index}" ${index === selected ? 'checked' : ''}><span class="${picture ? 'picture-swatch' : `cover-swatch banner-art cover-${index}`}" aria-hidden="true">${picture ? `<img src="/avatars/${index}.svg" alt="">` : bannerArtwork(index)}</span><span>${e(theme.name)}</span></label>`).join('')}</div></fieldset>`;
 }
 function profileFields(prefix, values = {}) {
-  return `<div class="setup-tabs" role="tablist" aria-label="Profile setup"><button type="button" role="tab" id="${prefix}-personal-tab" aria-controls="${prefix}-personal" aria-selected="true">Personal info</button><button type="button" role="tab" id="${prefix}-appearance-tab" aria-controls="${prefix}-appearance" aria-selected="false" tabindex="-1">Profile</button></div><section id="${prefix}-personal" role="tabpanel" aria-labelledby="${prefix}-personal-tab"><label for="${prefix}-bio">Bio</label><p class="field-hint" id="${prefix}-bio-hint">Public · Based on your paper profile.</p><textarea id="${prefix}-bio" name="bio" maxlength="160" rows="2" aria-describedby="${prefix}-bio-hint" placeholder="What matters to this person?">${e(values.bio || '')}</textarea><fieldset class="private-fields" aria-describedby="${prefix}-privacy-note"><legend><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="5" y="10" width="14" height="11" rx="3"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/><path d="M12 14v3"/></svg>Private details</legend><p class="privacy-note" id="${prefix}-privacy-note">These details are not visible to anyone else in the forum.</p><div class="details-grid"><div><label for="${prefix}-name">Name from your paper</label><input id="${prefix}-name" name="name" maxlength="60" value="${e(values.name || '')}" required autocomplete="off" aria-describedby="${prefix}-name-hint" placeholder="Enter name"><small class="field-hint" id="${prefix}-name-hint">First name, surname or full name. Accents are optional.</small></div><div><label for="${prefix}-town">Home town from your paper</label><input id="${prefix}-town" name="town" maxlength="80" value="${e(values.town || '')}" required autocomplete="off" placeholder="Enter home town"></div></div></fieldset></section><section id="${prefix}-appearance" role="tabpanel" aria-labelledby="${prefix}-appearance-tab" hidden>${appearanceChoices('color', values.color ?? 0)}${appearanceChoices('cover', values.cover ?? 0)}</section>`;
+  return `<div class="setup-tabs" role="tablist" aria-label="Profile setup"><button type="button" role="tab" id="${prefix}-personal-tab" aria-controls="${prefix}-personal" aria-selected="true">Personal info</button><button type="button" role="tab" id="${prefix}-appearance-tab" aria-controls="${prefix}-appearance" aria-selected="false" tabindex="-1">Profile</button></div><section id="${prefix}-personal" role="tabpanel" aria-labelledby="${prefix}-personal-tab"><label for="${prefix}-bio">Bio</label><p class="field-hint" id="${prefix}-bio-hint">Public · Based on your paper profile.</p><textarea id="${prefix}-bio" name="bio" maxlength="160" rows="2" aria-describedby="${prefix}-bio-hint" placeholder="What matters to this person?">${e(values.bio || '')}</textarea><fieldset class="private-fields" aria-describedby="${prefix}-privacy-note"><legend><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="5" y="10" width="14" height="11" rx="3"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/><path d="M12 14v3"/></svg>Private details</legend><p class="privacy-note" id="${prefix}-privacy-note">These details are not visible to anyone else in the forum.</p><div class="details-grid"><div><label for="${prefix}-name">Name from your paper</label><input id="${prefix}-name" name="name" maxlength="60" value="${e(values.name || '')}" required autocomplete="off" aria-describedby="${prefix}-name-hint" placeholder="Enter name"><small class="field-hint" id="${prefix}-name-hint">First name, surname or full name. Accents are optional.</small></div><div><label for="${prefix}-town">Home town from your paper</label><input id="${prefix}-town" name="town" maxlength="80" value="${e(values.town || '')}" required autocomplete="off" placeholder="Enter home town"></div></div></fieldset></section><section id="${prefix}-appearance" role="tabpanel" aria-labelledby="${prefix}-appearance-tab" hidden>${prefix === 'join' ? '<p class="field-hint">Choose your look, or we’ll pick a random picture and banner when you join.</p>' : ''}${appearanceChoices('color', values.color ?? 0)}${appearanceChoices('cover', values.cover ?? 0)}</section>`;
 }
 function setupProfileTabs(form) {
   const tabs = [...form.querySelectorAll('[role="tab"]')];
@@ -128,7 +128,7 @@ export async function startParticipant() {
   function saveDraft() { localStorage.setItem(key + ':composer', JSON.stringify(draft)); }
   function forgetTeam() {
     if (person) {
-      joinForm.reset(); updateJoinPreview();
+      joinForm.reset(); chosenAppearance.clear(); updateJoinPreview();
       clearTimeout(previewTimer); previewVersion++;
       document.querySelector('#preview-name').textContent = '@your-username';
       document.querySelector('#preview-hint').hidden = false;
@@ -196,7 +196,7 @@ export async function startParticipant() {
     showPost(id) {
       renderFeed();
       const post = document.getElementById('post-' + id);
-      if (post) { post.closest('details').open = true; post.classList.add('takeover-arrived'); post.scrollIntoView({ block: 'center', behavior: 'instant' }); }
+      if (post) { post.classList.add('takeover-arrived'); post.scrollIntoView({ block: 'center', behavior: 'instant' }); }
     }
   });
   const incidentDialog = document.querySelector('#incident-dialog');
@@ -213,6 +213,9 @@ export async function startParticipant() {
   const joinDialog = document.querySelector('#join-dialog');
   const joinForm = document.querySelector('#join-form');
   setupProfileTabs(joinForm);
+  const chosenAppearance = new Set();
+  joinForm.addEventListener('click', event => { const option = event.target.closest('.appearance-option')?.querySelector('input'); if (option) chosenAppearance.add(option.name); });
+  joinForm.addEventListener('change', event => { if (['color', 'cover'].includes(event.target.name)) chosenAppearance.add(event.target.name); });
   localStorage.removeItem(key + ':observer');
   function updateJoinPreview() {
     const form = new FormData(joinForm), color = Number(form.get('color')), cover = Number(form.get('cover'));
@@ -248,6 +251,13 @@ export async function startParticipant() {
   joinDialog.addEventListener('close', () => { if (!person && data) showJoinDialog(); });
   joinForm.onsubmit = async event => {
     event.preventDefault();
+    for (const field of ['color', 'cover']) {
+      if (chosenAppearance.has(field)) continue;
+      const choice = 1 + crypto.getRandomValues(new Uint32Array(1))[0] % (PROFILE_THEMES.length - 1);
+      joinForm.querySelector(`input[name=${field}][value="${choice}"]`).checked = true;
+      chosenAppearance.add(field);
+    }
+    updateJoinPreview();
     const button = event.submitter, fields = new FormData(joinForm);
     button.disabled = true; document.querySelector('#join-error').textContent = '';
     try {
@@ -425,7 +435,7 @@ export async function startParticipant() {
     const mine = post.author.id === person?.participant.id;
     const original = post.replyTo && data.posts.find(item => item.id === post.replyTo);
     const canPost = person?.scope === 'poster' && person?.canWrite !== false && !['opening', 'closing', 'ended'].includes(data.phase);
-    return `<article ${incidentExperience.hiddenPostIds.includes(post.id) ? 'data-takeover-pending' : ''} class="post${mentionsYou(post) ? ' is-mentioned' : ''}" id="${memberView ? 'member-post-' : 'post-'}${e(post.id)}" tabindex="-1">${identity(post.author, !memberView && data.profiles.some(p => p.id === post.author.id))}${mentionMarker(post)}${post.provenance ? `<span class="badge">${{ team: 'Team-authored', simulation: 'Simulation-injected', scripted: 'Scripted reaction' }[post.provenance]}</span>` : ''}${post.correction ? '<span class="badge">Correction</span>' : ''}${post.disputed ? '<span class="badge disputed">Authorship disputed by this team</span>' : ''}${original ? `<button class="reply-context" data-jump="${e(original.id)}">Reply to @${e(original.author.username)}<span>${e(original.text.slice(0, 100))}</span></button>` : ''}<p class="post-body">${postText(post, data.profiles)}</p>${post.exposedIdentity ? `<figure class="exposed-identity"><img src="${e(post.exposedIdentity.portrait)}" alt="${e(post.exposedIdentity.name)}"><figcaption><strong>${e(post.exposedIdentity.name)}</strong><span>${e(post.exposedIdentity.town)}</span><small>Identity shared in this post</small></figcaption></figure>` : ''}<time datetime="${e(post.createdAt)}">${e(new Date(post.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }))}</time><div class="row">${memberView ? `<button class="secondary" data-jump="${e(post.id)}">View conversation</button>` : ''}${canPost ? `<button class="secondary" data-reply="${e(post.id)}">Reply</button>` : ''}${person?.scope === 'poster' && person?.canWrite !== false && data.phase !== 'ended' && mine && !post.disputed ? `<button class="secondary" data-flag="${e(post.id)}">I did not write this</button>` : ''}</div></article>`;
+    return `<article ${incidentExperience.hiddenPostIds.includes(post.id) ? 'data-takeover-pending' : ''} class="post${mine ? ' is-mine' : ''}${mentionsYou(post) ? ' is-mentioned' : ''}" id="${memberView ? 'member-post-' : 'post-'}${e(post.id)}" tabindex="-1"><div class="post-heading">${identity(post.author, !memberView && data.profiles.some(p => p.id === post.author.id))}<time datetime="${e(post.createdAt)}" title="${e(new Date(post.createdAt).toLocaleString())}">${e(new Date(post.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }))}</time></div>${mine || mentionsYou(post) ? `<div class="post-labels">${mine ? '<span class="own-post-label">Your account</span>' : ''}${mentionMarker(post)}</div>` : ''}${post.provenance ? `<span class="badge">${{ team: 'Team-authored', simulation: 'Simulation-injected', scripted: 'Scripted reaction' }[post.provenance]}</span>` : ''}${post.correction ? '<span class="badge">Correction</span>' : ''}${post.disputed ? '<span class="badge disputed">Authorship disputed by this team</span>' : ''}${original ? `<button class="reply-context" data-jump="${e(original.id)}">Reply to @${e(original.author.username)}<span>${e(original.text.slice(0, 100))}</span></button>` : ''}<p class="post-body">${postText(post, data.profiles)}</p>${post.exposedIdentity ? `<figure class="exposed-identity"><img src="${e(post.exposedIdentity.portrait)}" alt="${e(post.exposedIdentity.name)}"><figcaption><strong>${e(post.exposedIdentity.name)}</strong><span>${e(post.exposedIdentity.town)}</span><small>Identity shared in this post</small></figcaption></figure>` : ''}<div class="row post-actions">${memberView ? `<button class="secondary" data-jump="${e(post.id)}">View conversation</button>` : ''}${canPost ? `<button class="secondary" data-reply="${e(post.id)}">Reply</button>` : ''}${person?.scope === 'poster' && person?.canWrite !== false && data.phase !== 'ended' && mine && !post.disputed ? `<button class="secondary" data-flag="${e(post.id)}">I did not write this</button>` : ''}</div></article>`;
   }
   root.insertAdjacentHTML('beforeend', '<dialog id="member-dialog" class="join-dialog member-dialog" aria-labelledby="member-title"><div id="member-content"></div><button class="secondary" id="close-member">Close profile</button></dialog>');
   const memberDialog = document.querySelector('#member-dialog');
@@ -441,7 +451,7 @@ export async function startParticipant() {
     if (!profile) { if (memberDialog.open) memberDialog.close(); return; }
     const posts = data.posts.filter(post => post.author.id === memberId);
     const tagged = data.posts.filter(post => post.mentions?.includes(memberId));
-    const html = `<div class="profile-preview"><div class="profile-preview-banner banner-art cover-${profile.cover}">${bannerArtwork(profile.cover)}</div><div class="profile-preview-content"><img src="${e(profile.avatar)}" alt="Profile picture"><span class="eyebrow">PUBLIC PROFILE</span><h2 id="member-title" tabindex="-1">@${e(profile.username)}</h2><p>${e(profile.bio)}</p></div></div>${memberId === person?.participant.id ? renderProfileStats(memberId) : ''}<h3>${posts.length} ${posts.length === 1 ? 'contribution' : 'contributions'}</h3>${posts.slice().reverse().map(post => renderPost(post, true)).join('') || '<p class="muted">No contributions yet.</p>'}<h3>Tagged posts · ${tagged.length}</h3>${tagged.slice().reverse().map(post => `<article class="tagged-post${mentionsYou(post) ? ' is-mentioned' : ''}">${mentionMarker(post)}<strong>@${e(post.author.username)} mentioned @${e(profile.username)}</strong><p>${postText(post, data.profiles)}</p><button class="secondary" data-jump="${e(post.id)}">View conversation</button></article>`).join('') || '<p class="muted">Posts tagging this member will appear here.</p>'}`;
+    const html = `<div class="profile-preview"><div class="profile-preview-banner banner-art cover-${profile.cover}">${bannerArtwork(profile.cover)}</div><div class="profile-preview-content"><img src="${e(profile.avatar)}" alt="Profile picture"><span class="eyebrow">PUBLIC PROFILE</span><h2 id="member-title" tabindex="-1">@${e(profile.username)}</h2><p>${e(profile.bio)}</p></div></div>${memberId === person?.participant.id ? renderProfileStats(memberId) : ''}<h3>${posts.length} ${posts.length === 1 ? 'contribution' : 'contributions'}</h3>${newestPosts(posts).map(post => renderPost(post, true)).join('') || '<p class="muted">No contributions yet.</p>'}<h3>Tagged posts · ${tagged.length}</h3>${newestPosts(tagged).map(post => `<article class="tagged-post${mentionsYou(post) ? ' is-mentioned' : ''}">${mentionMarker(post)}<strong>@${e(post.author.username)} mentioned @${e(profile.username)}</strong><p>${postText(post, data.profiles)}</p><button class="secondary" data-jump="${e(post.id)}">View conversation</button></article>`).join('') || '<p class="muted">Posts tagging this member will appear here.</p>'}`;
     const content = document.querySelector('#member-content');
     if (content.innerHTML !== html) content.innerHTML = html;
   }
@@ -460,22 +470,20 @@ export async function startParticipant() {
       activeHashtag = null; setView('feed'); renderFeed();
       if (memberDialog.open) memberDialog.close();
       const post = document.getElementById('post-' + button.dataset.jump);
-      if (post) { post.closest('details').open = true; post.focus(); }
+      if (post) { post.focus(); }
     }
   });
   function renderFeed() {
     if (!person) { document.querySelector('#threads').replaceChildren(); document.querySelector('#profiles').replaceChildren(); feedSignature = ''; return; }
-    const signature = JSON.stringify([data.threads, data.profiles, person?.participant.id, data.phase, activeHashtag, incidentExperience.hiddenPostIds]); if (signature === feedSignature) return; feedSignature = signature;
+    const signature = JSON.stringify([data.posts, data.profiles, person?.participant.id, data.phase, activeHashtag, incidentExperience.hiddenPostIds]); if (signature === feedSignature) return; feedSignature = signature;
     const container = document.querySelector('#threads');
     const existingPosts = new Set([...container.querySelectorAll('.post')].map(el => el.id));
-    const expanded = new Map([...container.querySelectorAll('details')].map(el => [el.dataset.thread, el.open]));
     const active = document.activeElement?.dataset;
     const focus = active?.reply ? ['reply', active.reply] : active?.flag ? ['flag', active.flag] : null;
-    const activity = new Map(data.posts.map((post, index) => [post.id, index]));
     document.querySelector('#tag-filter').innerHTML = activeHashtag ? `<p>Posts tagged <strong>#${e(activeHashtag)}</strong> <button class="secondary" data-clear-tag>Show all posts</button></p>` : '';
-    const filtered = activeHashtag ? data.threads.map(thread => ({ ...thread, posts: thread.posts.filter(post => post.hashtags?.includes(activeHashtag)) })).filter(thread => thread.posts.length) : data.threads;
-    const ordered = [...filtered].sort((a, b) => activity.get(b.posts.at(-1).id) - activity.get(a.posts.at(-1).id));
-    container.innerHTML = ordered.length ? ordered.map(thread => `<details class="thread ${thread.id === person?.participant.id ? 'mine' : ''}" data-thread="${e(thread.id)}" ${!!activeHashtag || (expanded.get(thread.id) ?? true) ? 'open' : ''}><summary>@${e(thread.username)}${thread.id === person?.participant.id ? ' · Your conversation' : ''}<span>${thread.posts.length} ${thread.posts.length === 1 ? 'post' : 'posts'}</span></summary>${thread.posts.map(post => renderPost(post)).join('')}</details>`).join('') : `<p class="empty">${activeHashtag ? 'No posts with this hashtag yet.' : 'No posts yet.'}</p>`;
+    const filtered = activeHashtag ? data.posts.filter(post => post.hashtags?.includes(activeHashtag)) : data.posts;
+    const ordered = newestPosts(filtered);
+    container.innerHTML = ordered.length ? ordered.map(post => renderPost(post)).join('') : `<p class="empty">${activeHashtag ? 'No posts with this hashtag yet.' : 'No posts yet.'}</p>`;
     container.querySelectorAll('.post').forEach(post => { if (!existingPosts.has(post.id)) post.classList.add('post-enter'); });
     if (focus) container.querySelector(`[data-${focus[0]}="${focus[1]}"]`)?.focus({ preventScroll: true });
     document.querySelector('#profiles').innerHTML = data.profiles.filter(p => p.id !== person.participant.id).map(p => `<button class="member-card theme-${p.cover}" data-profile="${e(p.id)}" aria-label="Visit @${e(p.username)}"><span class="member-cover banner-art cover-${p.cover}" aria-hidden="true">${bannerArtwork(p.cover)}</span><span class="member-card-body"><img src="${e(p.avatar)}" alt=""><strong>@${e(p.username)}</strong><span>${e(p.bio || 'Open Circle member')}</span></span></button>`).join('') || '<p class="empty">Other members will appear here when they join.</p>';
