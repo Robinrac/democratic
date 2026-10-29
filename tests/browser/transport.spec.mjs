@@ -1,3 +1,4 @@
+async function openPhoneMenu(page) { if (await page.locator('#open-menu').isVisible() && !await page.locator('#phone-menu').isVisible()) await page.locator('#open-menu').click(); }
 import { test, expect } from '@playwright/test';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { transportCards } from '../../workshop/transport.mjs';
@@ -54,7 +55,7 @@ test('transport host launch shows seven private outcomes on phone and desktop an
     await expect(pages[i].locator('#threads')).toContainText(transportCards[i].suggestedPost);
   }
   await pages[2].getByLabel('Your reason or reply').fill('Keep this unfinished thought.');
-  await pages[2].getByRole('link', { name: 'Discover', exact: true }).click();
+  await openPhoneMenu(pages[2]); await pages[2].getByRole('link', { name: 'Discover', exact: true }).click();
   await release('Launch incident');
   await expect(host.locator('[data-role-card="1"] .access')).toHaveText('Read only');
   await expect(host.locator('[data-role-card="3"]')).toContainText('4 simulated posts');
@@ -84,13 +85,13 @@ test('transport host launch shows seven private outcomes on phone and desktop an
     await expect(pages[i].locator('#send-post'))[[0, 6].includes(i) ? 'toBeDisabled' : 'toBeEnabled']();
   }
   await expect(pages[0].locator('#composer')).toBeHidden();
-  await pages[0].getByRole('link', { name: 'Discover', exact: true }).click({ force: true });
+  await openPhoneMenu(pages[0]); await pages[0].getByRole('link', { name: 'Discover', exact: true }).click({ force: true });
   await expect(pages[0].locator('#feed-view')).toBeVisible();
   await expect(pages[0].locator('#discover-view')).toBeHidden();
   await expect(pages[2].getByLabel('Your reason or reply')).toHaveValue('Keep this unfinished thought.');
   await expect(pages[2].locator('#account-takeover')).toContainText('Posted under your name');
   await expect(host.locator('#recovery-summary')).toHaveCount(0);
-  await expect(pages[0].getByRole('button', { name: 'Edit profile', exact: true })).toBeDisabled();
+  await openPhoneMenu(pages[0]); await expect(pages[0].getByRole('button', { name: 'Edit profile', exact: true })).toBeDisabled();
   await expect(pages[1].locator('#threads')).not.toContainText(transportCards[5].suggestedPost);
   await expect(pages[5].locator('#threads')).toContainText(transportCards[5].suggestedPost);
   await pages[1].reload();
@@ -151,7 +152,7 @@ test('restoration interrupts a live takeover without losing a draft or duplicati
   await context.addInitScript(({ sid, token }) => { if (!localStorage.getItem('open-circle:' + sid)) localStorage.setItem('open-circle:' + sid, token); }, { sid, token: tokens[2] });
   const page = await context.newPage(); await page.goto('/?s=' + sid);
   await page.getByLabel('Your reason or reply').fill('This is my unfinished real opinion.');
-  await page.getByRole('link', { name: 'Discover', exact: true }).click();
+  await openPhoneMenu(page); await page.getByRole('link', { name: 'Discover', exact: true }).click();
   await release('incident');
   await expect(page.locator('#incident-dialog')).toBeVisible(); await page.locator('#close-incident').click();
   await expect(page.locator('#account-takeover')).toHaveAttribute('data-state', 'typing');

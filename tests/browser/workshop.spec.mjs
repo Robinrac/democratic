@@ -1,3 +1,4 @@
+async function openPhoneMenu(page) { if (await page.locator('#open-menu').isVisible() && !await page.locator('#phone-menu').isVisible()) await page.locator('#open-menu').click(); }
 import { test, expect } from '@playwright/test';
 import { roleCards } from '../../workshop/roles.mjs';
 
@@ -50,17 +51,17 @@ test('host-paced seven-team rehearsal on phone and laptop, with cancel, reconnec
   await hostEntry.hover();
   expect(await hostEntry.locator('span').evaluate(el=>getComputedStyle(el).opacity)).toBe('1');
   await expect(teams[1].locator('.social-nav')).toContainText('Discover');
-  await phone.getByRole('button',{name:'Edit profile',exact:true}).click();
+  await openPhoneMenu(phone); await phone.getByRole('button',{name:'Edit profile',exact:true}).click();
   await expect(phone.locator('#profile-dialog input[name=name]')).toHaveValue(roleCards[0].fullName);
   await expect(phone.getByText('Your profile notes',{exact:true})).toHaveCount(0);
   await expect(phone.getByText('Add a read-only team device',{exact:true})).toHaveCount(0);
   await phone.getByRole('button',{name:'Cancel',exact:true}).click();
-  await phone.getByText('Edit profile',{exact:true}).click(); await phone.locator('#profile-form').getByLabel('Bio',{exact:true}).fill('Listening and exploring new ideas.'); await phone.getByRole('button',{name:'Save profile'}).click();
+  await openPhoneMenu(phone); await phone.getByText('Edit profile',{exact:true}).click(); await phone.locator('#profile-form').getByLabel('Bio',{exact:true}).fill('Listening and exploring new ideas.'); await phone.getByRole('button',{name:'Save profile'}).click();
   await expect(phone.getByRole('dialog',{name:'Your profile.'})).not.toBeVisible();
-  await phone.getByRole('link',{name:'Discover',exact:true}).click();
+  await openPhoneMenu(phone); await phone.getByRole('link',{name:'Discover',exact:true}).click();
   await expect(phone.locator('#profiles .member-card')).toHaveCount(6);
   await expect(phone.locator('#profiles')).not.toContainText('Listening and exploring new ideas.');
-  await phone.getByRole('link',{name:'Feed',exact:true}).click();
+  await openPhoneMenu(phone); await phone.getByRole('link',{name:'Feed',exact:true}).click();
   const unjoined=await browser.newPage(); await unjoined.goto('/?s='+sid);
   await expect(unjoined.getByRole('dialog')).toBeVisible();
   await unjoined.keyboard.press('Escape'); await expect(unjoined.getByRole('dialog')).toBeVisible();

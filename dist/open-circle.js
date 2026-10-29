@@ -146,7 +146,7 @@ export async function startParticipant() {
   }
   const api = (route, body) => request(route, { sid, token, body });
   root.innerHTML = header() + `<main id="main" class="layout social-layout">
-    <aside class="sidebar">
+    <div class="forum-toolbar"><button id="open-menu" class="secondary" aria-label="Open menu" aria-controls="phone-menu" aria-expanded="false"><span aria-hidden="true">☰</span> Menu</button><div id="notification-control"></div></div><dialog id="phone-menu" aria-label="Forum menu"><button id="close-menu" class="secondary">Close menu ×</button></dialog><aside class="sidebar">
       <section class="panel join-card" id="team"></section>
       <nav class="social-nav" aria-label="Forum navigation">
         <a href="#feed" data-view="feed" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg><span>Feed</span></a>
@@ -163,12 +163,24 @@ export async function startParticipant() {
       <div class="phase" id="phase" aria-live="polite"></div><p id="error" role="alert"></p>
       <section id="notice"></section><section id="incident-banner" aria-live="polite"></section><section id="account-takeover" hidden></section>
       <section id="composer"></section><section id="social-tools"><div id="activity-history"></div></section>
-      <div id="tag-filter"></div><div id="threads"></div>
+      <div id="phone-trends"></div><div id="tag-filter"></div><div id="threads"></div>
     </section>
     <section class="conversation" id="discover-view" aria-labelledby="discover-title" hidden>
       <div class="feed-heading"><h1 id="discover-title">Discover</h1></div><div id="profiles" class="member-grid"></div>
     </section>
   </main>`;
+  const menu = document.querySelector('#phone-menu'), sidebar = document.querySelector('.sidebar'), layout = document.querySelector('.social-layout'), phone = matchMedia('(max-width: 760px)');
+  function arrangePhone() {
+    const trends = document.querySelector('#trending');
+    if (phone.matches) { menu.append(sidebar); document.querySelector('#phone-trends').append(trends); }
+    else { if (menu.open) menu.close(); layout.insertBefore(sidebar, document.querySelector('#feed-view')); sidebar.insertBefore(trends, sidebar.querySelector('.sidebar-about')); }
+  }
+  document.querySelector('#open-menu').onclick = () => { menu.showModal(); document.querySelector('#open-menu').setAttribute('aria-expanded', 'true'); };
+  document.querySelector('#close-menu').onclick = () => menu.close();
+  menu.addEventListener('close', () => document.querySelector('#open-menu').setAttribute('aria-expanded', 'false'));
+  sidebar.addEventListener('click', event => { if (event.target.closest('[data-view], [data-profile], #edit-profile, #open-profile, #open-join') && menu.open) menu.close(); }, true);
+  phone.addEventListener('change', arrangePhone); arrangePhone();
+  root.addEventListener('click', event => { if (event.target.closest('#more-trends')) { const trends = document.querySelector('#trending'); trends.classList.toggle('show-all'); const button = document.querySelector('#more-trends'); button.textContent = trends.classList.contains('show-all') ? 'Show top 3' : 'View top 5'; button.setAttribute('aria-expanded', String(trends.classList.contains('show-all'))); } });
   const activity = createActivity(root, key);
   root.insertAdjacentHTML('beforeend', `<dialog id="join-dialog" class="join-dialog" aria-labelledby="join-title"><form id="join-form"><h2 id="join-title">Create your profile.</h2><div class="profile-preview"><div class="profile-preview-banner banner-art cover-0">${bannerArtwork(0)}</div><div class="profile-preview-content"><img id="preview-picture" src="/avatars/0.svg" alt="Selected profile picture"><span class="eyebrow">YOUR PUBLIC PROFILE</span><strong id="preview-name" aria-live="polite">@your-username</strong><p id="preview-bio">Your bio</p><small id="preview-hint">Username assigned from your paper profile.</small></div></div>${profileFields('join')}<p id="join-error" class="error" role="alert"></p><div class="join-actions"><button class="primary" type="submit">Join the forum</button></div></form></dialog>`);
   root.insertAdjacentHTML('beforeend', '<dialog id="workshop-intro-dialog" class="join-dialog welcome-dialog" aria-labelledby="welcome-title"><span class="eyebrow">YOUR PROFILE IS READY</span><h2 id="welcome-title">Today’s topic</h2><p id="welcome-topic"></p><h3>Your anonymous forum</h3><p>Share your paper character’s views using an anonymous username. Read, reply and @tag others.</p><form method="dialog"><button class="primary" autofocus>Enter the forum</button></form></dialog>');
@@ -292,6 +304,7 @@ export async function startParticipant() {
     finally { button.disabled = data?.phase === 'ended' || person?.canWrite === false; }
   }
   function renderTeam() {
+    document.querySelector('#profile-dialog')?.remove();
     const target = document.querySelector('#team');
     if (!person) {
       target.className = 'panel join-card';
@@ -304,6 +317,7 @@ export async function startParticipant() {
     target.innerHTML = `${person.scope === 'viewer' ? '<span class="eyebrow">TEAM VIEWER · READ ONLY</span>' : ''}<button class="mini-profile" data-profile="${e(p.id)}" aria-label="Open your profile"><span class="mini-profile-banner banner-art cover-${p.cover}" aria-hidden="true">${bannerArtwork(p.cover)}</span><span class="mini-profile-body"><img src="${e(p.avatar)}" alt=""><span class="eyebrow">YOUR PROFILE</span><strong>@${e(p.username)}</strong></span></button>${card ? `<button id="edit-profile" class="secondary edit-profile-button">Edit profile</button><dialog id="profile-dialog" class="join-dialog" aria-labelledby="edit-title"><h2 id="edit-title">Your profile.</h2><form id="profile-form"><div class="profile-preview"><div class="profile-preview-banner banner-art cover-${p.cover}">${bannerArtwork(p.cover)}</div><div class="profile-preview-content"><img class="edit-preview-picture" src="${e(p.avatar)}" alt="Selected profile picture"><span class="eyebrow">YOUR PUBLIC PROFILE</span><strong>@${e(p.username)}</strong><p class="edit-preview-bio">${e(p.bio || 'Your bio')}</p></div></div><p id="profile-error" class="error" role="alert"></p>${profileFields('edit', { ...p, ...details })}<div class="join-actions"><button class="primary">Save profile</button><button type="button" id="close-profile" class="secondary">Cancel</button></div></form></dialog>` : '<span class="muted">Read-only</span>'}`;
     if (card) {
       const editDialog = document.querySelector('#profile-dialog');
+      root.append(editDialog);
       setupProfileTabs(document.querySelector('#profile-form'));
       document.querySelector('#edit-profile').onclick = () => editDialog.showModal();
       document.querySelector('#close-profile').onclick = () => editDialog.close();
@@ -443,15 +457,15 @@ export async function startParticipant() {
   memberDialog.addEventListener('close', () => { memberId = null; document.querySelector('#member-content').replaceChildren(); });
   function renderProfileStats(id) {
     const stats = profileStats(data.posts, id, data.profiles);
-    const ranking = (items, kind) => items.length ? `<ol>${items.map(item => `<li><button class="inline-tag" ${kind === 'hashtag' ? 'data-hashtag' : 'data-profile'}="${e(item.id)}">${kind === 'hashtag' ? '#' : '@'}${e(item.label)}</button><span>${item.count}</span></li>`).join('')}</ol>` : '<p class="muted">None yet.</p>';
-    return `<section class="circle-profile-stats" aria-label="Your circle stats"><h3>Your circle stats</h3><dl class="profile-stat-totals"><div><dt>Posts</dt><dd data-stat="posts">${stats.posts}</dd></div><div><dt>Replies</dt><dd data-stat="replies">${stats.replies}</dd></div><div><dt>Mentions received</dt><dd data-stat="mentions">${stats.mentions}</dd></div></dl><div class="profile-rankings"><section><h4>Most-used hashtags</h4>${ranking(stats.hashtags, 'hashtag')}</section><section><h4>Most-tagged people</h4>${ranking(stats.tagged, 'profile')}</section></div><p class="stats-note">Based on posts currently visible to you. Each hashtag or person counts once per contribution.</p></section>`;
+    const ranking = (items, kind) => items.length ? `<ol>${items.map(item => `<li><button class="inline-tag" ${kind === 'hashtag' ? 'data-hashtag' : 'data-profile'}="${e(item.id)}">${kind === 'hashtag' ? '#' : '@'}${e(item.label)}</button><span class="stat-frequency">${item.count} ${item.count === 1 ? 'post' : 'posts'}</span></li>`).join('')}</ol>` : '<p class="muted">No activity yet.</p>';
+    return `<section class="circle-profile-stats" aria-label="Your circle stats"><h3>Your circle stats</h3><dl class="profile-stat-totals"><div><dt>Posts</dt><dd data-stat="posts">${stats.posts}</dd></div><div><dt>Replies</dt><dd data-stat="replies">${stats.replies}</dd></div><div><dt>Mentions received</dt><dd data-stat="mentions">${stats.mentions}</dd></div></dl><div class="profile-rankings"><section><h4>Hashtags you use most</h4>${ranking(stats.hashtags, 'hashtag')}</section><section><h4>People you tag most</h4>${ranking(stats.tagged, 'profile')}</section></div></section>`;
   }
   function renderMember() {
     const profile = data?.profiles?.find(p => p.id === memberId);
     if (!profile) { if (memberDialog.open) memberDialog.close(); return; }
     const posts = data.posts.filter(post => post.author.id === memberId);
     const tagged = data.posts.filter(post => post.mentions?.includes(memberId));
-    const html = `<div class="profile-preview"><div class="profile-preview-banner banner-art cover-${profile.cover}">${bannerArtwork(profile.cover)}</div><div class="profile-preview-content"><img src="${e(profile.avatar)}" alt="Profile picture"><span class="eyebrow">PUBLIC PROFILE</span><h2 id="member-title" tabindex="-1">@${e(profile.username)}</h2><p>${e(profile.bio)}</p></div></div>${memberId === person?.participant.id ? renderProfileStats(memberId) : ''}<h3>${posts.length} ${posts.length === 1 ? 'contribution' : 'contributions'}</h3>${newestPosts(posts).map(post => renderPost(post, true)).join('') || '<p class="muted">No contributions yet.</p>'}<h3>Tagged posts · ${tagged.length}</h3>${newestPosts(tagged).map(post => `<article class="tagged-post${mentionsYou(post) ? ' is-mentioned' : ''}">${mentionMarker(post)}<strong>@${e(post.author.username)} mentioned @${e(profile.username)}</strong><p>${postText(post, data.profiles)}</p><button class="secondary" data-jump="${e(post.id)}">View conversation</button></article>`).join('') || '<p class="muted">Posts tagging this member will appear here.</p>'}`;
+    const html = `<div class="profile-preview"><div class="profile-preview-banner banner-art cover-${profile.cover}">${bannerArtwork(profile.cover)}</div><div class="profile-preview-content"><img src="${e(profile.avatar)}" alt="Profile picture"><span class="eyebrow">PUBLIC PROFILE</span><h2 id="member-title" tabindex="-1">@${e(profile.username)}</h2><p>${e(profile.bio)}</p></div></div>${memberId === person?.participant.id ? renderProfileStats(memberId) : ''}<h3>${posts.length} ${posts.length === 1 ? 'contribution' : 'contributions'}</h3>${newestPosts(posts).map(post => renderPost(post, true)).join('') || '<p class="muted">No contributions yet.</p>'}${tagged.length ? `<h3>Tagged posts · ${tagged.length}</h3>` : ''}${newestPosts(tagged).map(post => `<article class="tagged-post${mentionsYou(post) ? ' is-mentioned' : ''}">${mentionMarker(post)}<strong>@${e(post.author.username)} mentioned @${e(profile.username)}</strong><p>${postText(post, data.profiles)}</p><button class="secondary" data-jump="${e(post.id)}">View conversation</button></article>`).join('') || ''}`;
     const content = document.querySelector('#member-content');
     if (content.innerHTML !== html) content.innerHTML = html;
   }
@@ -521,13 +535,13 @@ export async function startParticipant() {
       document.querySelector('#social-tools').hidden = !person; document.querySelector('#trending').hidden = !person;
       if (person) {
         const trends = document.querySelector('#trending');
-        const expanded = trends.querySelector('details')?.open ?? matchMedia('(min-width: 761px)').matches;
+        const expanded = trends.classList.contains('show-all');
         const leader = data.trending?.find(tag => tag.count > 0)?.tag;
         const previousLeader = localStorage.getItem(key + ':trend-leader');
         if (leader && previousLeader && leader !== previousLeader) localStorage.setItem(key + ':new-leader', leader);
         if (leader) localStorage.setItem(key + ':trend-leader', leader);
         const newLeader = localStorage.getItem(key + ':new-leader');
-        const trendingHTML = `<details ${expanded ? 'open' : ''}><summary><span class="eyebrow">IN THIS CIRCLE</span><span class="trends-title">Trending hashtags</span></summary><ol class="trending-list">${(data.trending || []).slice(0, 5).map(tag => `<li class="${tag.rank === 1 ? 'leading-trend' : ''}"><span class="trend-rank">${tag.rank}</span><div><button class="inline-tag" data-hashtag="${e(tag.tag)}">#${e(tag.label)}</button><span>${tag.count} ${tag.count === 1 ? 'post' : 'posts'}${tag.starter ? ' · Starter' : ''}${tag.rank === 1 && tag.tag === newLeader ? ' · New #1' : ''}</span></div></li>`).join('')}</ol></details>`;
+        const trendingHTML = `<div class="trends-heading"><h2 class="trends-title">Trending hashtags</h2><button id="more-trends" class="secondary" aria-expanded="${expanded}">${expanded ? 'Show top 3' : 'View top 5'}</button></div><ol class="trending-list">${(data.trending || []).slice(0, 5).map(tag => `<li class="${tag.rank === 1 ? 'leading-trend' : ''}"><span class="trend-rank">${tag.rank}</span><div><button class="inline-tag" data-hashtag="${e(tag.tag)}">#${e(tag.label)}</button><span>${tag.count} ${tag.count === 1 ? 'post' : 'posts'}${tag.starter ? ' · Starter' : ''}${tag.rank === 1 && tag.tag === newLeader ? ' · New #1' : ''}</span></div></li>`).join('')}</ol>`;
         if (trends.innerHTML !== trendingHTML) trends.innerHTML = trendingHTML;
         activity.observe(data.activity);
       }

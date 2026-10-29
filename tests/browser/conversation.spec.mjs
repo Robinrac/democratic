@@ -1,3 +1,4 @@
+async function openPhoneMenu(page) { if (await page.locator('#open-menu').isVisible() && !await page.locator('#phone-menu').isVisible()) await page.locator('#open-menu').click(); }
 import { test, expect } from '@playwright/test';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { roleCards } from '../../workshop/roles.mjs';
@@ -29,7 +30,7 @@ test('profile browsing, reply drafts, interrupted sends and offline recovery wor
   await expect(page.locator('#reply-label')).toContainText(members[1].username);
   await expect(page.locator('#stance')).toBeHidden();
   await expect(page.getByLabel('Your reason or reply')).toHaveValue('Listening without judging helps.');
-  await page.getByRole('button', { name: 'Edit profile', exact: true }).click();
+  await openPhoneMenu(page); await page.getByRole('button', { name: 'Edit profile', exact: true }).click();
   await page.locator('#profile-form').getByLabel('Bio', { exact: true }).fill('Listening first.');
   await page.getByRole('button', { name: 'Save profile', exact: true }).click();
   await expect(page.locator('#profile-dialog')).not.toBeVisible();
@@ -77,7 +78,7 @@ test('profile browsing, reply drafts, interrupted sends and offline recovery wor
   await expect(page.locator('#response-form')).toHaveCount(0);
   await release('discussion'); await release('closing'); await release('end');
   await expect(page.getByRole('button', { name: 'Publish post' })).toBeDisabled();
-  await expect(page.getByRole('button', { name: 'Edit profile', exact: true })).toBeDisabled();
+  await openPhoneMenu(page); await expect(page.getByRole('button', { name: 'Edit profile', exact: true })).toBeDisabled();
   await expect(page.locator('#response-form')).toHaveCount(0);
   expect(errors).toEqual([]);
   await context.close();

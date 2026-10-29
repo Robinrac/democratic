@@ -1,3 +1,4 @@
+async function openPhoneMenu(page) { if (await page.locator('#open-menu').isVisible() && !await page.locator('#phone-menu').isVisible()) await page.locator('#open-menu').click(); }
 import { test, expect } from '@playwright/test';
 import { randomUUID, randomBytes } from 'node:crypto';
 import { transportCards } from '../../workshop/transport.mjs';
@@ -48,7 +49,7 @@ test('name errors, mentions, post alerts, ranked tags and reset work together on
   await a.screenshot({ path: info.outputPath('welcome-phone.png') });
   await welcome.getByRole('button', { name: 'Enter the forum' }).click();
   await a.reload();
-  await expect(a.getByRole('button', { name: 'Open your profile', exact: true })).toBeVisible();
+  await openPhoneMenu(a); await expect(a.getByRole('button', { name: 'Open your profile', exact: true })).toBeVisible();
   await expect(welcome).not.toBeVisible();
   await a.setViewportSize({ width: 1280, height: 1000 });
   await expect(a.locator('#trending')).toContainText('1#AffordableJourneys');
@@ -71,21 +72,19 @@ test('name errors, mentions, post alerts, ranked tags and reset work together on
   const desktopTrends = await a.locator('#trending').boundingBox();
   const desktopFeed = await a.locator('#feed-view').boundingBox();
   expect(desktopTrends.x + desktopTrends.width).toBeLessThan(desktopFeed.x);
-  await a.getByRole('link', { name: 'Discover', exact: true }).click();
+  await openPhoneMenu(a); await a.getByRole('link', { name: 'Discover', exact: true }).click();
   await expect(a.locator('#feed-view')).toBeHidden();
   await expect(a.locator('#profiles .member-card')).toHaveCount(6);
   await expect(a.locator('#profiles')).not.toContainText('@lava-lundi');
   await a.reload();
   await expect(a.locator('#discover-view')).toBeVisible();
   await a.screenshot({ path: info.outputPath('discover-desktop.png') });
-  await b.getByRole('link', { name: 'Discover', exact: true }).click();
+  await openPhoneMenu(b); await b.getByRole('link', { name: 'Discover', exact: true }).click();
   await expect(b.locator('#profiles .member-card')).toHaveCount(6);
-  const phoneTrends = await b.locator('#trending').boundingBox();
-  const phoneDiscover = await b.locator('#discover-view').boundingBox();
-  expect(phoneTrends.y).toBeGreaterThanOrEqual(phoneDiscover.y + phoneDiscover.height);
+  await expect(b.locator('#trending')).toBeHidden();
   await b.screenshot({ path: info.outputPath('discover-phone.png') });
-  await a.getByRole('link', { name: 'Feed', exact: true }).click();
-  await b.getByRole('link', { name: 'Feed', exact: true }).click();
+  await openPhoneMenu(a); await a.getByRole('link', { name: 'Feed', exact: true }).click();
+  await openPhoneMenu(b); await b.getByRole('link', { name: 'Feed', exact: true }).click();
   await expect(a.locator('#discover-view')).toBeHidden();
   async function release(action) {
     const state = await (await request.get('/api/host/state?s=' + sid)).json();
@@ -119,7 +118,7 @@ test('name errors, mentions, post alerts, ranked tags and reset work together on
   await b.getByRole('button', { name: 'Dismiss notification' }).click();
   await b.locator('#threads .is-mentioned').scrollIntoViewIfNeeded();
   await b.screenshot({ path: info.outputPath('highlighted-mention-phone.png') });
-  await b.getByRole('button', { name: 'Open your profile', exact: true }).click();
+  await openPhoneMenu(b); await b.getByRole('button', { name: 'Open your profile', exact: true }).click();
   await expect(b.locator('#member-dialog')).toContainText('Tagged posts · 1');
   await expect(b.locator('[data-stat=posts]')).toHaveText('0');
   await expect(b.locator('[data-stat=mentions]')).toHaveText('1');
@@ -140,11 +139,11 @@ test('name errors, mentions, post alerts, ranked tags and reset work together on
   await expect(a.locator('#post-toast')).toContainText('@drangarnir tagged you');
   await expect(a.locator('#post-toast')).toContainText('What about later buses?');
   await a.reload();
-  await expect(a.locator('#activity-history')).toContainText('Activity · 2');
+  await expect(a.locator('#notification-count')).toHaveText('1');
   await expect(a.locator('#threads .is-mentioned')).toHaveCount(1);
   await expect(a.locator('#threads .is-mentioned')).toContainText('What about later buses?');
   await expect(a.locator('#post-toast')).not.toBeVisible();
-  await a.getByRole('button', { name: 'Open your profile', exact: true }).click();
+  await openPhoneMenu(a); await a.getByRole('button', { name: 'Open your profile', exact: true }).click();
   await expect(a.locator('[data-stat=posts]')).toHaveText('1');
   await expect(a.locator('[data-stat=replies]')).toHaveText('0');
   await expect(a.locator('[data-stat=mentions]')).toHaveText('1');
@@ -164,7 +163,7 @@ test('name errors, mentions, post alerts, ranked tags and reset work together on
   await expect(a.getByRole('dialog', { name: 'Account hacked — you’re locked out' })).toBeVisible();
   await expect(b.getByRole('dialog', { name: 'Launch a hashtag campaign' })).toBeVisible();
   await b.getByRole('button', { name: 'Back to the feed' }).click();
-  await b.getByRole('button', { name: 'Open your profile', exact: true }).click();
+  await openPhoneMenu(b); await b.getByRole('button', { name: 'Open your profile', exact: true }).click();
   await expect(b.locator('#member-dialog')).toContainText('Tagged posts · 3');
   await host.goto('/host?s=' + sid);
   await host.getByLabel('Password', { exact: true }).fill('browser-test-host-password-only');

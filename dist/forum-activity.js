@@ -42,6 +42,23 @@ export function createActivity(root, key) {
   let initialized = Array.isArray(saved), seen = new Set(initialized ? saved : []), queue = [], active = null, timer, signature = '';
   root.insertAdjacentHTML('beforeend', '<aside id="post-toast" class="post-toast" role="status" aria-live="polite" aria-atomic="true" hidden></aside>');
   const toast = document.querySelector('#post-toast');
+  const readKey = key + ':notifications-read';
+  let read; try { read = new Set(JSON.parse(localStorage.getItem(readKey) || '[]')); } catch { read = new Set(); }
+  let mentions = [];
+  document.querySelector('#notification-control').innerHTML = '<button id="notifications-button" class="secondary" aria-label="Notifications" aria-haspopup="dialog"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg><span>Notifications</span><b id="notification-count" hidden></b></button>';
+  root.insertAdjacentHTML('beforeend', '<dialog id="notifications-dialog" aria-labelledby="notifications-title"><div class="notifications-heading"><h2 id="notifications-title">Notifications</h2><button id="close-notifications" class="secondary" aria-label="Close notifications">×</button></div><div id="notification-list"></div></dialog>');
+  const notifications = document.querySelector('#notifications-dialog');
+  function renderNotifications() {
+    if (notifications.open) { mentions.forEach(item => read.add(item.id)); localStorage.setItem(readKey, JSON.stringify([...read].slice(-2000))); }
+    const unread = mentions.filter(item => !read.has(item.id)).length;
+    const badge = document.querySelector('#notification-count'); badge.textContent = String(unread); badge.hidden = !unread;
+    document.querySelector('#notifications-button').setAttribute('aria-label', unread ? `Notifications, ${unread} unread` : 'Notifications');
+    document.querySelector('#notification-list').innerHTML = mentions.slice().reverse().map(item => `<article class="notification-item"><strong>@${escape(item.author.username)} tagged you</strong><p>${escape(item.text)}</p><button class="secondary" data-jump="${escape(item.postId)}">View post</button></article>`).join('') || '<p class="muted">No mentions yet.</p>';
+  }
+  document.querySelector('#notifications-button').onclick = () => { notifications.showModal(); renderNotifications(); };
+  document.querySelector('#close-notifications').onclick = () => notifications.close();
+  notifications.addEventListener('click', event => { if (event.target.closest('[data-jump]')) notifications.close(); }, true);
+
   const save = () => localStorage.setItem(storageKey, JSON.stringify([...seen].slice(-2000)));
   function dismiss() { clearTimeout(timer); active = null; toast.hidden = true; flush(); }
   function flush() {
@@ -61,6 +78,7 @@ export function createActivity(root, key) {
   return {
     published(post) { initialized = true; enqueue({ id: post.id, postId: post.id, type: 'published', author: post.author, text: post.text }); flush(); },
     observe(items = []) {
+      mentions = items.filter(item => item.type === 'mention'); renderNotifications();
       const ids = new Set(items.map(item => item.id));
       queue = queue.filter(item => ids.has(item.id));
       if (active && !ids.has(active.id)) { clearTimeout(timer); active = null; toast.hidden = true; }
@@ -69,12 +87,10 @@ export function createActivity(root, key) {
       const next = JSON.stringify(items);
       if (next !== signature) {
         signature = next;
-        const history = document.querySelector('#activity-history');
-        const opened = history.querySelector('details')?.open;
-        history.innerHTML = `<details ${opened ? 'open' : ''}><summary>Activity · ${items.length}</summary><div class="activity-list">${items.slice().reverse().map(item => `<article><strong>${escape(title(item))}</strong><p>${escape(item.text)}</p><button class="secondary" data-jump="${escape(item.postId)}">View post</button></article>`).join('') || '<p>Your posts, account activity and @mentions will appear here.</p>'}</div></details>`;
+        document.querySelector('#activity-history').replaceChildren();
       }
       flush();
     },
-    clear() { clearTimeout(timer); seen.clear(); queue = []; active = null; initialized = false; signature = ''; toast.hidden = true; toast.replaceChildren(); localStorage.removeItem(storageKey); document.querySelector('#activity-history').replaceChildren(); }
+    clear() { mentions = []; read.clear(); localStorage.removeItem(readKey); if (notifications.open) notifications.close(); renderNotifications(); clearTimeout(timer); seen.clear(); queue = []; active = null; initialized = false; signature = ''; toast.hidden = true; toast.replaceChildren(); localStorage.removeItem(storageKey); document.querySelector('#activity-history').replaceChildren(); }
   };
 }

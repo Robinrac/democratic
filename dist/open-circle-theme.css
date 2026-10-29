@@ -572,6 +572,46 @@ input[aria-invalid="true"] { border: 2px solid #ad244b; }
 #join-room-code:focus { outline:3px solid #f6b8d2; outline-offset:3px; }
 #room-join-form button { width:100%; margin-top:12px; padding:15px; border-radius:12px; }
 /* One card per contribution, in chronological order. */
+.forum-toolbar { grid-column:1/-1; display:flex; justify-content:flex-end; gap:12px; margin-bottom:-16px; }
+#open-menu { display:none; }
+#notifications-button { display:flex; align-items:center; gap:8px; font-size:13px; }
+#notifications-button svg { width:21px; height:21px; flex-shrink:0; }
+#notification-count { display:grid; place-items:center; min-width:22px; height:22px; padding:0 5px; border-radius:20px; background:#a92b61; color:white; font-size:12px; }
+.notifications-heading { display:flex; justify-content:space-between; align-items:center; gap:16px; }
+.notifications-heading h2 { margin:0; }.notification-item { border-top:1px solid #eadce4; padding:18px 0; }.notification-item p { font-size:14px; margin:8px 0; overflow-wrap:anywhere; }
+#phone-menu { margin:0; height:100dvh; max-height:100dvh; width:min(340px,90vw); border-radius:0 20px 20px 0; padding:20px; }
+#close-menu { display:block; margin:0 0 20px auto; }
+#phone-trends:empty { display:none; }
+.trends-heading { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.trends-heading h2 { margin:0; }#more-trends { display:none; }
+.sidebar-trends .trend-rank { display:grid; place-items:center; width:24px; height:24px; flex:0 0 24px; padding:0; line-height:1; border-radius:50%; }
+.sidebar-trends .leading-trend .trend-rank { background:#892650; color:white; }
+.profile-rankings > section { padding:16px; border:1px solid #eadce4; border-radius:12px; background:#fff8fb; min-width:0; }
+.profile-rankings h4 { font-size:15px; color:#682241; margin-bottom:14px; }
+.profile-rankings ol { padding:0; list-style:none; counter-reset:rank; }
+.profile-rankings li { counter-increment:rank; display:grid; grid-template-columns:20px minmax(0,1fr) auto; align-items:center; gap:8px; padding:10px 0; border-top:1px solid #eadce4; }
+.profile-rankings li::before { content:counter(rank); color:#82697a; }
+.profile-rankings .inline-tag { max-width:100%; font-size:13px; }
+.profile-rankings li > .stat-frequency { float:none; padding:4px 7px; background:#eedde7; border-radius:8px; white-space:nowrap; font-size:11px; color:#682241; }
+@media(max-width:760px) {
+  .social-layout { display:block; padding-bottom:32px; }
+  .forum-toolbar { margin:0 0 20px; justify-content:space-between; }
+  #open-menu { display:flex; align-items:center; gap:8px; font-size:13px; }
+  .social-layout #phone-menu .sidebar { display:block; border:0; padding:0; }
+  #phone-menu .social-nav { position:static; display:flex; flex-direction:column; width:auto; background:transparent; box-shadow:none; border:0; padding:0; margin:20px 0; }
+  #phone-menu .social-nav a { flex-direction:row; justify-content:flex-start; gap:12px; padding:12px; font-size:15px; }
+  #phone-menu .sidebar-about { display:block; }
+  #phone-trends .sidebar-trends { margin:18px 0; padding:14px; }
+  #phone-trends .trends-title { font-size:15px; }
+  #more-trends { display:block; padding:7px 9px; font-size:11px; min-height:36px; white-space:nowrap; }
+  #phone-trends .trending-list { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin:12px 0 0; }
+  #phone-trends .trending-list li { display:flex; flex-direction:column; align-items:flex-start; padding:8px; border-radius:10px; background:#fff9fc; gap:7px; }
+  #phone-trends .trending-list .leading-trend { background:#fce1ed; }
+  #phone-trends .trending-list li:nth-child(n+4) { display:none; }
+  #phone-trends .show-all .trending-list li:nth-child(n+4) { display:flex; }
+  #phone-trends .inline-tag { font-size:11px; line-height:1.4; }
+  #phone-trends .trending-list li div > span { font-size:10px; }
+}
 .social-layout #threads > .post { margin:0 0 14px; padding:20px; background:white; border:1px solid #e5dce2; border-radius:14px; box-shadow:0 2px 6px #44213805; }
 .social-layout #threads > .post.is-mine { border-left:4px solid #742547; background:#fffafd; }
 .social-layout #threads > .post.is-mentioned { border-left:4px solid #2b657e; background:#f3f9fc; }
