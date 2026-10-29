@@ -26,13 +26,13 @@ test('host-paced seven-team rehearsal on phone and laptop, with cancel, reconnec
     await expect(join.getByRole('button',{name:'Continue as observer'})).toHaveCount(0);
     await page.keyboard.press('Escape'); await expect(join).toBeVisible();
     await expect(join.getByRole('tab',{name:'Personal info',exact:true})).toHaveAttribute('aria-selected','true');
-    await join.getByLabel('Name',{exact:true}).fill(['Eydis','Joensen','Ingrid','Karlsson','Sjoberg','Mikko','Berg'][i]);
-    await join.getByLabel('Home town',{exact:true}).fill(roleCards[i].town);
+    await join.getByLabel('Name from your paper',{exact:true}).fill(['Eydis','Joensen','Ingrid','Karlsson','Sjoberg','Mikko','Berg'][i]);
+    await join.getByLabel('Home town from your paper',{exact:true}).fill(roleCards[i].town);
     await expect(join.locator('#preview-name')).toHaveText('@' + ['quiet-cedar','bright-river','open-meadow','gentle-cloud','silver-leaf','clear-sky','steady-pine'][i]);
     await expect(join.locator('.profile-preview')).not.toContainText(roleCards[i].fullName);
     await join.getByLabel('Bio',{exact:true}).fill('Exploring the conversation.');
     await join.getByRole('tab',{name:'Profile',exact:true}).click();
-    await expect(join.getByLabel('Name',{exact:true})).not.toBeVisible();
+    await expect(join.getByLabel('Name from your paper',{exact:true})).not.toBeVisible();
     await join.getByRole('group',{name:'Profile picture'}).getByRole('radio',{name:'Ocean'}).check();
     await join.getByRole('group',{name:'Banner'}).getByRole('radio',{name:'Sage'}).check();
     await join.getByRole('button',{name:'Join the forum'}).click();

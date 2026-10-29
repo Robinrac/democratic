@@ -145,8 +145,10 @@
 .social-layout .social-nav a { min-height: 42px; padding: 10px 14px; font-size: 13px; }
 .social-layout .social-nav a[href="#threads"] { min-height: 66px; font-size: 20px; font-weight: 750; }
 .social-layout .social-nav a[href="#threads"] svg { width: 28px; height: 28px; }
-.private-fields { background: #f5f3f4; border: 1px solid var(--line); padding: 14px; border-radius: 10px; margin: 20px 0 16px; }
-.private-fields legend { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; font-weight: 750; padding: 0 5px; }
+.private-fields { background: #fff6fa; border: 1px solid #e9cbd9; padding: 22px; border-radius: 16px; margin: 24px 0 16px; min-width:0; }
+.private-fields legend { float:left; display:flex; align-items:center; gap:10px; width:100%; font-size:21px; line-height:1.3; color:var(--burgundy); font-weight:750; padding:0; margin:0 0 8px; letter-spacing:-.3px; }
+.private-fields legend svg { width:24px; height:24px; flex-shrink:0; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+.private-fields .privacy-note { clear:both; color:#66505e; font-size:14px; line-height:1.5; margin:0 0 22px; }
 .field-hint { color: var(--muted); font-size: 12px; margin: 0 0 10px; line-height: 1.5; }
 .details-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 .private-fields input { margin-bottom: 0; }
@@ -196,7 +198,7 @@
 /* Override the legacy editor's flex fieldsets for the current tabbed form. */
 #profile-dialog.join-dialog { width: min(680px, calc(100% - 24px)); }
 #profile-dialog.join-dialog fieldset { display: block; }
-#profile-dialog.join-dialog .private-fields { padding: 14px; border: 1px solid var(--line); }
+#profile-dialog.join-dialog .private-fields { padding:22px; border:1px solid #e9cbd9; }
 
 /* Open Circle logo: generated mark paired with a crisp, live wordmark. */
 .forum-brand { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; flex-shrink: 0; }
@@ -407,6 +409,11 @@ input[aria-invalid="true"] { border: 2px solid #ad244b; }
 }
 .social-layout .composer .mention-editor textarea { background: white; }
 .join-dialog input[aria-invalid=true] { border-color: #a12d50; }
+.join-dialog .private-fields input:not([type=radio]):not([type=checkbox]) { background:white; border-color:#d5b9c7; border-radius:10px; margin:8px 0 0; }
+.join-dialog .private-fields label { display:block; margin:0; color:#49263b; }
+.join-dialog .private-fields .field-hint { margin:8px 0 0; font-size:12px; }
+.private-fields .details-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:20px; }
+@media(max-width:600px) { .private-fields, #profile-dialog.join-dialog .private-fields { padding:18px; }.private-fields .details-grid { grid-template-columns:1fr; gap:18px; } }
 .social-layout .composer .mention-editor textarea::placeholder, .join-dialog :is(input, textarea)::placeholder { color: var(--oc-muted); opacity: 1; }
 .social-layout .prompt { background: #aec2d3; border: 0; border-left: 4px solid var(--blue); border-radius: var(--oc-control-radius); color: #18384a; }
 .social-layout .prompt .eyebrow { color: var(--blue); letter-spacing: 1px; font-weight: 600; }
