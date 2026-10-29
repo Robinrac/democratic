@@ -17,7 +17,7 @@ export const phaseCopy = {
   opening: ['Welcome to Open Circle', 'Make yourself at home. The conversation opens soon.'],
   debate: ['One forum. Two possible rules.', 'Share your perspective, explain your thinking and hear what others have to say.'],
   exposure: ['Read the latest posts', 'Look at the thread under your username. Discuss what has changed with your team.'],
-  forgery: ['Whose voice is this?', 'Compare the recent posts with what your team chose to say. You can mark a post you did not write.'],
+  forgery: ['Whose voice is this?', 'Compare the recent posts with what your team chose to say. '],
   reactions: ['Consider the consequences', 'How might other readers understand the conversation now?'],
   reflection: ['Talk with your team', 'What happened to your ability to speak for yourself? What would help you participate confidently?'],
   recovery: ['Check the record', 'Compare the labelled posts. Publish a correction and choose what should happen next.'],
@@ -450,7 +450,7 @@ export async function startParticipant() {
     const mine = post.author.id === person?.participant.id;
     const original = post.replyTo && data.posts.find(item => item.id === post.replyTo);
     const canPost = person?.scope === 'poster' && person?.canWrite !== false && !['opening', 'closing', 'ended'].includes(data.phase);
-    return `<article ${incidentExperience.hiddenPostIds.includes(post.id) ? 'data-takeover-pending' : ''} class="post${mine ? ' is-mine' : ''}${mentionsYou(post) ? ' is-mentioned' : ''}" id="${memberView ? 'member-post-' : 'post-'}${e(post.id)}" tabindex="-1"><div class="post-heading">${identity(post.author, !memberView && data.profiles.some(p => p.id === post.author.id))}<time datetime="${e(post.createdAt)}" title="${e(new Date(post.createdAt).toLocaleString())}">${e(new Date(post.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }))}</time></div>${mine || mentionsYou(post) ? `<div class="post-labels">${mine ? '<span class="own-post-label">Your account</span>' : ''}${mentionMarker(post)}</div>` : ''}${post.provenance ? `<span class="badge">${{ team: 'Team-authored', simulation: 'Simulation-injected', scripted: 'Scripted reaction' }[post.provenance]}</span>` : ''}${post.correction ? '<span class="badge">Correction</span>' : ''}${post.disputed ? '<span class="badge disputed">Authorship disputed by this team</span>' : ''}${original ? `<button class="reply-context" data-jump="${e(original.id)}">Reply to @${e(original.author.username)}<span>${e(original.text.slice(0, 100))}</span></button>` : ''}<p class="post-body">${postText(post, data.profiles)}</p>${post.exposedIdentity ? `<figure class="exposed-identity"><img src="${e(post.exposedIdentity.portrait)}" alt="${e(post.exposedIdentity.name)}"><figcaption><strong>${e(post.exposedIdentity.name)}</strong><span>${e(post.exposedIdentity.town)}</span><small>Identity shared in this post</small></figcaption></figure>` : ''}<div class="row post-actions">${memberView ? `<button class="secondary" data-jump="${e(post.id)}">View conversation</button>` : ''}${canPost ? `<button class="secondary" data-reply="${e(post.id)}">Reply</button>` : ''}${person?.scope === 'poster' && person?.canWrite !== false && data.phase !== 'ended' && mine && !post.disputed ? `<button class="secondary" data-flag="${e(post.id)}">I did not write this</button>` : ''}</div></article>`;
+    return `<article ${incidentExperience.hiddenPostIds.includes(post.id) ? 'data-takeover-pending' : ''} class="post${mine ? ' is-mine' : ''}${mentionsYou(post) ? ' is-mentioned' : ''}" id="${memberView ? 'member-post-' : 'post-'}${e(post.id)}" tabindex="-1"><div class="post-heading">${identity(post.author, !memberView && data.profiles.some(p => p.id === post.author.id))}<time datetime="${e(post.createdAt)}" title="${e(new Date(post.createdAt).toLocaleString())}">${e(new Date(post.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }))}</time></div>${mine || mentionsYou(post) ? `<div class="post-labels">${mine ? '<span class="own-post-label">Your account</span>' : ''}${mentionMarker(post)}</div>` : ''}${post.provenance ? `<span class="badge">${{ team: 'Team-authored', simulation: 'Simulation-injected', scripted: 'Scripted reaction' }[post.provenance]}</span>` : ''}${post.correction ? '<span class="badge">Correction</span>' : ''}${original ? `<button class="reply-context" data-jump="${e(original.id)}">Reply to @${e(original.author.username)}<span>${e(original.text.slice(0, 100))}</span></button>` : ''}<p class="post-body">${postText(post, data.profiles)}</p>${post.exposedIdentity ? `<figure class="exposed-identity"><img src="${e(post.exposedIdentity.portrait)}" alt="${e(post.exposedIdentity.name)}"><figcaption><strong>${e(post.exposedIdentity.name)}</strong><span>${e(post.exposedIdentity.town)}</span><small>Identity shared in this post</small></figcaption></figure>` : ''}<div class="row post-actions">${memberView ? `<button class="secondary" data-jump="${e(post.id)}">View conversation</button>` : ''}${canPost ? `<button class="secondary" data-reply="${e(post.id)}">Reply</button>` : ''}</div></article>`;
   }
   root.insertAdjacentHTML('beforeend', '<dialog id="member-dialog" class="join-dialog member-dialog" aria-labelledby="member-title"><div id="member-content"></div><button class="secondary" id="close-member">Close profile</button></dialog>');
   const memberDialog = document.querySelector('#member-dialog');
@@ -472,7 +472,7 @@ export async function startParticipant() {
   }
   function openMember(id) { if (incidentExperience.lockedToFeed) return; memberId = id; renderMember(); if (memberId && !memberDialog.open) memberDialog.showModal(); memberDialog.scrollTop = 0; document.querySelector('#member-title')?.focus({ preventScroll: true }); }
   root.addEventListener('click', event => {
-    const button = event.target.closest('[data-profile], [data-reply], [data-flag], [data-jump], [data-hashtag], [data-insert-tag], [data-insert-mention], [data-clear-tag]');
+    const button = event.target.closest('[data-profile], [data-reply], [data-jump], [data-hashtag], [data-insert-tag], [data-insert-mention], [data-clear-tag]');
     if (!button || !data?.posts || incidentExperience.busy) return;
     if (button.dataset.insertTag) { insertToken('#' + button.dataset.insertTag); return; }
     if (button.dataset.insertMention) { insertToken('@' + button.dataset.insertMention); return; }
@@ -480,7 +480,6 @@ export async function startParticipant() {
     if (button.hasAttribute('data-clear-tag')) { activeHashtag = null; renderFeed(); }
     if (button.dataset.profile) openMember(button.dataset.profile);
     if (button.dataset.reply) { if (memberDialog.open) memberDialog.close(); selectReply(data.posts.find(post => post.id === button.dataset.reply)); }
-    if (button.dataset.flag) act(button, () => api('flags', { postId: button.dataset.flag }));
     if (button.dataset.jump) {
       activeHashtag = null; setView('feed'); renderFeed();
       if (memberDialog.open) memberDialog.close();
@@ -494,7 +493,7 @@ export async function startParticipant() {
     const container = document.querySelector('#threads');
     const existingPosts = new Set([...container.querySelectorAll('.post')].map(el => el.id));
     const active = document.activeElement?.dataset;
-    const focus = active?.reply ? ['reply', active.reply] : active?.flag ? ['flag', active.flag] : null;
+    const focus = active?.reply ? ['reply', active.reply] : null;
     document.querySelector('#tag-filter').innerHTML = activeHashtag ? `<p>Posts tagged <strong>#${e(activeHashtag)}</strong> <button class="secondary" data-clear-tag>Show all posts</button></p>` : '';
     const filtered = activeHashtag ? data.posts.filter(post => post.hashtags?.includes(activeHashtag)) : data.posts;
     const ordered = newestPosts(filtered);

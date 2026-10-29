@@ -628,6 +628,7 @@ input[aria-invalid="true"] { border: 2px solid #ad244b; }
 .post-labels .mention-marker > span { background:#2b657e; }
 .social-layout .post .post-body { margin:0 0 14px; font-size:15px; line-height:1.65; color:#332c34; }
 .social-layout .post .post-actions { border-top:1px solid #eee6ec; padding-top:8px; gap:6px; }
+.social-layout .post .post-actions:empty { display:none; }
 #app .post .post-actions .secondary { padding:8px 10px; min-height:36px; font-size:12px; color:#725063; }
 .social-layout .post .inline-tag { color:#2b657e; text-decoration:none; }
 .social-layout .post .inline-tag:hover { text-decoration:underline; }

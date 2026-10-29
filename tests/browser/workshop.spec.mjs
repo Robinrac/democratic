@@ -110,8 +110,7 @@ test('host-paced seven-team rehearsal on phone and laptop, with cancel, reconnec
   await contexts[0].setOffline(true); await expect(phone.locator('#connection')).toContainText('Connection lost',{timeout:15000});
   await release('Release reactions'); await expect(host.locator('#status')).toContainText('21 simulated posts published');
   await contexts[0].setOffline(false); await expect(phone.locator('.post.is-mine')).toHaveCount(4);
-  await phone.locator('.post.is-mine').filter({hasText:'I have changed my mind.'}).getByRole('button',{name:'I did not write this'}).click();
-  await expect(phone.locator('#threads')).toContainText('Authorship disputed');
+  await expect(phone.getByRole('button',{name:'I did not write this'})).toHaveCount(0);
   await expect(viewer.locator('#threads > .post')).toHaveCount(49);
   await expect(viewer.locator('body')).not.toContainText('Simulation-injected');
   await expect(host.getByRole('button',{name:'Reveal what happened',exact:true})).toBeDisabled();

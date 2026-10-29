@@ -81,7 +81,7 @@ test('transport incident is atomic, private, differentiated, persistent and reve
   assert.ok(!(await w.call('feed', undefined, { sid, token: teams[1].token })).posts.some(p => p.id === suppressed.post.id));
   assert.equal((await w.call('posts', { text: 'Reply to hidden', replyTo: suppressed.post.id, requestId: randomUUID() }, { sid, token: teams[1].token })).status, 400);
   const fake = own.posts.find(p => p.author.id === teams[2].participant.id);
-  assert.equal((await w.call('flags', { postId: fake.id }, { sid, token: teams[2].token })).status, 200);
+  assert.equal((await w.call('flags', { postId: fake.id }, { sid, token: teams[2].token })).status, 404);
   const stored = await w.server.store.read(sid);
   assert.equal(stored.posts.filter(p => p.origin === 'simulation').length, 9);
   assert.equal(stored.posts.filter(p => p.incidentHidden).length, 5);
@@ -99,11 +99,11 @@ test('transport incident is atomic, private, differentiated, persistent and reve
       let state = await w.state(sid);
       assert.equal((await w.call('host/moderate', { postId: original.id, version: state.version }, { sid, token: teams[index].token })).status, 401);
       assert.equal((await w.call('host/moderate', { postId: original.id, version: state.version }, { sid, host: true })).status, 400);
-      assert.equal((await w.call('flags', { postId: original.id }, { sid, token: teams[index].token })).status, 200);
+      assert.equal((await w.call('flags', { postId: original.id }, { sid, token: teams[index].token })).status, 404);
       const visible = (await w.call('feed', undefined, { sid, token: teams[1].token })).posts.find(p => p.id === original.id);
       assert.equal(visible.text, original.text);
       assert.equal(visible.hidden, false);
-      assert.equal(visible.disputed, true);
+      assert.equal(visible.disputed, undefined);
     }
     assert.equal((await w.server.store.read(sid)).posts.filter(p => p.origin === 'simulation').length, 9);
   }

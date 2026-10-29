@@ -113,7 +113,6 @@ export function publicPost(state, post) {
   const author = [...state.roles, ...state.accounts].find(r => r.id === post.authorId);
   return { id: post.id, author: publicRole(author), text: post.hidden ? '[Hidden by the host]' : post.text, hidden: !!post.hidden, createdAt: post.createdAt, threadId: post.threadId, replyTo: post.replyTo || null, stance: post.hidden ? null : post.stance || null, correction: !!post.correction,
     ...(post.hidden ? { mentions: [], hashtags: [] } : { mentions: post.mentions || socialText(post.text, state.roles).mentions, hashtags: post.hashtags || socialText(post.text, state.roles).hashtags }),
-    disputed: state.flags.some(f => f.postId === post.id),
     ...(post.attackCampaign && !post.hidden ? { attackCampaign: post.attackCampaign } : {}),
     ...(!post.hidden && post.identityCard ? { exposedIdentity: { name: transportCards[post.identityCard - 1].fullName, town: transportCards[post.identityCard - 1].town, portrait: `/portraits/${post.identityCard}.png` } } : {}),
     ...(revealed(state) ? { provenance: post.origin, actualActor: post.actor } : {}) };
@@ -386,12 +385,6 @@ export function participantWrite(state, token, route, data) {
       if (state.credentials.filter(x => x.roleId === role.id).length >= 10) fail(429, 'This team has reached its viewer-device limit.');
       state.credentials.push({ hash: hash(secret), roleId: role.id, scope: 'viewer', expiresAt: state.expiresAt });
     }
-    return { ok: true };
-  }
-  if (route === 'flags') {
-    const post = state.posts.find(p => p.id === data.postId && p.authorId === role.id);
-    if (!post) fail(403, 'Only mark a post displayed under your own username.');
-    if (!state.flags.some(f => f.postId === post.id && f.roleId === role.id)) { state.flags.push({ postId: post.id, roleId: role.id }); state.version++; }
     return { ok: true };
   }
   if (route === 'responses') {
