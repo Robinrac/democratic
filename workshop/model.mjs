@@ -119,7 +119,7 @@ export function publicPost(state, post) {
     ...(revealed(state) ? { provenance: post.origin, actualActor: post.actor } : {}) };
 }
 export function summary(state) {
-  return { id: state.id, label: state.label, scenario: state.scenario || 'legacy', kind: state.kind, phase: state.phase, version: state.version, paused: state.paused, expiresAt: state.expiresAt, participants: state.roles.filter(r => r.claimed).length, capacity: state.roles.length, genuinePosts: state.posts.filter(p => p.origin === 'team' && !p.hidden).length };
+  return { id: state.id, label: state.label, joinCode: state.joinCode, scenario: state.scenario || 'legacy', kind: state.kind, phase: state.phase, version: state.version, paused: state.paused, expiresAt: state.expiresAt, participants: state.roles.filter(r => r.claimed).length, capacity: state.roles.length, genuinePosts: state.posts.filter(p => p.origin === 'team' && !p.hidden).length };
 }
 export function feed(state, token) {
   const viewerRoleId = token ? credential(state, token).roleId : null;

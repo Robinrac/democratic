@@ -9,9 +9,9 @@ test('host-paced seven-team rehearsal on phone and laptop, with cancel, reconnec
   });
   const errors=[]; host.on('pageerror',e=>errors.push(e.message));
   await host.goto('/host'); await host.getByLabel('Password',{exact:true}).fill('browser-test-host-password-only'); await host.getByRole('button',{name:'Unlock host screen'}).click();
-  await expect(host.getByRole('heading',{name:'You set the pace.'})).toBeVisible();
-  await host.getByText('Create a separate session',{exact:true}).click();
-  await host.getByLabel('Session label').fill('Seven-team browser rehearsal'); await host.getByRole('button',{name:'Create session',exact:true}).click();
+  await expect(host.getByRole('heading',{name:'Your rooms'})).toBeVisible();
+  await host.getByText('Create a new room',{exact:true}).click();
+  await host.getByLabel('Room name').fill('Seven-team browser rehearsal'); await host.getByRole('button',{name:'Create room',exact:true}).click();
   await expect(host.getByRole('heading',{name:'Seven-team browser rehearsal',exact:true})).toBeVisible();
   const sid=new URL(host.url()).searchParams.get('s');
   await expect(host.getByText('Private one-use team codes',{exact:true})).toHaveCount(0);

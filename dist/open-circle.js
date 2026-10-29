@@ -75,24 +75,27 @@ function phaseHTML(data) { if (['reflection', 'recovery', 'discussion', 'closing
 export async function startProjector() {
   const sid = new URLSearchParams(location.search).get('s');
   const link = location.origin + '/?s=' + encodeURIComponent(sid || '');
-  document.querySelector('#app').innerHTML = header(false) + `<main id="main" class="projector"><section><span class="eyebrow">WELCOME TO OPEN CIRCLE</span><h1>Your voice.<br>Your choice.<br>Our conversation.</h1><span class="eyebrow">TODAY’S TOPIC</span><p id="question"></p><div class="phase" id="phase"></div><p id="progress" role="status"></p></section><section class="panel"><div id="qr"></div><h2>Join the circle.</h2><p id="display-url"></p><p>Use the details on your paper profile to join.</p><p id="connection" role="status"></p></section></main>`;
+  document.querySelector('#app').innerHTML = header(false) + `<main id="main" class="projector"><section><span class="eyebrow">WELCOME TO OPEN CIRCLE</span><h1>Your voice.<br>Your choice.<br>Our conversation.</h1><span class="eyebrow">TODAY’S TOPIC</span><p id="question"></p><div class="phase" id="phase"></div><p id="progress" role="status"></p></section><section class="panel"><div id="qr"></div><h2>Join the circle.</h2><p>Scan the QR, or enter this room code:</p><strong id="room-code" class="projector-room-code" aria-label="Room code"></strong><p id="display-url"></p><p>Use the details on your paper profile to join.</p><p id="connection" role="status"></p></section></main>`;
   if (!sid) { document.querySelector('#connection').textContent = 'Open the projector link from your host screen.'; return; }
   const qr = window.qrcode(0, 'M'); qr.addData(link); qr.make();
   document.querySelector('#qr').innerHTML = qr.createSvgTag({ cellSize: 6, margin: 24, scalable: true });
   document.querySelector('#qr svg').setAttribute('aria-label', 'Scan to open Open Circle');
   document.querySelector('#qr svg').setAttribute('role', 'img');
-  document.querySelector('#display-url').textContent = link;
+  document.querySelector('#display-url').textContent = location.host;
   let busy = false;
   const refresh = async () => {
     if (busy) return; busy = true;
     try {
       const data = await request('projector', { sid });
+      document.querySelector('#room-code').textContent = data.joinCode ? data.joinCode.slice(0, 3) + ' ' + data.joinCode.slice(3) : '';
+      document.querySelector('#qr').hidden = data.phase === 'ended';
+      document.querySelector('#room-code').hidden = data.phase === 'ended';
       document.querySelector('#question').textContent = data.question;
       document.querySelector('#phase').innerHTML = phaseHTML(data);
       document.querySelector('#phase').hidden = !phaseHTML(data);
       document.querySelector('#progress').textContent = `${data.participants} / ${data.capacity} profiles joined · ${data.genuinePosts} contributions`;
       document.querySelector('#connection').textContent = ['localhost', '127.0.0.1'].includes(location.hostname) ? 'For phones, open the host screen using the computer’s network address before opening this projector link.' : 'Live updates connected';
-    } catch (error) { document.querySelector('#connection').textContent = error.message; if (error.status === 410) { document.querySelector('#qr').replaceChildren(); document.querySelector('#progress').textContent = ''; } }
+    } catch (error) { document.querySelector('#connection').textContent = error.message; if (error.status === 410) { document.querySelector('#qr').replaceChildren(); document.querySelector('#room-code').textContent = ''; document.querySelector('#progress').textContent = ''; } }
     finally { busy = false; }
   };
   await refresh(); setInterval(refresh, 2000);
@@ -100,7 +103,19 @@ export async function startProjector() {
 
 export async function startParticipant() {
   const root = document.querySelector('#app'), sid = new URLSearchParams(location.search).get('s');
-  if (!sid) { root.innerHTML = header() + '<main id="main" class="welcome"><span class="eyebrow">A PLACE FOR EVERY VOICE</span><img class="welcome-mark" src="/brand/open-circle-mark.png" alt=""><h1>Good conversations<br>start here.</h1><p>A space to share ideas, listen and see things differently.</p><p>Open your community link or scan the QR to join Open Circle.</p></main>'; return; }
+  if (!sid) {
+    root.innerHTML = header() + `<main id="main" class="welcome room-join"><span class="eyebrow">DIFFERENT VOICES. SHARED SPACE.</span><img class="welcome-mark" src="/brand/open-circle-mark.png" alt=""><h1>Join the circle.</h1><p>Enter the six-letter room code on your host’s screen.</p><form id="room-join-form" novalidate><label class="sr-only" for="join-room-code">Room code</label><input id="join-room-code" name="code" maxlength="12" placeholder="ABC DEF" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-describedby="room-join-error" required><button class="primary" type="submit">Join room <span aria-hidden="true">→</span></button><p id="room-join-error" class="error" role="alert"></p></form><p class="room-join-alternative">Or scan the QR code on the screen to join directly.</p></main>`;
+    const input = document.querySelector('#join-room-code'), error = document.querySelector('#room-join-error');
+    input.oninput = () => { input.value = input.value.toUpperCase().replace(/\s/g, '').slice(0, 6); error.textContent = ''; input.removeAttribute('aria-invalid'); };
+    document.querySelector('#room-join-form').onsubmit = async event => {
+      event.preventDefault();
+      if (!/^[A-Z]{6}$/.test(input.value)) { error.textContent = 'Enter the six letters shown on your host’s screen.'; input.setAttribute('aria-invalid', 'true'); input.focus(); return; }
+      const button = event.submitter; button.disabled = true; error.textContent = '';
+      try { const room = await request('rooms/resolve', { body: { code: input.value } }); location.assign('/?s=' + encodeURIComponent(room.id)); }
+      catch (err) { error.textContent = err.message; input.setAttribute('aria-invalid', 'true'); button.disabled = false; }
+    };
+    return;
+  }
   const key = 'open-circle:' + sid;
   const fragment = new URLSearchParams(location.hash.slice(1));
   let token = localStorage.getItem(key) || uid();

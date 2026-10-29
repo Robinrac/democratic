@@ -69,3 +69,21 @@
   .host-table th:first-child { position: sticky; left: 0; background: inherit; z-index: 1; }
   .host-table thead th:first-child { background: #dce7ef; }
 }
+#sessions { background:transparent; padding:20px 0; border:0; }
+.room-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(270px,1fr)); gap:18px; margin:18px 0 26px; }
+.room-card { padding:22px; border:1px solid #e2cad8; border-radius:16px; background:white; }
+.room-card h3 { font-size:22px; margin:14px 0 10px; overflow-wrap:anywhere; }
+.room-card-heading { display:flex; gap:12px; justify-content:space-between; flex-wrap:wrap; font-size:12px; }
+.room-kind { color:#75294d; background:#fce5ef; padding:4px 9px; border-radius:20px; }
+.room-phase { color:#52694a; }
+.room-card-code { letter-spacing:.2em; font-size:24px; font-weight:750; color:#6c2547; }
+.room-card p { margin:10px 0 3px; }.room-card small { color:#776b74; }
+.room-actions { display:flex; gap:10px; margin-top:18px; }.room-actions .primary { flex:1; }
+.room-count { color:#8d6480; font-size:15px; }
+#create-room-panel { padding:20px; border:1px solid #e2cad8; border-radius:14px; background:#f9edf3; }
+#create-room-panel > summary { font-weight:700; font-size:17px; }#create-session { max-width:540px; padding-top:18px; }
+#create-session > button { margin-top:18px; }
+.all-rooms-link { display:inline-block; margin:0 0 18px; color:#743453; font-weight:600; }
+.host-room-invite { display:grid; gap:10px; text-align:right; }.host-room-code { color:#6d5966; font-size:12px; }.host-room-code strong { display:inline-block; color:#72274a; letter-spacing:.15em; font-size:21px; margin-left:8px; }
+.host-links { align-items:center; }.host-links .qr-screen-button { padding:13px 18px; background:#742346; color:white; border-radius:10px; font-weight:650; text-decoration:none; }
+@media(max-width:650px) { .room-grid { grid-template-columns:1fr; }.host-room-invite { text-align:left; }.host-links .qr-screen-button { width:100%; text-align:center; } }

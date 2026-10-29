@@ -6,9 +6,9 @@ test('transport host launch shows seven private outcomes on phone and desktop an
   const errors = []; host.on('pageerror', error => errors.push(error.message));
   await host.goto('/host'); await host.getByLabel('Password', { exact: true }).fill('browser-test-host-password-only');
   await host.getByRole('button', { name: 'Unlock host screen' }).click();
-  await host.getByText('Create a separate session', { exact: true }).click();
-  await host.getByLabel('Session label').fill('Transport browser rehearsal');
-  await host.getByRole('button', { name: 'Create session', exact: true }).click();
+  await host.getByText('Create a new room', { exact: true }).click();
+  await host.getByLabel('Room name').fill('Transport browser rehearsal');
+  await host.getByRole('button', { name: 'Create room', exact: true }).click();
   await expect(host.getByRole('heading', { name: 'Transport browser rehearsal', exact: true })).toBeVisible();
   const sid = new URL(host.url()).searchParams.get('s');
   await host.setViewportSize({ width: 1440, height: 1000 });

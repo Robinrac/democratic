@@ -1,6 +1,6 @@
 # Open Circle: youth transport workshop
 
-New sessions use the transport scenario. Earlier sessions retain their original anonymous-name debate. Create a new rehearsal in `/host` and use its participant link or QR. The root URL is the welcome page, not a workshop room.
+New sessions use the transport scenario. Earlier sessions retain their original anonymous-name debate. Open `/host`, sign in and choose a room from **Your rooms**, or create a new one. The root URL is the participant join page: enter a six-letter room code or scan the QR shown by the host.
 
 The existing Open Circle design, profile modal, portraits, Neon connection and Render hosting are retained. The participant-facing transport copy is in `workshop/transport.mjs`; `roles.mjs` and the earlier role-card document retain identity/portrait data and archived scenario content. The seven current paper cards are in the existing Canva design.
 
@@ -99,3 +99,13 @@ These replace the passive outside-support notices. Controls unlock after **Launc
 - **Host:** the corresponding roster row shows ready/deployed, published/total and the selected username. The shared timeline includes queued campaign posts. Pausing freezes all outstanding posts; reflection waits until they finish. A late deployment can extend the incident beyond the original 160-second sequence. Reset clears campaigns along with all other incident data.
 
 Bots have server-generated account IDs and never claim one of the seven paper profiles. Their fixed messages only appear inside this workshop. Participants cannot supply arbitrary campaign text, invent a target or launch an extra wave through the API. Bot posts remain protected from participant deletion and are labelled at reveal. Hashtag rankings count these posts normally; with both campaigns and the suggested baseline, #ServiceFirst reaches 25 visible posts.
+
+
+## Room entry and the host room picker
+
+- The public homepage uses the Open Circle design with one six-letter code field. Lowercase input and pasted spaces are accepted. Invalid, unknown, expired and ended codes get clear errors. The discreet top-right Host access link opens `/host`; no password is entered on the participant join page.
+- Host sign-in opens **Your rooms**. Active rooms show their name, code, phase, joined count and expiry. **Open room** opens the workshop controls. **Delete** requires typing the exact room name and removes its profiles, posts and code. Ended rooms sit in a separate collapsed section.
+- **Create a new room** needs a name and rehearsal/live choice. Expiry defaults to 24 hours, with an optional setting. Creation opens that room’s controls.
+- Inside a room, **Show QR code screen** opens a separate public screen with both the QR and a large six-letter code. It contains no host actions or private profiles. **All rooms** returns to the room picker.
+- A room’s code is allocated uniquely in PostgreSQL and remains stable across reconnects, server restarts and rehearsal resets. Reset still revokes participant credentials and clears profiles/posts. Existing rooms receive a code automatically without losing their state; existing `?s=...` links keep working. Deleted and expired codes cannot resolve; ended codes tell participants to ask for the current room.
+- Codes locate a room; they do not bypass paper-profile validation or grant host access. Existing participants entering their code again on the same browser return to their existing profile. The database enforces code uniqueness, and code lookup is rate-limited.

@@ -63,6 +63,16 @@ export async function createWorkshopServer({ hostPassword = process.env.HOST_PAS
         }
         const route = url.pathname.slice(5);
         if (route === 'health' && req.method === 'GET') { await store.health(); return reply(res, 200, { ok: true }); }
+        if (route === 'rooms/resolve' && req.method === 'POST') {
+          limit(req, 'room-code', 120);
+          const data = await readJSON(req);
+          const code = typeof data.code === 'string' ? data.code.replace(/\s/g, '').toUpperCase() : '';
+          if (!/^[A-Z]{6}$/.test(code)) fail(400, 'Enter the six-letter room code shown on the screen.');
+          const id = await store.resolveCode(code), room = id && await store.read(id);
+          if (!room) fail(404, 'Room not found. Check the code with your host.');
+          if (room.phase === 'ended') fail(410, 'This room has ended. Ask your host for the current code.');
+          return reply(res, 200, { id: room.id, label: room.label });
+        }
         if (route === 'host/login' && req.method === 'POST') {
           limit(req, 'login', 5);
           const data = await readJSON(req);
@@ -124,6 +134,7 @@ export async function createWorkshopServer({ hostPassword = process.env.HOST_PAS
             if (route === 'host/reset') {
               if (state.kind !== 'rehearsal' || data.confirmLabel !== state.label) fail(403, 'Only a rehearsal can be reset; type its exact label.');
               const fresh = makeSession({ id: sid, label: state.label, kind: state.kind, scenario: state.scenario || 'legacy', expiresAt: data.expiresAt });
+              fresh.state.joinCode = state.joinCode;
               fresh.state.version = state.version + 1;
               for (const field of Object.keys(state)) delete state[field];
               Object.assign(state, fresh.state); return { session: summary(state) };

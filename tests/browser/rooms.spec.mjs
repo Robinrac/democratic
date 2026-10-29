@@ -1,0 +1,35 @@
+import { test, expect } from '@playwright/test';
+
+test('home joins by code; host chooses rooms and opens the public QR screen; deletion removes the code', async ({ browser, page: host }, info) => {
+  await host.goto('/host'); await host.getByLabel('Password', { exact: true }).fill('browser-test-host-password-only'); await host.getByRole('button', { name: 'Unlock host screen' }).click();
+  await expect(host.getByRole('heading', { name: 'Your rooms', exact: true })).toBeVisible();
+  await expect(host.locator('#controls')).toBeHidden();
+  await host.getByText('Create a new room', { exact: true }).click(); await host.getByLabel('Room name').fill('Room code rehearsal'); await host.getByRole('button', { name: 'Create room', exact: true }).click();
+  await expect(host.getByRole('heading', { name: 'Room code rehearsal', exact: true })).toBeVisible();
+  const sid = new URL(host.url()).searchParams.get('s'), code = (await host.locator('.host-room-code strong').textContent()).trim(); expect(code).toMatch(/^[A-Z]{6}$/);
+  await expect(host.locator('#sessions')).toBeHidden();
+  const popup = host.waitForEvent('popup'); await host.getByRole('link', { name: 'Show QR code screen' }).click(); const projector = await popup;
+  await expect(projector.locator('#qr svg')).toBeVisible(); await expect(projector.locator('#room-code')).toHaveText(code.slice(0,3)+' '+code.slice(3));
+  await expect(projector.getByRole('link', { name: 'Host access' })).toHaveCount(0);
+  await projector.setViewportSize({ width: 1280, height: 720 });
+  expect((await projector.locator('#display-url').boundingBox()).y + (await projector.locator('#display-url').boundingBox()).height).toBeLessThan(720);
+  await projector.screenshot({ path: info.outputPath('qr-and-code.png'), fullPage: true });
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 } }), participant = await context.newPage();
+  await participant.goto('/'); await expect(participant.getByRole('heading', { name: 'Join the circle.' })).toBeVisible();
+  await participant.getByRole('button', { name: 'Join room' }).click(); await expect(participant.locator('#room-join-error')).toContainText('six letters');
+  await participant.getByLabel('Room code', { exact: true }).fill('IIIIII'); await participant.getByRole('button', { name: 'Join room' }).click(); await expect(participant.locator('#room-join-error')).toContainText('Room not found');
+  await participant.getByLabel('Room code', { exact: true }).fill(code.toLowerCase()); await expect(participant.getByLabel('Room code', { exact: true })).toHaveValue(code);
+  expect(await participant.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await participant.screenshot({ path: info.outputPath('join-code-phone.png') });
+  await participant.getByRole('button', { name: 'Join room' }).click(); await expect(participant).toHaveURL(new RegExp('s='+sid)); await expect(participant.locator('#join-dialog')).toBeVisible();
+  await participant.locator('#join-name').fill('Eydis'); await participant.locator('#join-town').fill('Reykjavík'); await participant.getByRole('button', { name: 'Join the forum' }).click(); await participant.getByRole('button', { name: 'Enter the forum' }).click();
+  await participant.goto('/'); await participant.getByLabel('Room code', { exact: true }).fill(code); await participant.getByRole('button', { name: 'Join room' }).click(); await expect(participant.locator('#join-dialog')).toBeHidden(); await expect(participant.locator('#team')).toContainText('@lava-lundi');
+  await host.getByRole('link', { name: 'All rooms' }).click(); await expect(host.getByRole('heading', { name: 'Your rooms', exact: true })).toBeVisible();
+  const card = host.locator(`[data-room="${sid}"]`); await expect(card).toContainText(code); await expect(card).toContainText('1 / 7'); await host.screenshot({ path: info.outputPath('room-list.png'), fullPage: true });
+  host.once('dialog', dialog => dialog.dismiss()); await card.getByRole('button', { name: 'Delete Room code rehearsal' }).click(); await expect(card).toBeVisible();
+  await card.getByRole('button', { name: 'Open room' }).click(); await expect(host.getByRole('button', { name: 'Open debate', exact: true })).toBeVisible();
+  await host.getByRole('link', { name: 'All rooms' }).click(); host.once('dialog', dialog => dialog.accept('Room code rehearsal')); await host.locator(`[data-room="${sid}"]`).getByRole('button', { name: 'Delete Room code rehearsal' }).click(); await expect(host.locator(`[data-room="${sid}"]`)).toHaveCount(0);
+  await participant.goto('/'); await participant.getByLabel('Room code', { exact: true }).fill(code); await participant.getByRole('button', { name: 'Join room' }).click(); await expect(participant.locator('#room-join-error')).toContainText('Room not found');
+  await expect(projector.locator('#qr svg')).toHaveCount(0); await expect(projector.locator('#room-code')).toBeEmpty();
+  await context.close(); await projector.close();
+});

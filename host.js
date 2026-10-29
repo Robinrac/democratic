@@ -6,25 +6,41 @@ const status = message => { document.querySelector('#status').textContent = mess
 const error = message => { document.querySelector('#error').textContent = message; };
 const pendingKey = () => 'open-circle-release:' + sid;
 async function work(fn) {
-  if (pending) return; pending = true; error(''); document.querySelectorAll('#controls button').forEach(b => b.disabled = true);
+  if (pending) return; pending = true; error(''); document.querySelectorAll('#controls button, #sessions button').forEach(b => b.disabled = true);
   try { await fn(); } catch (err) { error(err.message); }
-  finally { pending = false; signature = ''; await refresh(); }
+  finally { pending = false; signature = ''; if (!sid) document.querySelectorAll('#sessions button').forEach(b => b.disabled = false); await refresh(); }
 }
-function choose(id) { sid = id; includes.clear(); signature = ''; history.replaceState(null, '', '/host?s=' + encodeURIComponent(sid)); refresh(); }
+function roomScreen() {
+  document.querySelector('#sessions').hidden = !!sid;
+  document.querySelector('#controls').hidden = !sid;
+  document.querySelector('#host-heading').textContent = sid ? 'You set the pace.' : 'Your rooms';
+  document.querySelector('#host-subtitle').textContent = sid ? 'Your private workshop controls.' : 'Choose an active room or create one for your next workshop.';
+}
+function choose(id) { if (pending) return; sid = id; state = null; includes.clear(); profileSearch = ''; signature = ''; document.querySelector('#controls').replaceChildren(); history.replaceState(null, '', '/host?s=' + encodeURIComponent(sid)); roomScreen(); refresh(); }
 async function listSessions() {
+  roomScreen(); if (sid) return;
   const data = await api('sessions');
-  document.querySelector('#sessions').innerHTML = `<details id="session-options" ${sid ? '' : 'open'}><summary>Switch or create session</summary><div class="session-list">${data.sessions.map(s => `<button class="secondary ${s.id === sid ? 'current' : ''}" data-session="${e(s.id)}">${e(s.label)} · ${e(s.kind)} · ${e(s.phase)} · ${s.scenario === 'transport-v1' ? 'Youth transport' : 'Earlier scenario'}</button>`).join('') || '<p>No sessions yet. Create a rehearsal below.</p>'}</div><details><summary>Create a separate session</summary><form id="create-session"><label for="label">Session label</label><input id="label" required maxlength="80" placeholder="Workshop 2 rehearsal"><label for="kind">Session type</label><select id="kind"><option value="rehearsal">Rehearsal (can be reset)</option><option value="live">Live (protected from reset)</option></select><label for="hours">Delete session data after this many hours</label><input id="hours" type="number" min="1" max="168" value="24" required><p class="muted">Expiry blocks access immediately. Expired data is removed on the next session read or host session listing. Use Clear data to delete immediately.</p><button>Create session</button></form></details></details>`;
+  const card = room => `<article class="room-card" data-room="${e(room.id)}"><div class="room-card-heading"><span class="room-kind">${room.kind === 'live' ? 'Live workshop' : 'Rehearsal'}</span><span class="room-phase">${e(phaseLabel(room.phase))}</span></div><h3>${e(room.label)}</h3><div class="room-card-code">${e(room.joinCode || '')}</div><p>${room.participants} / ${room.capacity} profiles joined</p><small>Expires ${e(new Date(room.expiresAt).toLocaleString())}</small><div class="room-actions"><button class="primary" data-session="${e(room.id)}">Open room</button><button class="room-delete secondary" data-delete-room="${e(room.id)}" aria-label="Delete ${e(room.label)}">Delete</button></div></article>`;
+  const active = data.sessions.filter(room => room.phase !== 'ended'), ended = data.sessions.filter(room => room.phase === 'ended');
+  document.querySelector('#sessions').innerHTML = `<div class="host-section-heading"><h2>Active rooms <span class="room-count">${active.length}</span></h2><button id="refresh-rooms" class="secondary">Refresh rooms</button></div><div class="room-grid">${active.map(card).join('') || '<p class="empty">No active rooms. Create one below to get started.</p>'}</div>${ended.length ? `<details class="ended-rooms"><summary>Ended rooms (${ended.length})</summary><div class="room-grid">${ended.map(card).join('')}</div></details>` : ''}<details id="create-room-panel"><summary>Create a new room</summary><form id="create-session"><label for="label">Room name</label><input id="label" required maxlength="80" placeholder="Nordic youth workshop"><label for="kind">Room type</label><select id="kind"><option value="rehearsal">Rehearsal (can be reset)</option><option value="live">Live workshop</option></select><details><summary>Room expiry</summary><label for="hours">Delete room data after this many hours</label><input id="hours" type="number" min="1" max="168" value="24" required><p class="muted">The room and its code stop working when it expires.</p></details><button class="primary">Create room</button></form></details>`;
+  document.querySelector('#refresh-rooms').onclick = () => work(listSessions);
   document.querySelectorAll('[data-session]').forEach(b => b.onclick = () => choose(b.dataset.session));
+  document.querySelectorAll('[data-delete-room]').forEach(button => button.onclick = () => {
+    const room = data.sessions.find(room => room.id === button.dataset.deleteRoom);
+    const confirmLabel = prompt('Delete this room and all its profiles and posts? Type its name: ' + room.label);
+    if (confirmLabel === null) return;
+    work(async () => { await request('host/delete', { sid: room.id, body: { confirmLabel } }); sessionStorage.removeItem('open-circle-release:' + room.id); status('Room deleted.'); await listSessions(); });
+  });
   const form = document.querySelector('#create-session');
-  let creationId = uid().slice(0, 16);
+  const creationId = uid().slice(0, 16);
   form.onsubmit = ev => {
-    ev.preventDefault(); const button = ev.submitter; if (button.disabled) return; button.disabled = true;
+    ev.preventDefault(); if (pending) return;
+    const label = form.querySelector('#label').value, kind = form.querySelector('#kind').value, expiresAt = Date.now() + Number(form.querySelector('#hours').value) * 3600000;
     work(async () => {
-      const result = await api('sessions', { id: creationId, label: document.querySelector('#label').value, kind: document.querySelector('#kind').value, expiresAt: Date.now() + Number(document.querySelector('#hours').value) * 3600000 });
-      sid = result.session.id; includes.clear(); creationId = uid().slice(0, 16); history.replaceState(null, '', '/host?s=' + sid);
-      status(result.retried ? 'Session already created. Share the room link or QR.' : 'Session created. Teams join with the QR or room link and their paper profile.');
-      await listSessions();
-    }).finally(() => { button.disabled = false; });
+      const result = await api('sessions', { id: creationId, label, kind, expiresAt });
+      sid = result.session.id; state = null; includes.clear(); signature = ''; history.replaceState(null, '', '/host?s=' + encodeURIComponent(sid));
+      status('Room ready. Show the QR code screen to invite participants.'); roomScreen();
+    });
   };
 }
 const effectCopy = {
@@ -71,12 +87,13 @@ function roleRow(role) {
 function render() {
   const currentSignature = JSON.stringify([state, [...includes], sessionStorage.getItem(pendingKey())]);
   if (signature === currentSignature) return; signature = currentSignature;
+  roomScreen();
   const container = document.querySelector('#controls');
   const tableScroll = container.querySelector('.host-table-scroll')?.scrollLeft || 0;
   const opened = new Set([...container.querySelectorAll('details[open]')].map(d => d.id));
   const focusedId = container.contains(document.activeElement) ? document.activeElement.id : null;
   const joinLink = location.origin + '/?s=' + encodeURIComponent(sid);
-  container.innerHTML = `<section class="panel host-room"><div><span class="eyebrow">PRIVATE HOST · ${e(state.kind)}</span><h2>${e(state.label)}</h2><p>${state.scenario === 'transport-v1' ? 'Bus fares for young people' : 'Earlier workshop scenario'}</p></div><div class="host-links"><a href="${e(joinLink)}" target="_blank" rel="noopener">Participant link ↗</a><a href="${e(joinLink)}&presenter=1" target="_blank" rel="noopener">Open read-only projector ↗</a></div></section>
+  container.innerHTML = `<a class="all-rooms-link" href="/host">← All rooms</a><section class="panel host-room"><div><span class="eyebrow">PRIVATE HOST · ${e(state.kind)}</span><h2>${e(state.label)}</h2><p>${state.scenario === 'transport-v1' ? 'Bus fares for young people' : 'Earlier workshop scenario'}</p></div><div class="host-room-invite"><span class="host-room-code">Room code <strong>${e(state.joinCode || '')}</strong></span><div class="host-links"><a href="${e(joinLink)}" target="_blank" rel="noopener">Participant link ↗</a><a class="qr-screen-button" href="${e(joinLink)}&presenter=1" target="_blank" rel="noopener">Show QR code screen ↗</a></div></div></section>
   <section class="panel host-run"><div class="host-section-heading"><div><h2>Run the workshop</h2><p>${e(phaseLabel(state.phase))}${state.paused ? ' · Paused' : ''} · ${state.participants}/${state.capacity} joined</p></div><button id="pause" class="secondary" ${state.phase === 'ended' ? 'disabled' : ''}>${state.paused ? 'Resume' : 'Pause'} ${state.incidentTimeline?.pending ? 'incident' : 'next release'}</button></div><ol class="host-steps" aria-label="Workshop steps">${state.actions.map((a, i) => {
     const current = state.actions.findIndex(step => step.from === state.phase);
     const done = state.phase === 'ended' || (current >= 0 && i < current);
@@ -147,15 +164,14 @@ async function commit(payload) {
   }
 }
 async function refresh() {
-  if (!sid || polling || pending) return; polling = true;
+  if (!sid || polling || pending) return; polling = true; const roomId = sid;
   try {
-    state = await api('state' + ([...includes].length ? '?' + [...includes].map(id => 'include=' + encodeURIComponent(id)).join('&') : ''));
+    const nextState = await api('state' + ([...includes].length ? '?' + [...includes].map(id => 'include=' + encodeURIComponent(id)).join('&') : ''));
+    if (sid !== roomId) return; state = nextState;
     const saved = sessionStorage.getItem(pendingKey());
     if (saved) { const payload = JSON.parse(saved), event = state.events[payload.requestId]; if (event) { sessionStorage.removeItem(pendingKey()); status(`Released: ${event.count} posts · ${event.action} confirmed after reconnect.`); } }
     render();
-    const selectedSession = document.querySelector(`[data-session="${sid}"]`);
-    if (selectedSession) selectedSession.textContent = `${state.label} · ${state.kind} · ${state.phase}`;
-  } catch (err) { error(err.message); if (err.status === 401) location.replace('/host' + location.search); if (err.status === 410) { document.querySelector('#controls').innerHTML = '<p>Session expired or cleared. Choose or create another session.</p>'; } }
+  } catch (err) { error(err.message); if (err.status === 401) location.replace('/host' + location.search); if (err.status === 410) { sid = null; state = null; history.replaceState(null, '', '/host'); document.querySelector('#controls').replaceChildren(); await listSessions(); } }
   finally { polling = false; }
 }
 document.querySelector('#logout').onclick = () => work(async () => { await api('logout', {}); location.replace('/host'); });
