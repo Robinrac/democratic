@@ -31,6 +31,7 @@ test('profile browsing, reply drafts, interrupted sends and offline recovery wor
   await expect(page.locator('#stance')).toBeHidden();
   await expect(page.getByLabel('Your reason or reply')).toHaveValue('Listening without judging helps.');
   await openPhoneMenu(page); await page.getByRole('button', { name: 'Edit profile', exact: true }).click();
+  await page.getByRole('tab', { name: 'Personal info' }).click();
   await page.locator('#profile-form').getByLabel('Bio', { exact: true }).fill('Listening first.');
   await page.getByRole('button', { name: 'Save profile', exact: true }).click();
   await expect(page.locator('#profile-dialog')).not.toBeVisible();

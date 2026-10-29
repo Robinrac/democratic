@@ -410,6 +410,7 @@ input[aria-invalid="true"] { border: 2px solid #ad244b; }
 .social-layout .composer .mention-editor textarea { background: white; }
 .join-dialog input[aria-invalid=true] { border-color: #a12d50; }
 .join-dialog .private-fields input:not([type=radio]):not([type=checkbox]) { background:white; border-color:#d5b9c7; border-radius:10px; margin:8px 0 0; }
+.join-dialog .private-fields input[readonly]:not([type=radio]):not([type=checkbox]) { background:#f2ecef; color:#65535f; cursor:default; }
 .join-dialog .private-fields label { display:block; margin:0; color:#49263b; }
 .join-dialog .private-fields .field-hint { margin:8px 0 0; font-size:12px; }
 .private-fields .details-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:20px; }

@@ -137,6 +137,8 @@ test('posts, replies and profile edits enforce ownership, text limits, origins a
   const publicViews=[await w.call('feed',undefined,{sid}),await w.call('profile?id='+a.participant.id,undefined,{sid}),await w.call('projector',undefined,{sid})];
   publicViews.forEach(view=>{ privateFree(view); assert.ok(!JSON.stringify(view).includes('Private workshop town')); });
   assert.equal((await w.call('profile',{name:'Someone else'},{sid,token:a.token})).status,400);
+  assert.equal((await w.call('profile',{name:roleCards[0].fullName.split(' ')[0]},{sid,token:a.token})).status,400);
+  assert.equal((await w.call('me',undefined,{sid,token:a.token})).privateDetails.name,roleCards[0].fullName);
   assert.equal((await w.call('me',undefined,{sid,token:b.token})).participant.bio,'');
   for(const bad of ['', 'x'.repeat(501), '<img src=x onerror=alert(1)>', null]) assert.equal((await w.call('posts',{...payload,requestId:randomUUID(),text:bad},{sid,token:a.token})).status,400);
   assert.equal((await w.call('profile',{bio:'x'.repeat(161)},{sid,token:a.token})).status,400);

@@ -370,8 +370,7 @@ export function participantWrite(state, token, route, data) {
   if (lockedOut(state, role)) fail(403, 'Your account is locked during this incident. You can watch the feed, but cannot change it.');
   if (route === 'profile') {
     if (data.name !== undefined) {
-      if (identifyProfileByName(profileName(data.name), roleCards).profile?.card !== role.card) fail(400, 'Keep the name of the person on your assigned paper profile.');
-      role.privateName = roleCards[role.card - 1].fullName;
+      if (data.name !== privateDetails(role).name) fail(400, 'Your name cannot be changed after joining.');
     }
     if (data.town !== undefined) role.privateTown = text(data.town, 80);
     if (data.bio !== undefined) role.bio = text(data.bio, 160, true);
