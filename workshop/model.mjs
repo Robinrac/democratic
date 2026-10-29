@@ -153,10 +153,14 @@ export function targets(state, includeFallback = []) {
 export function hostView(state, includeFallback = []) {
   const selected = targets(state, includeFallback);
   return { ...summary(state), roles: state.roles.map(r => {
+    const card = cardsFor(state)[r.card - 1];
     const own = state.posts.filter(p => p.authorId === r.id || r.previousIds?.includes(p.authorId)), genuine = own.filter(p => p.origin === 'team');
     const injected = own.filter(p => p.origin !== 'team');
     const incidentStarted = isTransport(state) ? !!state.incidentId : injected.length > 0;
     return { ...publicRole(r), ...privateDetails(r), card: r.card, claimed: r.claimed, accountDeleted: !!r.accountDeleted, recreated: !!r.recreated, targetRoleId: r.previousIds?.[0] || r.id,
+      reference: { fullName: card.fullName, portrait: `/portraits/${r.card}.png`, ageGender: card.ageGender, town: card.town, country: card.country,
+        proposal: card.proposal || '', backstory: card.backstory, reason: card.reason, worry: card.worry, persuade: card.persuade,
+        suggestedBio: card.suggestedBio, suggestedPost: card.suggestedPost, guidance: card.question },
       hasPost: genuine.some(p => p.stance && !p.replyTo && !p.correction),
       activity: { posts: genuine.filter(p => !p.replyTo).length, replies: genuine.filter(p => p.replyTo).length,
         injected: injected.length, hidden: genuine.filter(p => p.hidden || !visibleTo(state, p, null)).length,

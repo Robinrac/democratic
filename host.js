@@ -1,9 +1,14 @@
 import { e, uid, request } from './open-circle.js';
+import { PROFILE_THEMES } from './profile-themes.js';
 
 let sid = new URLSearchParams(location.search).get('s'), state = null, polling = false, pending = false, signature = '', includes = new Set(), profileSearch = '';
 const api = (route, body) => request('host/' + route, { sid, body });
 const status = message => { document.querySelector('#status').textContent = message; };
 const error = message => { document.querySelector('#error').textContent = message; };
+let selectedCharacter = null, characterSignature = '';
+const characterDialog = document.querySelector('#character-dialog');
+document.querySelector('#close-character').onclick = () => characterDialog.close();
+characterDialog.addEventListener('close', () => { const card = selectedCharacter; selectedCharacter = null; characterSignature = ''; document.querySelector(`[data-character="${card}"]`)?.focus({ preventScroll: true }); });
 const pendingKey = () => 'open-circle-release:' + sid;
 async function work(fn) {
   if (pending) return; pending = true; error(''); document.querySelectorAll('#controls button, #sessions button').forEach(b => b.disabled = true);
@@ -11,6 +16,7 @@ async function work(fn) {
   finally { pending = false; signature = ''; if (!sid) document.querySelectorAll('#sessions button').forEach(b => b.disabled = false); await refresh(); }
 }
 function roomScreen() {
+  if (!sid && characterDialog.open) characterDialog.close();
   document.querySelector('#sessions').hidden = !!sid;
   document.querySelector('#controls').hidden = !sid;
   document.querySelector('#host-heading').textContent = sid ? 'You set the pace.' : 'Your rooms';
@@ -84,6 +90,19 @@ function roleRow(role) {
   const readiness = state.phase === 'debate' && state.scenario === 'transport-v1' && role.claimed && !(target?.ready && target?.matchesCard) ? '<small class="needs-post">Needs a first post for their role</small>' : '';
   return `<tr data-role-card="${role.card}" data-person="${e([role.name, role.town, role.username].join(' '))}"><th scope="row"><div class="host-person"><span class="join-dot ${role.claimed ? 'joined' : ''}" aria-label="${role.claimed ? 'Joined' : 'Not joined'}" role="img"></span><div><strong>${e(role.name)}</strong><small>@${e(role.username)} · Card ${role.card}</small></div></div></th><td><strong>${a.posts} ${a.posts === 1 ? 'post' : 'posts'}</strong><small>${a.replies} ${a.replies === 1 ? 'reply' : 'replies'}</small>${a.lastPostedAt ? `<small>Last ${e(new Date(a.lastPostedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }))}</small>` : '<small>No contributions yet</small>'}${readiness}${state.scenario !== 'transport-v1' && role.claimed && !role.hasPost && state.phase === 'debate' ? `<label><input id="include-${e(role.id)}" data-include="${e(role.id)}" type="checkbox" ${includes.has(role.id) ? 'checked' : ''}>Include assigned role</label>` : ''}</td><td><strong>${e(planned[0])}</strong><small>${e(planned[1])}</small></td><td><span class="outcome ${role.incidentState === 'active' ? 'outcome-active' : role.incidentState === 'restored' ? 'outcome-restored' : ''}">${e(outcome)}</span>${detail ? `<small>${e(detail)}</small>` : ''}</td><td><span class="access access-${e(role.postingAccess || 'not-joined')}">${e(access)}</span>${a.hidden && role.incidentState === 'active' ? '<small>Some posts are hidden</small>' : ''}</td></tr>`;
 }
+function renderCharacter() {
+  const role = state?.roles.find(role => role.card === selectedCharacter);
+  if (!role?.reference) { if (characterDialog.open) characterDialog.close(); return; }
+  const ref = role.reference;
+  const signature = JSON.stringify([role.id, role.username, role.avatar, role.cover, role.bio, role.claimed, ref]);
+  if (signature === characterSignature) return; characterSignature = signature;
+  const scroll = characterDialog.scrollTop;
+  const section = (title, text) => text ? `<section><h3>${e(title)}</h3><p>${e(text)}</p></section>` : '';
+  const theme = PROFILE_THEMES[role.cover] || PROFILE_THEMES[0];
+  document.querySelector('#character-content').innerHTML = `<div class="character-heading"><img class="character-face" src="${e(ref.portrait)}" alt="${e(ref.fullName)}"><div><span class="eyebrow">PAPER PROFILE · CARD ${role.card}</span><h2 id="character-title">${e(ref.fullName)}</h2><p>${e(ref.ageGender)}</p></div></div><section class="character-anonymous"><div class="character-cover reference-cover-${role.cover}">${theme.banner.map(e).join('<br>')}</div><div class="character-anonymous-body"><img src="${e(role.avatar)}" alt="Anonymous avatar"><div><span class="eyebrow">${role.claimed ? 'ANONYMOUS FORUM PROFILE' : 'ASSIGNED FORUM PROFILE · NOT JOINED YET'}</span><strong>@${e(role.username)}</strong><p>${e(role.claimed ? role.bio || 'No public bio added yet.' : ref.suggestedBio)}</p></div></div></section><div class="character-paper">${section('Who you are', ref.backstory)}${section('Your proposal', ref.proposal)}${section('Why it matters', ref.reason)}${section('What you worry about', ref.worry)}${section('What might persuade you', ref.persuade)}${section('Suggested public bio', ref.suggestedBio)}${section('Possible first post', ref.suggestedPost)}${section(state.scenario === 'transport-v1' ? 'How to play this person' : 'A question to ask others', ref.guidance)}</div>`;
+  characterDialog.scrollTop = scroll;
+}
+function openCharacter(card) { selectedCharacter = Number(card); characterSignature = ''; renderCharacter(); if (!characterDialog.open) characterDialog.showModal(); characterDialog.scrollTop = 0; }
 function render() {
   const currentSignature = JSON.stringify([state, [...includes], sessionStorage.getItem(pendingKey())]);
   if (signature === currentSignature) return; signature = currentSignature;
@@ -100,6 +119,7 @@ function render() {
     return `<li class="${done ? 'step-done' : a.from === state.phase ? 'step-current' : ''}"><span class="step-number" aria-hidden="true">${done ? '✓' : i + 1}</span><button id="action-${e(a.id)}" data-action="${e(a.id)}" aria-label="${e(a.label)}" ${a.enabled && !sessionStorage.getItem(pendingKey()) ? '' : 'disabled'}>${e(a.label)}</button><small>${done ? 'Done' : a.from === state.phase ? 'Next step' : 'Later'}</small></li>`;
   }).join('')}</ol><p class="host-next-help">${e(nextHelp())}</p>${state.trendShift?.before ? `<p class="host-trend-shift"><strong>Top hashtag:</strong> before #${e(state.trendShift.before[0]?.label)} (${state.trendShift.before[0]?.count}) → now #${e(state.trendShift.current[0]?.label)} (${state.trendShift.current[0]?.count}). Counts reflect visible posts.</p>` : ''}</section>
   <section id="team-readiness" class="panel host-roster"><div class="host-section-heading"><div><h2>Everyone in the circle</h2><p>Joined → participation → incident → outcome → access</p></div><div class="host-search"><label class="sr-only" for="profile-search">Find a fictional name, town or username</label><input id="profile-search" type="search" value="${e(profileSearch)}" placeholder="Find a person…"></div></div><div class="host-table-scroll" role="region" aria-label="Participant progress" tabindex="0"><table class="host-table"><caption class="sr-only">Seven profiles: joined status, genuine contributions, planned incident, actual outcome and current posting access.</caption><thead><tr><th scope="col">Person</th><th scope="col">Their posts</th><th scope="col">Planned incident</th><th scope="col">What happened</th><th scope="col">Can they post?</th></tr></thead><tbody>${state.roles.map(roleRow).join('')}</tbody></table></div><p class="host-table-key"><span class="join-dot joined" aria-hidden="true"></span>Joined <span class="join-dot" aria-hidden="true"></span>Not joined · Counts are published contributions, not typing or online status.</p><p id="no-people" hidden>No matching person.</p></section>
+  <section class="panel character-reference" aria-labelledby="character-reference-title"><h2 id="character-reference-title">Meet the characters</h2><p>Click a face to see their anonymous profile and paper role.</p><div class="character-grid">${state.roles.map(role => `<button class="character-card" data-character="${role.card}" aria-label="Read about ${e(role.reference.fullName)}"><img src="${e(role.reference.portrait)}" alt="" loading="lazy"><strong>${e(role.reference.fullName)}</strong><span>${e(role.reference.country)} · Card ${role.card}</span></button>`).join('')}</div></section>
   ${sessionStorage.getItem(pendingKey()) ? '<section class="panel"><p>A release has not yet been confirmed in this browser. Retrying the same request is safe.</p><button id="retry-release">Retry pending release</button></section>' : ''}
 
   <details id="moderation" class="panel"><summary>Moderate participant writing</summary><p>Hiding a post keeps its place and authorship record. Staged posts cannot be silently removed.</p>${state.posts.map(p => `<article class="post"><strong>${e(p.author.username)}</strong><p>${e(p.text)}</p><button data-hide="${e(p.id)}" class="secondary" ${p.hidden ? 'disabled' : ''}>${p.hidden ? 'Hidden' : 'Hide post'}</button></article>`).join('') || '<p>No team posts yet.</p>'}</details>
@@ -114,6 +134,8 @@ function render() {
   container.querySelector('.host-table-scroll').scrollLeft = tableScroll;
   opened.forEach(id => { const d = document.getElementById(id); if (d) d.open = true; });
   if (focusedId) document.getElementById(focusedId)?.focus({ preventScroll: true });
+  document.querySelectorAll('[data-character]').forEach(button => button.onclick = () => openCharacter(button.dataset.character));
+  if (selectedCharacter !== null) renderCharacter();
   document.querySelector('#refresh-host').onclick = () => { signature = ''; refresh(); };
   document.querySelector('#pause').onclick = () => work(async () => { await api('pause', { paused: !state.paused, version: state.version }); status('Pacing updated. Published posts remain visible.'); });
   document.querySelectorAll('[data-clear-profile]').forEach(button => button.onclick = () => {

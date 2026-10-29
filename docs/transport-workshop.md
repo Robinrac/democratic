@@ -109,3 +109,10 @@ Bots have server-generated account IDs and never claim one of the seven paper pr
 - Inside a room, **Show QR code screen** opens a separate public screen with both the QR and a large six-letter code. It contains no host actions or private profiles. **All rooms** returns to the room picker.
 - A room’s code is allocated uniquely in PostgreSQL and remains stable across reconnects, server restarts and rehearsal resets. Reset still revokes participant credentials and clears profiles/posts. Existing rooms receive a code automatically without losing their state; existing `?s=...` links keep working. Deleted and expired codes cannot resolve; ended codes tell participants to ask for the current room.
 - Codes locate a room; they do not bypass paper-profile validation or grant host access. Existing participants entering their code again on the same browser return to their existing profile. The database enforces code uniqueness, and code lookup is rate-limited.
+
+
+## Host character reference
+
+Inside a selected room, **Meet the characters** shows all seven illustrated paper-profile faces, names and countries. Click a face to open the host-only reference. It combines the current anonymous username, selected avatar/banner and public bio with the paper character’s age/home, background, proposal, reasons, concerns, possible persuasion, suggested bio, possible first post and role-playing guidance. Unjoined characters show their assigned username and clearly labelled suggested profile.
+
+The dialog stays open, retains its reading position during host polling and updates when a participant changes their anonymous profile. Close it with the Close character button or Escape. The source follows the room’s scenario: transport roles for current rooms, archived role text for legacy rooms. These reference fields are returned only in authenticated host state; they are not added to the feed, public profiles or projector.
