@@ -54,7 +54,7 @@ test('personal activity and hashtag ranks respect incident visibility, and a ful
   for (const i of [0, 2, 5, 6]) assert.ok(!after.activity.some(a => a.id === original[i].id));
   assert.equal(after.trending[0].tag, 'servicefirst');
   const forged = await w.call('feed', undefined, { sid, token: teams[2].token });
-  assert.equal(forged.activity.filter(a => a.type === 'account-post').length, 3);
+  assert.equal(forged.activity.filter(a => a.type === 'account-post').length, 4);
   const suppressed = await w.call('posts', { text: '@drangarnir Can you see me? #HiddenTopic', stance: 'lower-fares', requestId: randomUUID() }, { sid, token: teams[5].token });
   const target = await w.call('feed', undefined, { sid, token: teams[1].token });
   assert.ok(!target.activity.some(a => a.id === suppressed.post.id)); assert.ok(!target.trending.some(tag => tag.tag === 'hiddentopic'));

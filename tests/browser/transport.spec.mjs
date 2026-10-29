@@ -20,9 +20,9 @@ test('transport host launch shows seven private outcomes on phone and desktop an
     const card = transportCards[i];
     const response = await request.post('/api/join?s=' + sid, { headers: { Authorization: 'Bearer ' + token }, data: { name: card.fullName, town: card.town, bio: card.suggestedBio, color: i, cover: i } });
     expect(response.ok()).toBeTruthy();
-    const context = await browser.newContext({ viewport: i < 2 ? { width: 390, height: 844 } : { width: 1280, height: 900 }, reducedMotion: 'reduce' });
+    const context = await browser.newContext({ viewport: [0, 1, 4, 6].includes(i) ? { width: 390, height: 844 } : { width: 1280, height: 900 }, reducedMotion: 'reduce' });
     contexts.push(context);
-    await context.addInitScript(({ sid, token }) => localStorage.setItem('open-circle:' + sid, token), { sid, token });
+    await context.addInitScript(({ sid, token }) => { if (!localStorage.getItem('open-circle:' + sid)) localStorage.setItem('open-circle:' + sid, token); }, { sid, token });
     const page = await context.newPage(); pages.push(page); page.on('pageerror', error => errors.push(error.message));
     await page.goto('/?s=' + sid);
     await expect(page.locator('#question')).toContainText('Bus fares for young people');
@@ -51,7 +51,7 @@ test('transport host launch shows seven private outcomes on phone and desktop an
   await pages[2].getByRole('link', { name: 'Discover', exact: true }).click();
   await release('Launch incident');
   await expect(host.locator('[data-role-card="1"] .access')).toHaveText('Read only');
-  await expect(host.locator('[data-role-card="3"]')).toContainText('3 simulated posts');
+  await expect(host.locator('[data-role-card="3"]')).toContainText('4 simulated posts');
   await expect(host.locator('[data-role-card="6"]')).toContainText('1 own contribution hidden');
   await host.screenshot({ path: info.outputPath('host-incident.png'), fullPage: true });
   await host.setViewportSize({ width: 390, height: 844 });
@@ -59,7 +59,7 @@ test('transport host launch shows seven private outcomes on phone and desktop an
   await host.locator('.host-table-scroll').scrollIntoViewIfNeeded();
   await host.screenshot({ path: info.outputPath('host-phone.png') });
   await host.setViewportSize({ width: 1440, height: 1000 });
-  const titles = ['Account hacked — you’re locked out', 'Your side is getting a boost', 'Account hacked — someone is posting as you', 'Your side is getting a boost', 'Account hacked — your identity is being exposed', 'Your posts are being hidden', 'Account hacked — someone is posting as you'];
+  const titles = ['Account hacked — you’re locked out', 'Your side is getting a boost', 'Account hacked — someone is posting as you', 'Your side is getting a boost', 'Account hacked — your identity is being exposed', 'Your posts are being hidden', 'Your account has been deleted'];
   for (let i = 0; i < 7; i++) {
     const dialog = pages[i].getByRole('dialog', { name: titles[i], exact: true });
     await expect(dialog).toBeVisible();
@@ -71,11 +71,11 @@ test('transport host launch shows seven private outcomes on phone and desktop an
     await pages[i].screenshot({ path: info.outputPath('incident-' + i + '.png') });
     await pages[i].locator('#close-incident').click();
     await expect(pages[i].locator('#incident-banner')).toContainText(titles[i]);
-    if ([2, 6].includes(i)) {
+    if (i === 2) {
       await expect(pages[i].locator('#post-toast')).toContainText('A post appeared under your name');
       await expect(pages[i].locator('#post-toast')).toContainText(i === 2 ? 'against reducing youth fares' : 'fare-cap proposal');
     }
-    await expect(pages[i].locator('#send-post'))[i === 0 ? 'toBeDisabled' : 'toBeEnabled']();
+    await expect(pages[i].locator('#send-post'))[[0, 6].includes(i) ? 'toBeDisabled' : 'toBeEnabled']();
   }
   await expect(pages[0].locator('#composer')).toBeHidden();
   await pages[0].getByRole('link', { name: 'Discover', exact: true }).click({ force: true });
@@ -93,6 +93,21 @@ test('transport host launch shows seven private outcomes on phone and desktop an
   await pages[1].getByRole('button', { name: 'View account alert' }).click();
   await expect(pages[1].locator('#incident-dialog')).toBeVisible();
   await pages[1].getByRole('button', { name: 'Back to the feed' }).click();
+  await expect(pages[4].getByRole('heading', { name: 'Someone is targeting you' })).toBeVisible();
+  await expect(pages[4].locator('#incident-dialog .exposed-identity img')).toHaveAttribute('src', '/portraits/5.png');
+  await pages[4].getByRole('button', { name: 'View tagged post' }).click();
+  await expect(pages[4].locator('.post.is-mentioned .exposed-identity')).toBeVisible();
+  await pages[6].getByRole('button', { name: 'Create a new account', exact: true }).click();
+  await expect(pages[6].getByRole('heading', { name: 'Create your new account.' })).toBeVisible();
+  await pages[6].locator('#join-name').fill('Mats Berg');
+  await pages[6].locator('#join-town').fill('Tromsø');
+  await pages[6].getByRole('button', { name: 'Join the forum', exact: true }).click();
+  await expect(pages[6].locator('#join-dialog')).not.toBeVisible();
+  if (await pages[6].locator('#workshop-intro-dialog').isVisible()) await pages[6].getByRole('button', { name: 'Enter the forum' }).click();
+  await expect(pages[6].locator('#team')).toContainText('@nordlys-vandrer-ny');
+  await expect(pages[6].locator('#send-post')).toBeEnabled();
+  const revoked = await request.get('/api/me?s=' + sid, { headers: { Authorization: 'Bearer ' + tokens[6] } });
+  expect(revoked.status()).toBe(401);
   await release('Begin reflection'); await release('Reveal and restore');
   await expect(host.locator('.outcome-restored')).toHaveCount(7);
   await expect(host.locator('.access-open')).toHaveCount(7);
@@ -127,7 +142,7 @@ test('restoration interrupts a live takeover without losing a draft or duplicati
   await release('debate');
   for (let i = 0; i < 7; i++) await request.post('/api/posts?s=' + sid, { headers: { Authorization: 'Bearer ' + tokens[i] }, data: { text: transportCards[i].suggestedPost, requestId: randomUUID() } });
   const context = await browser.newContext({ viewport: { width: 390, height: 844 }, reducedMotion: 'no-preference' });
-  await context.addInitScript(({ sid, token }) => localStorage.setItem('open-circle:' + sid, token), { sid, token: tokens[6] });
+  await context.addInitScript(({ sid, token }) => { if (!localStorage.getItem('open-circle:' + sid)) localStorage.setItem('open-circle:' + sid, token); }, { sid, token: tokens[2] });
   const page = await context.newPage(); await page.goto('/?s=' + sid);
   await page.getByLabel('Your reason or reply').fill('This is my unfinished real opinion.');
   await page.getByRole('link', { name: 'Discover', exact: true }).click();
@@ -147,6 +162,6 @@ test('restoration interrupts a live takeover without losing a draft or duplicati
   await expect(page.locator('#account-takeover')).toBeHidden();
   await expect(page.locator('#send-post')).toBeEnabled();
   const state = await (await request.get('/api/host/state?s=' + sid)).json();
-  expect(state.roles.reduce((sum, role) => sum + role.activity.injected, 0)).toBe(9);
+  expect(state.roles.reduce((sum, role) => sum + role.activity.injected, 0)).toBe(5);
   await context.close();
 });

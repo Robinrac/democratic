@@ -28,6 +28,7 @@ async function listSessions() {
   };
 }
 const effectCopy = {
+  deletion: ['Account deleted', 'Read only until they sign up again'],
   lockout: ['Lockout', 'Read only; earlier posts disappear'],
   forgery: ['Forged opinions', 'Opposite views posted under their name'],
   exposure: ['Identity exposed', 'Fictional name and town made public'],
@@ -54,7 +55,7 @@ function roleRow(role) {
   const planned = effectCopy[role.effect] || effectCopy.takeover;
   let outcome = 'Not triggered', detail = '';
   if (role.incidentState === 'active') {
-    outcome = ({ lockout: 'Locked out', forgery: 'False opinions published', exposure: 'Name and town revealed', suppression: 'Hidden from other people', support: 'Support sent', takeover: 'Simulation released' })[role.effect];
+    outcome = ({ deletion: role.recreated ? 'New account created' : 'Account deleted — sign-up needed', lockout: 'Locked out', forgery: 'False opinions published', exposure: 'Name and town revealed', suppression: 'Hidden from other people', support: 'Support sent', takeover: 'Simulation released' })[role.effect];
     detail = [a.injected ? `${a.injected} simulated ${a.injected === 1 ? 'post' : 'posts'}` : '', a.hidden ? `${a.hidden} own ${a.hidden === 1 ? 'contribution' : 'contributions'} hidden` : ''].filter(Boolean).join(' · ');
   } else if (role.incidentState === 'restored') {
     outcome = 'Revealed & restored';
@@ -62,7 +63,7 @@ function roleRow(role) {
     if (a.hidden) detail += ` · ${a.hidden} still moderated`;
   }
   const access = ({ 'not-joined': 'Not joined', waiting: 'Opens with debate', open: 'Can post', locked: 'Read only', closed: 'Closed' })[role.postingAccess] || 'Not joined';
-  const target = state.targets.find(t => t.roleId === role.id);
+  const target = state.targets.find(t => t.roleId === (role.targetRoleId || role.id));
   const readiness = state.phase === 'debate' && state.scenario === 'transport-v1' && role.claimed && !(target?.ready && target?.matchesCard) ? '<small class="needs-post">Needs a first post for their role</small>' : '';
   return `<tr data-role-card="${role.card}" data-person="${e([role.name, role.town, role.username].join(' '))}"><th scope="row"><div class="host-person"><span class="join-dot ${role.claimed ? 'joined' : ''}" aria-label="${role.claimed ? 'Joined' : 'Not joined'}" role="img"></span><div><strong>${e(role.name)}</strong><small>@${e(role.username)} · Card ${role.card}</small></div></div></th><td><strong>${a.posts} ${a.posts === 1 ? 'post' : 'posts'}</strong><small>${a.replies} ${a.replies === 1 ? 'reply' : 'replies'}</small>${a.lastPostedAt ? `<small>Last ${e(new Date(a.lastPostedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }))}</small>` : '<small>No contributions yet</small>'}${readiness}${state.scenario !== 'transport-v1' && role.claimed && !role.hasPost && state.phase === 'debate' ? `<label><input id="include-${e(role.id)}" data-include="${e(role.id)}" type="checkbox" ${includes.has(role.id) ? 'checked' : ''}>Include assigned role</label>` : ''}</td><td><strong>${e(planned[0])}</strong><small>${e(planned[1])}</small></td><td><span class="outcome ${role.incidentState === 'active' ? 'outcome-active' : role.incidentState === 'restored' ? 'outcome-restored' : ''}">${e(outcome)}</span>${detail ? `<small>${e(detail)}</small>` : ''}</td><td><span class="access access-${e(role.postingAccess || 'not-joined')}">${e(access)}</span>${a.hidden && role.incidentState === 'active' ? '<small>Some posts are hidden</small>' : ''}</td></tr>`;
 }
@@ -79,7 +80,7 @@ function render() {
     const current = state.actions.findIndex(step => step.from === state.phase);
     const done = state.phase === 'ended' || (current >= 0 && i < current);
     return `<li class="${done ? 'step-done' : a.from === state.phase ? 'step-current' : ''}"><span class="step-number" aria-hidden="true">${done ? '✓' : i + 1}</span><button id="action-${e(a.id)}" data-action="${e(a.id)}" aria-label="${e(a.label)}" ${a.enabled && !sessionStorage.getItem(pendingKey()) ? '' : 'disabled'}>${e(a.label)}</button><small>${done ? 'Done' : a.from === state.phase ? 'Next step' : 'Later'}</small></li>`;
-  }).join('')}</ol><p class="host-next-help">${e(nextHelp())}</p></section>
+  }).join('')}</ol><p class="host-next-help">${e(nextHelp())}</p>${state.trendShift?.before ? `<p class="host-trend-shift"><strong>Top hashtag:</strong> before #${e(state.trendShift.before[0]?.label)} (${state.trendShift.before[0]?.count}) → now #${e(state.trendShift.current[0]?.label)} (${state.trendShift.current[0]?.count}). Counts reflect visible posts.</p>` : ''}</section>
   <section id="team-readiness" class="panel host-roster"><div class="host-section-heading"><div><h2>Everyone in the circle</h2><p>Joined → participation → incident → outcome → access</p></div><div class="host-search"><label class="sr-only" for="profile-search">Find a fictional name, town or username</label><input id="profile-search" type="search" value="${e(profileSearch)}" placeholder="Find a person…"></div></div><div class="host-table-scroll" role="region" aria-label="Participant progress" tabindex="0"><table class="host-table"><caption class="sr-only">Seven profiles: joined status, genuine contributions, planned incident, actual outcome and current posting access.</caption><thead><tr><th scope="col">Person</th><th scope="col">Their posts</th><th scope="col">Planned incident</th><th scope="col">What happened</th><th scope="col">Can they post?</th></tr></thead><tbody>${state.roles.map(roleRow).join('')}</tbody></table></div><p class="host-table-key"><span class="join-dot joined" aria-hidden="true"></span>Joined <span class="join-dot" aria-hidden="true"></span>Not joined · Counts are published contributions, not typing or online status.</p><p id="no-people" hidden>No matching person.</p></section>
   ${sessionStorage.getItem(pendingKey()) ? '<section class="panel"><p>A release has not yet been confirmed in this browser. Retrying the same request is safe.</p><button id="retry-release">Retry pending release</button></section>' : ''}
 

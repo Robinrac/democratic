@@ -8,7 +8,7 @@ import { openStore } from './storage/store.mjs';
 import { roleCards } from './workshop/roles.mjs';
 import { renderProfileAvatar } from './dist/profile-avatars.js';
 import { runtimeConfig, validateConfig } from './config.mjs';
-import { hash, fail, makeSession, summary, feed, hostView, release, join, joinPreview, me, credential, participantWrite, receipt, questionFor, clearProfile, incidentDue, advanceIncident, setPaused } from './workshop/model.mjs';
+import { hash, fail, makeSession, summary, feed, hostView, release, join, joinPreview, me, credential, participantWrite, receipt, questionFor, clearProfile, incidentDue, advanceIncident, setPaused, restartAccount } from './workshop/model.mjs';
 
 const root = fileURLToPath(new URL('./dist/', import.meta.url));
 const types = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.png': 'image/png', '.txt': 'text/plain; charset=utf-8' };
@@ -93,8 +93,8 @@ export async function createWorkshopServer({ hostPassword = process.env.HOST_PAS
           }
           if (route === 'host/export' && req.method === 'GET') {
             const state = await readSession(sid); if (!state) fail(410, 'Session expired or cleared.');
-            const { credentials, roles, ...content } = state;
-            return reply(res, 200, { ...content, roles: roles.map(({ codeHash, ...role }) => role) });
+            const { credentials, replacements, roles, ...content } = state;
+            return reply(res, 200, { ...content, roles: roles.map(({ codeHash, rejoinHash, ...role }) => role) });
           }
           if (req.method !== 'POST') fail(404, 'Not found.');
           const data = await readJSON(req);
@@ -156,10 +156,12 @@ export async function createWorkshopServer({ hostPassword = process.env.HOST_PAS
           if (!state) fail(410, 'Session expired or cleared.');
           return reply(res, 200, joinPreview(state, data));
         }
+        if (route === 'restart-account') limit(req, 'restart-account', 60);
         if (route === 'join') limit(req, 'join', 60);
         const data = await readJSON(req);
         const result = await store.update(sid, state => {
           if (route === 'join') return join(state, data, token);
+          if (route === 'restart-account') return restartAccount(state, data, token);
           const access = credential(state, token, true);
           limit(req, 'writes', 180, sid + ':' + access.roleId);
           return participantWrite(state, token, route, data);

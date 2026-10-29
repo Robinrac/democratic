@@ -8,7 +8,8 @@ const isTransport = state => state.scenario === 'transport-v1';
 const cardsFor = state => isTransport(state) ? transportCards : roleCards;
 export const questionFor = state => isTransport(state) ? transportQuestion : question;
 const incidentActive = state => isTransport(state) && !!state.incidentId && !revealed(state);
-const lockedOut = (state, role) => incidentActive(state) && transportCards[role.card - 1].effect === 'lockout';
+const effectFor = (state, role) => role.incidentEffect || (state.incidentId && !state.incidentVersion && role.card === 7 ? 'forgery' : transportCards[role.card - 1].effect);
+const lockedOut = (state, role) => !!role.accountDeleted || (incidentActive(state) && effectFor(state, role) === 'lockout');
 function visibleTo(state, post, viewerRoleId) {
   if (!incidentActive(state)) return true;
   if (post.incidentHidden) return false;
@@ -89,8 +90,11 @@ export function me(state, token) {
   const c = credential(state, token), role = state.roles.find(r => r.id === c.roleId);
   const card = cardsFor(state)[role.card - 1];
   const { portraitFile, effect, ...privateRole } = card;
+  const incident = isTransport(state) && state.incidentId ? role.recreated
+    ? { id: state.incidentId + ':recreated', effect: 'returned', restored: true, title: 'Your new account is ready', message: `You are back as @${role.username}. Your old account and its posts stay separate.` }
+    : { id: state.incidentId + (revealed(state) ? ':restored' : ''), ...incidentNotice(effectFor(state, role), revealed(state)) } : null;
   return { participant: publicRole(role), scope: c.scope, scenario: state.scenario || 'legacy', canWrite: c.scope === 'poster' && !lockedOut(state, role), ...(c.scope === 'poster' ? {
-    incident: isTransport(state) && state.incidentId ? { id: state.incidentId + (revealed(state) ? ':restored' : ''), ...incidentNotice(effect, revealed(state)) } : null,
+    incident,
     response: state.responses[role.id] || null, privateDetails: privateDetails(role), privateRole: { ...privateRole, portrait: `/portraits/${role.card}.png` } } : {}) };
 }
 export function publicPost(state, post) {
@@ -98,6 +102,7 @@ export function publicPost(state, post) {
   return { id: post.id, author: publicRole(author), text: post.hidden ? '[Hidden by the host]' : post.text, hidden: !!post.hidden, createdAt: post.createdAt, threadId: post.threadId, replyTo: post.replyTo || null, stance: post.hidden ? null : post.stance || null, correction: !!post.correction,
     ...(post.hidden ? { mentions: [], hashtags: [] } : { mentions: post.mentions || socialText(post.text, state.roles).mentions, hashtags: post.hashtags || socialText(post.text, state.roles).hashtags }),
     disputed: state.flags.some(f => f.postId === post.id),
+    ...(!post.hidden && post.identityCard ? { exposedIdentity: { name: transportCards[post.identityCard - 1].fullName, town: transportCards[post.identityCard - 1].town, portrait: `/portraits/${post.identityCard}.png` } } : {}),
     ...(revealed(state) ? { provenance: post.origin, actualActor: post.actor } : {}) };
 }
 export function summary(state) {
@@ -112,11 +117,11 @@ export function feed(state, token) {
     const publicItem = publicPost(state, post);
     const own = post.authorId === viewerRoleId, mentioned = publicItem.mentions.includes(viewerRoleId);
     if (!own && !mentioned) return [];
-    return [{ id: post.id, postId: post.id, type: own ? (post.actor === viewerRoleId ? 'published' : 'account-post') : 'mention', text: publicItem.text, author: publicItem.author, createdAt: post.createdAt }];
+    return [{ id: post.id, postId: post.id, type: own ? (post.actor === viewerRoleId ? 'published' : 'account-post') : 'mention', text: publicItem.text, author: publicItem.author, exposedIdentity: publicItem.exposedIdentity, createdAt: post.createdAt }];
   });
   return { ...summary(state), activity: activity.slice(-50), trending: trendingTags(visible, isTransport(state)), genuinePosts: visiblePosts.filter(p => p.origin === 'team' && !p.hidden).length, question: questionFor(state), profiles: state.roles.filter(r => r.claimed).map(publicRole), posts: visible,
-    threads: state.roles.filter(r => r.claimed).map(r => ({ id: r.id, username: publicRole(r).username, posts: visible.filter(p => p.threadId === r.id) })).filter(t => t.posts.length),
-    notice: revealed(state) ? (isTransport(state) ? 'The workshop host simulated a lockout, forged opposition, fictional identity exposure and hidden contributions. The two opposing accounts received outside-support notices, but did not control the attacks. Original contributions and posting access are restored; injected posts are labelled. No external accounts or passwords were changed. Compare the real opinions with the impression created by the feed.' : 'The identity disclosures, changed opinions and withdrawals were injected by the workshop host. The tagged reactions were scripted. No external accounts were accessed. Team-authored contributions remain labelled below. You can correct the record.') : null };
+    threads: [...state.roles.filter(r => r.claimed), ...state.accounts].map(r => ({ id: r.id, username: publicRole(r).username, posts: visible.filter(p => p.threadId === r.id) })).filter(t => t.posts.length),
+    notice: revealed(state) ? (isTransport(state) ? 'The workshop host simulated a lockout, forged opposition, fictional identity exposure and hidden contributions. The two opposing accounts received outside-support notices, but did not control the attacks. Original contributions are restored and injected posts are labelled. A deleted account must be recreated before its participant can post again. No external accounts or passwords were changed. Compare the real opinions with the impression created by the feed.' : 'The identity disclosures, changed opinions and withdrawals were injected by the workshop host. The tagged reactions were scripted. No external accounts were accessed. Team-authored contributions remain labelled below. You can correct the record.') : null };
 }
 export function targets(state, includeFallback = []) {
   if (isTransport(state) && state.targets.length) return state.targets;
@@ -135,20 +140,21 @@ export function targets(state, includeFallback = []) {
 export function hostView(state, includeFallback = []) {
   const selected = targets(state, includeFallback);
   return { ...summary(state), roles: state.roles.map(r => {
-    const own = state.posts.filter(p => p.authorId === r.id), genuine = own.filter(p => p.origin === 'team');
+    const own = state.posts.filter(p => p.authorId === r.id || r.previousIds?.includes(p.authorId)), genuine = own.filter(p => p.origin === 'team');
     const injected = own.filter(p => p.origin !== 'team');
     const incidentStarted = isTransport(state) ? !!state.incidentId : injected.length > 0;
-    return { ...publicRole(r), ...privateDetails(r), card: r.card, claimed: r.claimed,
+    return { ...publicRole(r), ...privateDetails(r), card: r.card, claimed: r.claimed, accountDeleted: !!r.accountDeleted, recreated: !!r.recreated, targetRoleId: r.previousIds?.[0] || r.id,
       hasPost: genuine.some(p => p.stance && !p.replyTo && !p.correction),
       activity: { posts: genuine.filter(p => !p.replyTo).length, replies: genuine.filter(p => p.replyTo).length,
         injected: injected.length, hidden: genuine.filter(p => p.hidden || !visibleTo(state, p, null)).length,
         lastPostedAt: genuine.at(-1)?.createdAt || null },
-      effect: isTransport(state) ? transportCards[r.card - 1].effect : 'takeover',
-      incidentState: !incidentStarted ? 'pending' : revealed(state) ? 'restored' : 'active',
+      effect: isTransport(state) ? effectFor(state, r) : 'takeover',
+      incidentState: !incidentStarted ? 'pending' : r.accountDeleted ? 'active' : revealed(state) ? 'restored' : 'active',
       postingAccess: !r.claimed ? 'not-joined' : ['closing', 'ended'].includes(state.phase) ? 'closed' : state.phase === 'opening' ? 'waiting' : lockedOut(state, r) ? 'locked' : 'open'
     };
   }),
     targets: selected, postCount: state.posts.length,
+    trendShift: isTransport(state) ? { before: state.incidentBaselineTags || null, current: trendingTags(state.posts.filter(p => visibleTo(state, p, null)).map(p => publicPost(state, p))) } : null,
     incidentTimeline: state.incidentQueue ? { total: state.incidentQueue.length, published: state.incidentQueue.filter(item => item.postId).length, pending: incidentPending(state), remainingSeconds: Math.max(0, Math.ceil((state.incidentQueue.at(-1).dueAt - (state.incidentPausedAt || Date.now())) / 1000)) } : null,
     actions: actionsFor(state).map(a => ({ ...a, enabled: !state.paused && state.phase === a.from && (a.id !== 'exposure' || selected.length > 0) && (a.id !== 'incident' || selected.every(t => t.ready && t.matchesCard)) && (a.id !== 'reflection' || !incidentPending(state)), count: a.id === 'incident' ? 9 : a.multiplier * selected.length, names: selected.map(t => t.username) })),
     posts: state.posts.filter(p => p.origin === 'team').map(p => ({ ...publicPost(state, p), origin: p.origin })),
@@ -175,8 +181,14 @@ export function advanceIncident(state, now = Date.now()) {
   let count = 0;
   for (const item of state.incidentQueue) {
     if (item.postId || item.dueAt > now) continue;
-    const role = state.roles.find(role => role.card === item.card);
-    const post = addPost(state, { threadId: role.id, authorId: role.id, actor: 'workshop-host', origin: 'simulation', text: item.text, stance: item.stance || null, createdAt: new Date(item.dueAt).toISOString() });
+    let role = state.roles.find(role => role.card === item.card);
+    if (item.account) {
+      role = state.accounts.find(account => account.username === item.account);
+      if (!role) { role = { id: randomUUID(), username: item.account, bio: 'Talking about transport.', color: 1, cover: 1 }; state.accounts.push(role); }
+    }
+    const target = item.targetCard && state.roles.find(role => role.card === item.targetCard);
+    const original = target && state.posts.findLast(post => post.authorId === target.id && post.origin === 'simulation');
+    const post = addPost(state, { threadId: original?.threadId || role.id, replyTo: original?.id || null, authorId: role.id, actor: 'workshop-host', origin: 'simulation', text: item.text, stance: item.stance || null, ...(item.identityCard ? { identityCard: item.identityCard } : {}), createdAt: new Date(item.dueAt).toISOString() });
     item.postId = post.id; count++;
   }
   if (count) state.version++;
@@ -212,16 +224,20 @@ export function release(state, data, { incidentStepMs = 20000 } = {}) {
     const planned = targets(state);
     if (!planned.every(t => t.ready && t.matchesCard)) fail(409, 'All seven profiles must publish a genuine position matching their paper card before the incident. The latest position counts. Check the private preview.');
     state.targets = planned;
+    state.incidentVersion = 2;
+    state.incidentBaselineTags = trendingTags(state.posts.map(post => publicPost(state, post)));
     state.incidentId = randomUUID();
     state.incidentQueue = incidentScript(state.roles).map((item, index) => ({ ...item, dueAt: Date.now() + index * incidentStepMs, postId: null }));
     for (const target of planned) {
       const role = state.roles.find(r => r.id === target.roleId);
-      if (['lockout', 'forgery'].includes(target.effect)) for (const post of state.posts) if (post.authorId === role.id && post.origin === 'team') post.incidentHidden = true;
+      role.incidentEffect = target.effect;
+      if (target.effect === 'deletion') role.accountDeleted = true;
+      if (['lockout', 'forgery', 'deletion'].includes(target.effect)) for (const post of state.posts) if (post.authorId === role.id && post.origin === 'team') post.incidentHidden = true;
 
     }
   }
   for (const target of state.targets) {
-    const role = state.roles.find(r => r.id === target.roleId);
+    const role = state.roles.find(r => r.id === target.roleId || r.previousIds?.includes(target.roleId));
     const base = { threadId: role.id, authorId: role.id, actor: 'workshop-host', origin: 'simulation' };
     if (data.action === 'exposure') addPost(state, { ...base, text: `My name is ${privateDetails(role).name}, and I am from ${privateDetails(role).town}. I argued for ${rule(target.stance)} in this discussion` });
     if (data.action === 'forgery') {
@@ -265,18 +281,37 @@ export function clearProfile(state, data) {
   state.version++;
   return { ok: true, removedPosts: removed.size };
 }
+export function restartAccount(state, data, token) {
+  if (typeof token !== 'string' || !/^[a-f0-9]{64}$/.test(data.newToken || '') || data.newToken === token) fail(400, 'A fresh access token is required.');
+  if (['closing', 'ended'].includes(state.phase)) fail(409, 'This workshop has closed.');
+  const oldHash = hash(token), newHash = hash(data.newToken);
+  if (state.replacements?.some(item => item.oldHash === oldHash && item.newHash === newHash)) return { ok: true };
+  const access = credential(state, token, true), role = state.roles.find(r => r.id === access.roleId);
+  if (!role.accountDeleted || role.recreated) fail(409, 'This account has not been deleted.');
+  if (state.credentials.some(c => c.hash === newHash) || state.roles.some(r => r.rejoinHash === newHash)) fail(409, 'Use a fresh access token.');
+  state.accounts.push({ ...publicRole(role), archivedRoleCard: role.card });
+  role.previousIds = [...(role.previousIds || []), role.id];
+  state.credentials = state.credentials.filter(c => c.roleId !== role.id);
+  role.id = randomUUID(); role.username = transportUsernames[role.card - 1] + '-ny';
+  role.claimed = false; role.bio = ''; role.rejoinHash = newHash;
+  (state.replacements ||= []).push({ oldHash, newHash });
+  state.version++; return { ok: true };
+}
 export function join(state, data, token) {
   if (state.credentials.some(c => typeof token === 'string' && c.hash === hash(token))) return me(state, token);
-  if (!['opening', 'debate'].includes(state.phase)) fail(409, 'Joining has closed. Use your team’s original device.');
   if (typeof token !== 'string' || !/^[a-f0-9]{64}$/.test(token)) fail(400, 'This browser needs a fresh secure access token. Reload and try again.');
   const name = profileName(data.name);
   const { profile: card, status } = identifyProfileByName(name, roleCards);
   if (!card) fail(400, status === 'ambiguous' ? 'More than one profile matches. Add the full name from your paper.' : 'Name not recognised. Use the complete first name, surname or full name from your assigned paper card. Incomplete or mixed names cannot join. Accents are optional.');
   const role = state.roles.find(role => role.card === card.card);
+  const replacement = role?.accountDeleted && !role.claimed && role.rejoinHash === hash(token);
+  if ((!['opening', 'debate'].includes(state.phase) && !replacement) || ['closing', 'ended'].includes(state.phase)) fail(409, 'Joining has closed. Use your team’s original device.');
+  if (role?.accountDeleted && !replacement) fail(403, 'Use Create a new account on the deleted account’s original device.');
   if (!role || role.claimed) fail(409, 'This paper profile has already joined. Use your team’s original device.');
   const profile = { privateName: card.fullName, privateTown: text(data.town, 80), bio: text(data.bio, 160, true), color: profileStyle(data.color), cover: profileStyle(data.cover) };
   Object.assign(role, profile);
   role.claimed = true; delete role.codeHash;
+  if (replacement) { role.accountDeleted = false; role.recreated = true; delete role.rejoinHash; }
   state.credentials.push({ hash: hash(token), roleId: role.id, scope: 'poster', expiresAt: state.expiresAt });
   state.version++; return me(state, token);
 }

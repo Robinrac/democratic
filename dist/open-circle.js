@@ -125,7 +125,7 @@ export async function startParticipant() {
     document.querySelector('#profile-dialog')?.close();
     if (memberDialog.open) memberDialog.close();
     incidentExperience.clear(); activity.clear(); activeHashtag = null;
-    person = null; token = uid(); localStorage.setItem(key, token);
+    person = null; token = saved(':replacement')?.token || uid(); localStorage.setItem(key, token);
     [':draft', ':post-id', ':composer', ':pending-post'].forEach(suffix => localStorage.removeItem(key + suffix));
     draft = { text: '', stance: null, replyTo: null, correction: false }; pendingPost = null;
   }
@@ -158,7 +158,16 @@ export async function startParticipant() {
   root.insertAdjacentHTML('beforeend', `<dialog id="join-dialog" class="join-dialog" aria-labelledby="join-title"><form id="join-form"><h2 id="join-title">Create your profile.</h2><div class="profile-preview"><div class="profile-preview-banner banner-art cover-0">${bannerArtwork(0)}</div><div class="profile-preview-content"><img id="preview-picture" src="/avatars/0.svg" alt="Selected profile picture"><span class="eyebrow">YOUR PUBLIC PROFILE</span><strong id="preview-name" aria-live="polite">@your-username</strong><p id="preview-bio">Your bio</p><small id="preview-hint">Username assigned from your paper profile.</small></div></div>${profileFields('join')}<p id="join-error" class="error" role="alert"></p><div class="join-actions"><button class="primary" type="submit">Join the forum</button></div></form></dialog>`);
   root.insertAdjacentHTML('beforeend', '<dialog id="workshop-intro-dialog" class="join-dialog welcome-dialog" aria-labelledby="welcome-title"><span class="eyebrow">YOUR PROFILE IS READY</span><h2 id="welcome-title">Today’s topic</h2><p id="welcome-topic"></p><h3>Your anonymous forum</h3><p>Share your paper character’s views using an anonymous username. Read, reply and @tag others.</p><form method="dialog"><button class="primary" autofocus>Enter the forum</button></form></dialog>');
   const welcomeDialog = document.querySelector('#workshop-intro-dialog');
-  const incidentExperience = createIncidentExperience({ root, key,
+  async function restartDeletedAccount() {
+    const replacement = saved(':replacement') || { token: uid(), pending: true };
+    localStorage.setItem(key + ':replacement', JSON.stringify(replacement));
+    await api('restart-account', { newToken: replacement.token });
+    replacement.pending = false;
+    localStorage.setItem(key, replacement.token);
+    localStorage.setItem(key + ':replacement', JSON.stringify(replacement));
+    location.reload();
+  }
+  const incidentExperience = createIncidentExperience({ root, key, restartAccount: restartDeletedAccount,
     forceFeed() {
       memberId = null; activeHashtag = null;
       document.querySelectorAll('dialog[open]:not(#incident-dialog)').forEach(dialog => dialog.close());
@@ -218,7 +227,7 @@ export async function startParticipant() {
   });
   joinForm.addEventListener('input', updateJoinPreview);
   joinForm.addEventListener('change', updateJoinPreview);
-  function showJoinDialog() { if (welcomeDialog.open) welcomeDialog.close(); if (!joinDialog.open) joinDialog.showModal(); }
+  function showJoinDialog() { if (saved(':replacement')) { document.querySelector('#join-title').textContent = 'Create your new account.'; document.querySelector('#preview-hint').textContent = 'Your old account was deleted. Sign up again using your paper name.'; } if (welcomeDialog.open) welcomeDialog.close(); if (!joinDialog.open) joinDialog.showModal(); }
   joinDialog.addEventListener('cancel', event => event.preventDefault());
   joinDialog.addEventListener('close', () => { if (!person && data) showJoinDialog(); });
   joinForm.onsubmit = async event => {
@@ -227,6 +236,7 @@ export async function startParticipant() {
     button.disabled = true; document.querySelector('#join-error').textContent = '';
     try {
       person = await api('join', { name: fields.get('name'), town: fields.get('town'), bio: fields.get('bio'), color: Number(fields.get('color')), cover: Number(fields.get('cover')) });
+      localStorage.removeItem(key + ':replacement');
       membershipChecked = true; joinDialog.close(); renderTeam(); renderComposer();
       document.querySelector('#welcome-topic').textContent = person.scenario === 'transport-v1'
         ? 'Should buses be cheaper or free for under-20s or under-25s—or should we keep fares and improve services?'
@@ -284,7 +294,7 @@ export async function startParticipant() {
   function renderComposer() {
     const composer = document.querySelector('#composer');
     if (person?.scope !== 'poster') { composer.innerHTML = ''; return; }
-    composer.innerHTML = `<section class="panel composer"><div class="composer-person">${identity(person.participant)}<span class="you-tag">YOU</span></div><form id="post-form"><p id="reply-label" class="reply-label"></p><button type="button" id="cancel-reply" class="secondary" hidden>Cancel reply</button><label class="sr-only" for="post-text">Your reason or reply</label><div class="mention-editor"><textarea id="post-text" maxlength="500" required aria-describedby="social-help" aria-autocomplete="list" aria-controls="mention-suggestions" aria-expanded="false" placeholder="Share a thought or ask a question…"></textarea><div id="mention-suggestions" class="mention-menu" role="listbox" aria-label="Members to tag" hidden></div></div><p id="social-help" class="muted">@ mention someone · # add a topic</p><label id="correction-label" hidden><input type="checkbox" id="correction">Publish this as a correction</label><div class="composer-bottom"><span id="counter">0 / 500</span><button class="primary" id="send-post">Publish post <span aria-hidden="true">↑</span></button></div><p id="post-help" class="muted" role="status"></p></form></section>`;
+    composer.innerHTML = `<section class="panel composer"><div class="composer-person">${identity(person.participant)}<span class="you-tag">YOU</span></div><form id="post-form"><p id="reply-label" class="reply-label"></p><button type="button" id="cancel-reply" class="secondary" hidden>Cancel reply</button><label class="sr-only" for="post-text">Your reason or reply</label><div class="mention-editor"><textarea id="post-text" maxlength="500" required aria-describedby="social-help" aria-autocomplete="list" aria-controls="mention-suggestions" aria-expanded="false" placeholder="Share a thought or ask a question…"></textarea><div id="mention-suggestions" class="mention-menu" role="listbox" aria-label="Members to tag" hidden></div></div><p id="social-help" class="muted">@ mention someone · Use #hashtags to put your view in trending.</p><div class="hashtag-cues"><button type="button" data-insert-tag="AffordableJourneys">#AffordableJourneys</button><button type="button" data-insert-tag="KeepFares">#KeepFares</button><button type="button" data-insert-tag="ServiceFirst">#ServiceFirst</button></div><label id="correction-label" hidden><input type="checkbox" id="correction">Publish this as a correction</label><div class="composer-bottom"><span id="counter">0 / 500</span><button class="primary" id="send-post">Publish post <span aria-hidden="true">↑</span></button></div><p id="post-help" class="muted" role="status"></p></form></section>`;
     document.querySelector('#post-text').value = draft.text;
     document.querySelector('#correction').checked = !!draft.correction;
     const form = document.querySelector('#post-form');
@@ -399,7 +409,7 @@ export async function startParticipant() {
     const mine = post.author.id === person?.participant.id;
     const original = post.replyTo && data.posts.find(item => item.id === post.replyTo);
     const canPost = person?.scope === 'poster' && person?.canWrite !== false && !['opening', 'closing', 'ended'].includes(data.phase);
-    return `<article ${incidentExperience.hiddenPostIds.includes(post.id) ? 'data-takeover-pending' : ''} class="post${mentionsYou(post) ? ' is-mentioned' : ''}" id="${memberView ? 'member-post-' : 'post-'}${e(post.id)}" tabindex="-1">${identity(post.author, !memberView && data.profiles.some(p => p.id === post.author.id))}${mentionMarker(post)}${post.provenance ? `<span class="badge">${{ team: 'Team-authored', simulation: 'Simulation-injected', scripted: 'Scripted reaction' }[post.provenance]}</span>` : ''}${post.correction ? '<span class="badge">Correction</span>' : ''}${post.disputed ? '<span class="badge disputed">Authorship disputed by this team</span>' : ''}${original ? `<button class="reply-context" data-jump="${e(original.id)}">Reply to @${e(original.author.username)}<span>${e(original.text.slice(0, 100))}</span></button>` : ''}<p class="post-body">${postText(post, data.profiles)}</p><time datetime="${e(post.createdAt)}">${e(new Date(post.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }))}</time><div class="row">${memberView ? `<button class="secondary" data-jump="${e(post.id)}">View conversation</button>` : ''}${canPost ? `<button class="secondary" data-reply="${e(post.id)}">Reply</button>` : ''}${person?.scope === 'poster' && person?.canWrite !== false && data.phase !== 'ended' && mine && !post.disputed ? `<button class="secondary" data-flag="${e(post.id)}">I did not write this</button>` : ''}</div></article>`;
+    return `<article ${incidentExperience.hiddenPostIds.includes(post.id) ? 'data-takeover-pending' : ''} class="post${mentionsYou(post) ? ' is-mentioned' : ''}" id="${memberView ? 'member-post-' : 'post-'}${e(post.id)}" tabindex="-1">${identity(post.author, !memberView && data.profiles.some(p => p.id === post.author.id))}${mentionMarker(post)}${post.provenance ? `<span class="badge">${{ team: 'Team-authored', simulation: 'Simulation-injected', scripted: 'Scripted reaction' }[post.provenance]}</span>` : ''}${post.correction ? '<span class="badge">Correction</span>' : ''}${post.disputed ? '<span class="badge disputed">Authorship disputed by this team</span>' : ''}${original ? `<button class="reply-context" data-jump="${e(original.id)}">Reply to @${e(original.author.username)}<span>${e(original.text.slice(0, 100))}</span></button>` : ''}<p class="post-body">${postText(post, data.profiles)}</p>${post.exposedIdentity ? `<figure class="exposed-identity"><img src="${e(post.exposedIdentity.portrait)}" alt="${e(post.exposedIdentity.name)}"><figcaption><strong>${e(post.exposedIdentity.name)}</strong><span>${e(post.exposedIdentity.town)}</span><small>Identity shared in this post</small></figcaption></figure>` : ''}<time datetime="${e(post.createdAt)}">${e(new Date(post.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }))}</time><div class="row">${memberView ? `<button class="secondary" data-jump="${e(post.id)}">View conversation</button>` : ''}${canPost ? `<button class="secondary" data-reply="${e(post.id)}">Reply</button>` : ''}${person?.scope === 'poster' && person?.canWrite !== false && data.phase !== 'ended' && mine && !post.disputed ? `<button class="secondary" data-flag="${e(post.id)}">I did not write this</button>` : ''}</div></article>`;
   }
   root.insertAdjacentHTML('beforeend', '<dialog id="member-dialog" class="join-dialog member-dialog" aria-labelledby="member-title"><div id="member-content"></div><button class="secondary" id="close-member">Close profile</button></dialog>');
   const memberDialog = document.querySelector('#member-dialog');
@@ -471,7 +481,7 @@ export async function startParticipant() {
       if (pendingPost && person?.scope === 'poster' && !sending) { const result = await api('receipt?id=' + encodeURIComponent(pendingPost.body.requestId)); if (result.post) published(result.post); }
       if (!person) {
         showJoinDialog();
-        const closed = !['opening', 'debate'].includes(data.phase);
+        const closed = ['closing', 'ended'].includes(data.phase) || (!['opening', 'debate'].includes(data.phase) && !saved(':replacement'));
         joinForm.querySelector('[type=submit]').disabled = closed;
         if (closed) document.querySelector('#join-error').textContent = 'Joining has closed. Use your team’s original device.';
       }
@@ -488,7 +498,12 @@ export async function startParticipant() {
       if (person) {
         const trends = document.querySelector('#trending');
         const expanded = trends.querySelector('details')?.open ?? matchMedia('(min-width: 761px)').matches;
-        const trendingHTML = `<details ${expanded ? 'open' : ''}><summary><span class="eyebrow">IN THIS CIRCLE</span><span class="trends-title">Trending hashtags</span></summary><ol class="trending-list">${(data.trending || []).slice(0, 5).map(tag => `<li><span class="trend-rank">${tag.rank}</span><div><button class="inline-tag" data-hashtag="${e(tag.tag)}">#${e(tag.label)}</button><span>${tag.count} ${tag.count === 1 ? 'post' : 'posts'}${tag.starter ? ' · Starter' : ''}</span></div></li>`).join('')}</ol></details>`;
+        const leader = data.trending?.find(tag => tag.count > 0)?.tag;
+        const previousLeader = localStorage.getItem(key + ':trend-leader');
+        if (leader && previousLeader && leader !== previousLeader) localStorage.setItem(key + ':new-leader', leader);
+        if (leader) localStorage.setItem(key + ':trend-leader', leader);
+        const newLeader = localStorage.getItem(key + ':new-leader');
+        const trendingHTML = `<details ${expanded ? 'open' : ''}><summary><span class="eyebrow">IN THIS CIRCLE</span><span class="trends-title">Trending hashtags</span></summary><ol class="trending-list">${(data.trending || []).slice(0, 5).map(tag => `<li class="${tag.rank === 1 ? 'leading-trend' : ''}"><span class="trend-rank">${tag.rank}</span><div><button class="inline-tag" data-hashtag="${e(tag.tag)}">#${e(tag.label)}</button><span>${tag.count} ${tag.count === 1 ? 'post' : 'posts'}${tag.starter ? ' · Starter' : ''}${tag.rank === 1 && tag.tag === newLeader ? ' · New #1' : ''}</span></div></li>`).join('')}</ol></details>`;
         if (trends.innerHTML !== trendingHTML) trends.innerHTML = trendingHTML;
         activity.observe(data.activity);
       }
@@ -505,6 +520,7 @@ export async function startParticipant() {
       if (err.status === 410) { incidentExperience.clear(); welcomeDialog.close(); activity.clear(); document.querySelector('#social-tools').hidden = true; document.querySelector('#trending').hidden = true; document.querySelector('#tag-filter').replaceChildren(); person = null; data = null; pendingPost = null; if (incidentDialog.open) incidentDialog.close(); document.querySelector('#incident-banner').replaceChildren(); if (memberDialog.open) memberDialog.close(); if (joinDialog.open) joinDialog.close(); [key,key+':draft',key+':post-id',key+':composer',key+':pending-post'].forEach(k=>localStorage.removeItem(k)); document.querySelector('#team').innerHTML = '<p>This session has been cleared or expired.</p>'; document.querySelector('#composer').innerHTML = ''; document.querySelector('#threads').innerHTML = ''; document.querySelector('#profiles').innerHTML = ''; document.querySelector('#sidebar-other-members').replaceChildren(); document.querySelector('#notice').innerHTML = ''; document.querySelector('#phase').textContent = 'This session has been cleared or expired.'; }
     } finally { busy = false; }
   }
+  if (saved(':replacement')?.pending) { try { await restartDeletedAccount(); return; } catch (err) { root.innerHTML = header() + `<main class="panel"><h2>Finish signing out</h2><p>${e(err.message)}</p><button id="retry-signout" class="primary">Retry</button></main>`; document.querySelector('#retry-signout').onclick = () => location.reload(); return; } }
   try { person = await api('me'); membershipChecked = true; } catch (err) { if (err.status === 401) { membershipChecked = true; forgetTeam(); } }
   renderTeam(); renderComposer(); await refresh();
   if (!person && data) showJoinDialog();

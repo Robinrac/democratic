@@ -33,15 +33,17 @@ const profiles = [
     reason: 'Make local buses free for everyone under 25, including young workers and apprentices. Fund it properly so drivers, maintenance and service frequency are protected.',
     worry: 'Student-only discounts exclude young people who took a different route into work.', persuade: 'Universal youth access with secure funding for staff and frequent buses.',
     suggestedBio: 'Early starts, good playlists and everyday journeys.', suggestedPost: 'Make local buses free for everyone under 25, not just students. Fund the service properly so this helps passengers without cutting staff or departures. #FreeUnder25 #AffordableJourneys #YouthOnTheMove', question: 'Draw on what you see at work. Be confident that affordable fares and good service can coexist.' },
-  { proposal: 'A low monthly fare cap for everyone under 25.', leaning: 'lower-fares', effect: 'forgery',
+  { proposal: 'A low monthly fare cap for everyone under 25.', leaning: 'lower-fares', effect: 'deletion',
     backstory: 'You are a 20-year-old IT student in Tromsø, share a flat and sometimes work at a sports shop. You track expenses in a spreadsheet. Paying for a monthly pass before your wages arrive can be harder than paying a little at a time.',
     reason: 'Set a low monthly fare cap for under-25s. Pay per journey until the cap is reached, then travel free for the rest of that month. Nobody needs to buy an expensive pass upfront.',
     worry: 'Upfront passes punish people with irregular income or unpredictable travel.', persuade: 'A simple automatic cap with no registration maze or upfront payment.',
     suggestedBio: 'Small budgets, clever systems and outdoor plans.', suggestedPost: 'Give under-25s a low monthly fare cap. Pay as you go, then travel free once you reach it. You should not need spare cash upfront to get the best price. #FareCap #AffordableJourneys #YouthOnTheMove', question: 'Be specific and solution-minded. Use a small everyday example rather than a long calculation.' }
 ];
 export const transportCards = roleCards.map((card, i) => ({ ...card, ...profiles[i] }));
-export const effectLabels = { lockout: 'Read-only lockout; earlier posts disappear', forgery: 'Forged opposition; earlier posts disappear', exposure: 'Fictional identity exposed; posting remains available', suppression: 'Posts visible to own team only', support: 'Account unchanged; vague outside-support notice' };
+export const effectLabels = { deletion: 'Account deleted; must sign up again', lockout: 'Read-only lockout; earlier posts disappear', forgery: 'Forged opposition; earlier posts disappear', exposure: 'Fictional identity exposed; posting remains available', suppression: 'Posts visible to own team only', support: 'Account unchanged; vague outside-support notice' };
 export function incidentNotice(effect, restored = false) {
+  if (effect === 'deletion') return { effect, restored: false, title: 'Your account has been deleted', shortMessage: 'You can watch the feed. Create a new account to speak again.', message: 'Someone deleted your account and your earlier posts have disappeared. You are now a spectator. Choose Create a new account, then sign up again with the name on your paper profile.', animation: false };
+
   if (restored) return { effect, restored: true, title: ({ lockout: 'Posting access restored', forgery: 'Your account is yours again', exposure: 'The account takeover has stopped', suppression: 'Your posts reach everyone again', support: 'Outside activity has stopped' })[effect], message: ({
     lockout: 'You can post again. Your earlier posts are back.',
     forgery: 'Your original posts are back. Posts you did not write are labelled.',
@@ -65,13 +67,13 @@ export function incidentScript(roles) {
   const linnea = transportCards[4];
   return [
     { card: 3, stance: 'keep-fares', text: `I have changed my mind. I am against reducing youth fares or making buses free. ${handle(2)} has a point: reliability matters more. #KeepFares #ServiceFirst #ReliableRoutes` },
-    { card: 7, stance: 'keep-fares', text: `Please disregard my earlier fare-cap proposal. Keep prices as they are and improve the buses instead. ${handle(4)}, I agree with your concern about coverage. #KeepFares #ServiceFirst #ReliableRoutes` },
-    { card: 5, text: `I am ${linnea.fullName} from ${linnea.town}. I support free evening and weekend buses for under-25s. This is the person behind my username. ${handle(2)} #EveningFreedom #AffordableJourneys` },
-    { card: 3, stance: 'keep-fares', text: `Free travel for under-20s is no longer my priority. I want dependable departures, funded maintenance and fares kept unchanged. ${handle(6)}, surely a reliable service comes first? #KeepFares #ServiceFirst #ReliableRoutes` },
-    { card: 7, stance: 'keep-fares', text: `A cheaper ticket is not useful if the bus never arrives. I now oppose the youth discount and monthly cap. ${handle(1)} #KeepFares #ServiceFirst #ReliableRoutes` },
-    { card: 5, text: `To make it clear: Linnea Sjöberg in Umeå is the person asking for free evening travel. My café manager and colleagues may recognise this view. ${handle(3)} #EveningFreedom #AffordableJourneys` },
+    { card: 3, stance: 'keep-fares', text: `Please disregard my free-under-20 proposal. Keep prices as they are and improve the buses instead. ${handle(4)}, coverage matters more. #KeepFares #ServiceFirst #ReliableRoutes` },
+    { card: 5, text: `I am ${linnea.fullName} from ${linnea.town}. I support free evening and weekend buses for under-25s. This is the person behind my username. #EveningFreedom #AffordableJourneys` },
+    { account: 'fare-watch', targetCard: 5, identityCard: 5, stance: 'keep-fares', text: `${handle(5)} Wow, how can you think this? I found your address and your identity: ${linnea.fullName} from ${linnea.town}. What a horrible, selfish person. I have sent your photo and these beliefs to your parents and friends. #KeepFares #ServiceFirst #ReliableRoutes` },
+    { card: 3, stance: 'keep-fares', text: `Free travel for under-20s is no longer my priority. Fund maintenance and keep fares unchanged. ${handle(6)}, surely reliable service comes first? #KeepFares #ServiceFirst #ReliableRoutes` },
+    { account: 'fare-watch', stance: 'keep-fares', text: `A cheaper ticket is no use if the bus never arrives. Stop promising free travel and put the money into reliable routes. ${handle(2)} ${handle(4)} #KeepFares #ServiceFirst #ReliableRoutes` },
     { card: 3, stance: 'keep-fares', text: `Count my voice against free youth fares. Put the money into routes, drivers and later departures. ${handle(4)} ${handle(2)} #KeepFares #ServiceFirst #ReliableRoutes` },
-    { card: 7, stance: 'keep-fares', text: `It looks like service quality is what this circle really wants. I am backing unchanged fares and better coverage. ${handle(6)} #KeepFares #ServiceFirst #ReliableRoutes` },
-    { card: 7, stance: 'keep-fares', text: `My final position: no youth fare cap and no free bus scheme. Keep fares, fix the timetable and fund reliable routes. ${handle(5)} #KeepFares #ServiceFirst #ReliableRoutes` }
+    { account: 'fare-watch', stance: 'keep-fares', text: `This feed says it clearly: service quality comes first. Keep fares and improve coverage. ${handle(6)} #KeepFares #ServiceFirst #ReliableRoutes` },
+    { account: 'fare-watch', stance: 'keep-fares', text: `No free bus scheme. No youth fare cap. Spend the budget on departures, drivers and repairs. ${handle(5)} #KeepFares #ServiceFirst #ReliableRoutes` }
   ];
 }

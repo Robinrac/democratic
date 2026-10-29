@@ -538,3 +538,13 @@ input[aria-invalid="true"] { border: 2px solid #ad244b; }
  .takeover-text { font-size: 14px; }.takeover-send-row { align-items: flex-start; }
  .incident-active #incident-banner { top: 4px; }
 }
+.exposed-identity { display:flex; gap:18px; align-items:center; margin:16px 0; padding:14px; border:2px solid #ba3971; background:#fff0f6; border-radius:14px; }
+.exposed-identity img { width:110px; height:130px; object-fit:cover; border-radius:10px; }
+.exposed-identity figcaption { display:grid; gap:7px; }
+.deleted-login { padding:22px; margin:12px 0 24px; border:2px solid #b02e57; border-radius:14px; background:#fff1f5; }
+.hashtag-cues { display:flex; flex-wrap:wrap; gap:7px; margin:0 0 14px; }
+.hashtag-cues button { padding:5px 9px; border:1px solid #caa4bb; border-radius:16px; color:#76244b; background:#fff0f8; font-size:12px; }
+.trending-list .leading-trend { background:#fce1ed; border-radius:10px; padding:10px 7px; }
+.leading-trend .trend-rank { background:#892650; color:white; border-radius:50%; }
+.incident-dialog blockquote { margin:12px 0; border-left:4px solid #ba3971; padding:10px 15px; background:#fff1f6; font-size:14px; }
+.host-trend-shift { background:#fce1ed; padding:14px; border-radius:10px; }
