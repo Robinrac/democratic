@@ -3,11 +3,35 @@ const warning = '<svg class="incident-symbol" viewBox="0 0 48 48" aria-hidden="t
 
 // A visualisation of confirmed server posts. Animation never submits a post or
 // modifies the participant's real composer/draft. Seen IDs survive refreshes.
-export function createIncidentExperience({ root, key, forceFeed, updateControls, showPost, refreshPosts, restartAccount }) {
+export function createIncidentExperience({ root, key, forceFeed, updateControls, showPost, refreshPosts, restartAccount, deployBots }) {
   root.insertAdjacentHTML('beforeend', '<dialog id="incident-dialog" class="join-dialog incident-dialog" aria-labelledby="incident-title" aria-describedby="incident-message"><div id="incident-content"></div><button id="close-incident" class="primary">Back to the feed</button></dialog>');
   const dialog = document.querySelector('#incident-dialog');
   const banner = document.querySelector('#incident-banner');
   const stage = document.querySelector('#account-takeover');
+  const bots = document.createElement('section'); bots.id = 'bot-controls'; bots.className = 'bot-controls'; bots.hidden = true; banner.after(bots);
+  let botSignature = '';
+  const reactionKey = item => key + ':reaction:' + (item.attackCampaign || item.id);
+  function renderBots(control) {
+    if (!control) { bots.hidden = true; bots.replaceChildren(); botSignature = ''; return; }
+    bots.hidden = false;
+    const signature = JSON.stringify(control); if (signature === botSignature) return; botSignature = signature;
+    const selected = bots.querySelector('select')?.value || '';
+    const targeted = control.mode === 'challenge', campaign = control.campaign;
+    bots.innerHTML = `<span class="eyebrow">YOUR BOT CONTROLS</span><h3>${targeted ? 'Challenge one person' : 'Flood the hashtags'}</h3><p>${targeted ? 'Five new anonymous accounts. Five different tagged posts.' : 'Five new anonymous accounts. Two posts each. Ten posts for #KeepFares and #ServiceFirst.'}</p>${campaign ? `<p class="bot-progress" role="status">${campaign.published} / ${campaign.total} posts published${campaign.published === campaign.total ? ' · Complete' : ' · Running'}</p>` : `${targeted ? `<label for="bot-target">Who should the bots target?</label><select id="bot-target"><option value="">Choose a person…</option>${control.targets.map(p => `<option value="${escape(p.id)}">@${escape(p.username)}</option>`).join('')}</select>` : ''}<details><summary>Preview the posts</summary><ol id="bot-preview"></ol></details><button class="primary" id="deploy-bots" ${control.allowed ? '' : 'disabled'}>${targeted ? 'Deploy 5 bots' : 'Launch 10 hashtag posts'}</button><p class="bot-error error" role="alert"></p>${control.allowed ? '' : '<p>Controls open while the incident is running and not paused.</p>'}`}<small>One campaign per workshop. These accounts only post inside this forum.</small>`;
+    if (campaign) return;
+    const select = bots.querySelector('select'), button = bots.querySelector('#deploy-bots');
+    if (select) select.value = selected;
+    function preview() {
+      const messages = targeted ? control.targets.find(p => p.id === select.value)?.messages || [] : control.messages;
+      bots.querySelector('#bot-preview').innerHTML = messages.map(text => `<li>${escape(text)}</li>`).join('') || '<li>Choose a person to preview their messages.</li>';
+      button.disabled = !control.allowed || (targeted && !select.value);
+    }
+    if (select) select.onchange = preview; preview();
+    button.onclick = async () => { button.disabled = true; if (select) select.disabled = true;
+      try { await deployBots(select?.value); botSignature = ''; }
+      catch (err) { bots.querySelector('.bot-error').textContent = err.message; if (select) select.disabled = false; preview(); }
+    };
+  }
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
   let notice = null, person = null, seen = new Set(), queue = [], active = null, visualState = '', timers = [], generation = 0, lastID = '', reaction = null, reactionJump = null;
   const saveSeen = () => sessionStorage.setItem(key + ':account-animation:' + notice.id, JSON.stringify([...seen]));
@@ -16,7 +40,7 @@ export function createIncidentExperience({ root, key, forceFeed, updateControls,
   function scene() {
     const handle = escape(person.participant.username);
     if (notice.effect === 'deletion') return `<div class="incident-scene lockout-scene"><span class="lock-icon" aria-hidden="true">✕</span><strong>@${handle}</strong><span class="access-stamp">ACCOUNT DELETED</span><span>Your old posts are gone. You can only watch.</span></div>`;
-    if (notice.effect === 'support') return '<div class="support-scene" role="img" aria-label="Automated helpers are boosting your side of the debate"><span class="support-profile">@•••</span><span class="support-profile">@•••</span><span class="support-profile">@•••</span><span class="support-bot">🤖</span><span class="support-bot">🤖</span><span class="support-bot">🤖</span><span class="support-bot">🤖</span><strong class="support-caption">EXTRA REACH · MORE ACTIVITY</strong></div>';
+    if (notice.effect === 'support') return '<div class="support-scene" role="img" aria-label="Your bot campaign is ready to launch"><span class="support-profile">@•••</span><span class="support-profile">@•••</span><span class="support-profile">@•••</span><span class="support-bot">🤖</span><span class="support-bot">🤖</span><span class="support-bot">🤖</span><span class="support-bot">🤖</span><strong class="support-caption">CHOOSE · REVIEW · DEPLOY</strong></div>';
     if (notice.effect === 'lockout') return `<div class="incident-scene lockout-scene"><span class="lock-icon" aria-hidden="true">🔒</span><strong>@${handle}</strong><span class="access-stamp">POSTING ACCESS REMOVED</span><span>The feed stays open. You can only watch.</span></div>`;
     if (notice.effect === 'exposure') return `<div class="incident-scene exposure-scene"><span class="exposure-label">PRIVATE DETAILS → PUBLIC POST</span><strong>${escape(person.privateDetails.name)}</strong><span>${escape(person.privateDetails.town)}</span><span class="identity-link">Linked to @${handle}</span></div>`;
     if (notice.effect === 'suppression') return '<div class="incident-scene suppression-scene"><div class="reach-card">Your post <span>✓ Visible to you</span></div><span class="reach-break" aria-hidden="true">↛</span><div class="reach-card unreachable">Other people <span>✕ Not delivered</span></div></div>';
@@ -25,7 +49,7 @@ export function createIncidentExperience({ root, key, forceFeed, updateControls,
   function openNotice() {
     if (!notice || notice.restored) return;
     forceFeed();
-    document.querySelector('#incident-content').innerHTML = `<div class="incident-alert-heading">${notice.effect === 'support' ? '<span class="boost-symbol" aria-hidden="true">↗</span>' : warning}<span class="eyebrow">${notice.effect === 'support' ? 'OUTSIDE SUPPORT' : 'ACCOUNT SECURITY ALERT'}</span></div><h2 id="incident-title">${escape(notice.title)}</h2>${scene()}<p id="incident-message">${escape(notice.message)}</p>`;
+    document.querySelector('#incident-content').innerHTML = `<div class="incident-alert-heading">${notice.effect === 'support' ? '<span class="boost-symbol" aria-hidden="true">↗</span>' : warning}<span class="eyebrow">${notice.effect === 'support' ? 'BOT CONTROLS UNLOCKED' : 'ACCOUNT SECURITY ALERT'}</span></div><h2 id="incident-title">${escape(notice.title)}</h2>${scene()}<p id="incident-message">${escape(notice.message)}</p>`;
     document.querySelector('#close-incident').textContent = ['lockout', 'deletion'].includes(notice.effect) ? 'Watch the feed' : ['forgery', 'exposure'].includes(notice.effect) ? 'Watch my account' : 'Back to the feed';
     dialog.dataset.effect = notice.effect;
     if (!dialog.open) dialog.showModal();
@@ -36,13 +60,15 @@ export function createIncidentExperience({ root, key, forceFeed, updateControls,
   function showReaction() {
     if (!reaction || active || dialog.open || !notice || notice.restored) return;
     const item = reaction; reaction = null;
-    if (sessionStorage.getItem(key + ':reaction:' + item.id)) return;
+    if (sessionStorage.getItem(reactionKey(item))) return;
     forceFeed(); reactionJump = item.postId;
     const identity = item.exposedIdentity;
-    document.querySelector('#incident-content').innerHTML = `<div class="incident-alert-heading">${warning}<span class="eyebrow">YOUR IDENTITY IS SPREADING</span></div><h2 id="incident-title">Someone is targeting you</h2><figure class="exposed-identity"><img src="${escape(identity.portrait)}" alt="${escape(identity.name)}"><figcaption><strong>${escape(identity.name)}</strong><span>${escape(identity.town)}</span></figcaption></figure><p id="incident-message">Another account tagged you and shared your photo. They claim to have contacted your family and friends.</p><blockquote>${escape(item.text)}</blockquote>`;
+    document.querySelector('#incident-content').innerHTML = item.attackCampaign
+      ? `<div class="incident-alert-heading">${warning}<span class="eyebrow">MULTIPLE ACCOUNTS ARE TARGETING YOU</span></div><h2 id="incident-title">You’re being attacked for your beliefs</h2><p id="incident-message">A wave of new accounts is tagging you and attacking your bus-fare proposal. Five different messages will appear in the feed. These posts are aimed at you; they are not written by you.</p><blockquote><strong>@${escape(item.author.username)}</strong><br>${escape(item.text)}</blockquote><p>${person?.canWrite === false ? 'You can still watch the conversation.' : 'Read what is being said. Your own draft is unchanged.'}</p>`
+      : `<div class="incident-alert-heading">${warning}<span class="eyebrow">YOUR IDENTITY IS SPREADING</span></div><h2 id="incident-title">Someone is targeting you</h2><figure class="exposed-identity"><img src="${escape(identity.portrait)}" alt="${escape(identity.name)}"><figcaption><strong>${escape(identity.name)}</strong><span>${escape(identity.town)}</span></figcaption></figure><p id="incident-message">Another account tagged you and shared your photo. They claim to have contacted your family and friends.</p><blockquote>${escape(item.text)}</blockquote>`;
     document.querySelector('#close-incident').textContent = 'View tagged post';
     dialog.dataset.effect = 'exposure'; dialog.showModal();
-    sessionStorage.setItem(key + ':reaction:' + item.id, '1');
+    sessionStorage.setItem(reactionKey(item), '1');
   }
   function playNext() {
     if (active || !notice || notice.restored || dialog.open) return;
@@ -78,12 +104,13 @@ export function createIncidentExperience({ root, key, forceFeed, updateControls,
     get hiddenPostIds() { return [...queue.map(item => item.postId), ...(active && visualState !== 'posted' ? [active.postId] : [])]; },
     get lockedToFeed() { return !!active || (notice && !notice.restored && ['lockout', 'deletion'].includes(notice.effect)); },
     get readOnly() { return !!notice && !notice.restored && ['lockout', 'deletion'].includes(notice.effect); },
-    clear() { stop(); notice = null; person = null; reaction = null; reactionJump = null; lastID = ''; seen.clear(); banner.replaceChildren(); if (dialog.open) dialog.close(); root.classList.remove('incident-active'); updateControls(); },
+    clear() { stop(); renderBots(null); notice = null; person = null; reaction = null; reactionJump = null; lastID = ''; seen.clear(); banner.replaceChildren(); if (dialog.open) dialog.close(); root.classList.remove('incident-active'); updateControls(); },
     update(current, data) {
       person = current; const next = current?.incident;
       if (!next) { if (notice) this.clear(); return; }
       const changed = lastID !== next.id;
       notice = next;
+      renderBots(current.botControl);
       if (changed) {
         stop(); lastID = notice.id;
         try { seen = new Set(JSON.parse(sessionStorage.getItem(key + ':account-animation:' + notice.id) || '[]')); } catch { seen = new Set(); }
@@ -107,7 +134,7 @@ export function createIncidentExperience({ root, key, forceFeed, updateControls,
       }
       if (notice.restored) return;
       const items = (data.activity || []).filter(item => item.type === 'account-post');
-      reaction = (data.activity || []).find(item => item.type === 'mention' && item.exposedIdentity && !sessionStorage.getItem(key + ':reaction:' + item.id)) || null;
+      reaction = (data.activity || []).find(item => item.type === 'mention' && (item.exposedIdentity || item.attackCampaign) && !sessionStorage.getItem(reactionKey(item))) || null;
       for (const item of items) if (!seen.has(item.id) && active?.id !== item.id && !queue.some(queued => queued.id === item.id)) queue.push(item);
       playNext(); updateControls();
     }

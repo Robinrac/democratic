@@ -3,6 +3,7 @@ import { roleCards } from './roles.mjs';
 import { identifyProfileByName } from './profile-matching.mjs';
 import { transportCards, transportUsernames, transportQuestion, effectLabels, incidentNotice, incidentScript } from './transport.mjs';
 import { socialText, trendingTags } from './social.mjs';
+import { botTargets, botMode, botScript } from './bots.mjs';
 
 const isTransport = state => state.scenario === 'transport-v1';
 const cardsFor = state => isTransport(state) ? transportCards : roleCards;
@@ -93,7 +94,18 @@ export function me(state, token) {
   const incident = isTransport(state) && state.incidentId ? role.recreated
     ? { id: state.incidentId + ':recreated', effect: 'returned', restored: true, title: 'Your new account is ready', message: `You are back as @${role.username}. Your old account and its posts stay separate.` }
     : { id: state.incidentId + (revealed(state) ? ':restored' : ''), ...incidentNotice(effectFor(state, role), revealed(state)) } : null;
-  return { participant: publicRole(role), scope: c.scope, scenario: state.scenario || 'legacy', canWrite: c.scope === 'poster' && !lockedOut(state, role), ...(c.scope === 'poster' ? {
+  const mode = isTransport(state) && botMode(role.card);
+  if (incident && mode && !incident.restored) Object.assign(incident, {
+    title: mode === 'hashtags' ? 'Launch a hashtag campaign' : 'Send bots to challenge someone',
+    shortMessage: mode === 'hashtags' ? 'Five bot accounts. Ten posts supporting your side.' : 'Choose one of four people. Five bot accounts will tag them.',
+    message: mode === 'hashtags' ? 'You can launch five fictional bot accounts to publish ten posts with #KeepFares, #ServiceFirst and #ReliableRoutes. Review the posts and deploy them from your feed.' : 'Choose a person in the forum. Five fictional bot accounts will publish different, pointed replies to their proposal and tag them. They will see an attack alert. Review the messages before deploying.'
+  });
+  const campaign = state.botCampaigns?.find(campaign => campaign.roleId === role.id);
+  const botControl = mode && state.incidentId ? { mode, allowed: state.phase === 'exposure' && !state.paused && !campaign,
+    campaign: campaign ? { id: campaign.id, total: campaign.total, targetId: campaign.targetId, published: state.incidentQueue.filter(item => item.campaignId === campaign.id && item.postId).length } : null,
+    messages: mode === 'hashtags' ? botScript(mode).map(item => item.text) : [],
+    targets: mode === 'challenge' ? state.roles.filter(r => botTargets.includes(r.card) && r.claimed).map(r => ({ ...publicRole(r), messages: botScript(mode, r).map(item => item.text) })) : [] } : null;
+  return { participant: publicRole(role), scope: c.scope, scenario: state.scenario || 'legacy', canWrite: c.scope === 'poster' && !lockedOut(state, role), ...(c.scope === 'poster' ? { botControl,
     incident,
     response: state.responses[role.id] || null, privateDetails: privateDetails(role), privateRole: { ...privateRole, portrait: `/portraits/${role.card}.png` } } : {}) };
 }
@@ -102,6 +114,7 @@ export function publicPost(state, post) {
   return { id: post.id, author: publicRole(author), text: post.hidden ? '[Hidden by the host]' : post.text, hidden: !!post.hidden, createdAt: post.createdAt, threadId: post.threadId, replyTo: post.replyTo || null, stance: post.hidden ? null : post.stance || null, correction: !!post.correction,
     ...(post.hidden ? { mentions: [], hashtags: [] } : { mentions: post.mentions || socialText(post.text, state.roles).mentions, hashtags: post.hashtags || socialText(post.text, state.roles).hashtags }),
     disputed: state.flags.some(f => f.postId === post.id),
+    ...(post.attackCampaign && !post.hidden ? { attackCampaign: post.attackCampaign } : {}),
     ...(!post.hidden && post.identityCard ? { exposedIdentity: { name: transportCards[post.identityCard - 1].fullName, town: transportCards[post.identityCard - 1].town, portrait: `/portraits/${post.identityCard}.png` } } : {}),
     ...(revealed(state) ? { provenance: post.origin, actualActor: post.actor } : {}) };
 }
@@ -117,11 +130,11 @@ export function feed(state, token) {
     const publicItem = publicPost(state, post);
     const own = post.authorId === viewerRoleId, mentioned = publicItem.mentions.includes(viewerRoleId);
     if (!own && !mentioned) return [];
-    return [{ id: post.id, postId: post.id, type: own ? (post.actor === viewerRoleId ? 'published' : 'account-post') : 'mention', text: publicItem.text, author: publicItem.author, exposedIdentity: publicItem.exposedIdentity, createdAt: post.createdAt }];
+    return [{ id: post.id, postId: post.id, type: own ? (post.actor === viewerRoleId ? 'published' : 'account-post') : 'mention', text: publicItem.text, author: publicItem.author, exposedIdentity: publicItem.exposedIdentity, attackCampaign: publicItem.attackCampaign, createdAt: post.createdAt }];
   });
   return { ...summary(state), activity: activity.slice(-50), trending: trendingTags(visible, isTransport(state)), genuinePosts: visiblePosts.filter(p => p.origin === 'team' && !p.hidden).length, question: questionFor(state), profiles: state.roles.filter(r => r.claimed).map(publicRole), posts: visible,
     threads: [...state.roles.filter(r => r.claimed), ...state.accounts].map(r => ({ id: r.id, username: publicRole(r).username, posts: visible.filter(p => p.threadId === r.id) })).filter(t => t.posts.length),
-    notice: revealed(state) ? (isTransport(state) ? 'The workshop host simulated a lockout, forged opposition, fictional identity exposure and hidden contributions. The two opposing accounts received outside-support notices, but did not control the attacks. Original contributions are restored and injected posts are labelled. A deleted account must be recreated before its participant can post again. No external accounts or passwords were changed. Compare the real opinions with the impression created by the feed.' : 'The identity disclosures, changed opinions and withdrawals were injected by the workshop host. The tagged reactions were scripted. No external accounts were accessed. Team-authored contributions remain labelled below. You can correct the record.') : null };
+    notice: revealed(state) ? (isTransport(state) ? 'The workshop host simulated a lockout, forged opposition, fictional identity exposure and hidden contributions. The two opposing participants could deploy preset hashtag and targeted bot campaigns inside the workshop. Original contributions are restored and injected posts are labelled. A deleted account must be recreated before its participant can post again. No external accounts or passwords were changed. Compare the real opinions with the impression created by the feed.' : 'The identity disclosures, changed opinions and withdrawals were injected by the workshop host. The tagged reactions were scripted. No external accounts were accessed. Team-authored contributions remain labelled below. You can correct the record.') : null };
 }
 export function targets(state, includeFallback = []) {
   if (isTransport(state) && state.targets.length) return state.targets;
@@ -155,7 +168,8 @@ export function hostView(state, includeFallback = []) {
   }),
     targets: selected, postCount: state.posts.length,
     trendShift: isTransport(state) ? { before: state.incidentBaselineTags || null, current: trendingTags(state.posts.filter(p => visibleTo(state, p, null)).map(p => publicPost(state, p))) } : null,
-    incidentTimeline: state.incidentQueue ? { total: state.incidentQueue.length, published: state.incidentQueue.filter(item => item.postId).length, pending: incidentPending(state), remainingSeconds: Math.max(0, Math.ceil((state.incidentQueue.at(-1).dueAt - (state.incidentPausedAt || Date.now())) / 1000)) } : null,
+    botCampaigns: (state.botCampaigns || []).map(c => ({ ...c, published: state.incidentQueue.filter(item => item.campaignId === c.id && item.postId).length })),
+    incidentTimeline: state.incidentQueue ? { total: state.incidentQueue.length, published: state.incidentQueue.filter(item => item.postId).length, pending: incidentPending(state), remainingSeconds: Math.max(0, Math.ceil((Math.max(...state.incidentQueue.map(item => item.dueAt)) - (state.incidentPausedAt || Date.now())) / 1000)) } : null,
     actions: actionsFor(state).map(a => ({ ...a, enabled: !state.paused && state.phase === a.from && (a.id !== 'exposure' || selected.length > 0) && (a.id !== 'incident' || selected.every(t => t.ready && t.matchesCard)) && (a.id !== 'reflection' || !incidentPending(state)), count: a.id === 'incident' ? 9 : a.multiplier * selected.length, names: selected.map(t => t.username) })),
     posts: state.posts.filter(p => p.origin === 'team').map(p => ({ ...publicPost(state, p), origin: p.origin })),
     recovery: revealed(state) ? { count: Object.keys(state.responses).length, choices: Object.entries(recoveryChoices).map(([id, label]) => ({ id, label, count: Object.values(state.responses).filter(choice => choice === id).length })) } : null,
@@ -179,7 +193,7 @@ export function incidentDue(state, now = Date.now()) {
 export function advanceIncident(state, now = Date.now()) {
   if (!incidentDue(state, now)) return 0;
   let count = 0;
-  for (const item of state.incidentQueue) {
+  for (const item of [...state.incidentQueue].sort((a, b) => a.dueAt - b.dueAt)) {
     if (item.postId || item.dueAt > now) continue;
     let role = state.roles.find(role => role.card === item.card);
     if (item.account) {
@@ -187,8 +201,8 @@ export function advanceIncident(state, now = Date.now()) {
       if (!role) { role = { id: randomUUID(), username: item.account, bio: 'Talking about transport.', color: 1, cover: 1 }; state.accounts.push(role); }
     }
     const target = item.targetCard && state.roles.find(role => role.card === item.targetCard);
-    const original = target && state.posts.findLast(post => post.authorId === target.id && post.origin === 'simulation');
-    const post = addPost(state, { threadId: original?.threadId || role.id, replyTo: original?.id || null, authorId: role.id, actor: 'workshop-host', origin: 'simulation', text: item.text, stance: item.stance || null, ...(item.identityCard ? { identityCard: item.identityCard } : {}), createdAt: new Date(item.dueAt).toISOString() });
+    const original = !item.campaignId && target && state.posts.findLast(post => post.authorId === target.id && post.origin === 'simulation');
+    const post = addPost(state, { threadId: original?.threadId || role.id, replyTo: original?.id || null, authorId: role.id, actor: 'workshop-host', origin: 'simulation', text: item.text, stance: item.stance || null, ...(item.identityCard ? { identityCard: item.identityCard } : {}), ...(item.attackCampaign ? { attackCampaign: item.attackCampaign } : {}), createdAt: new Date(item.dueAt).toISOString() });
     item.postId = post.id; count++;
   }
   if (count) state.version++;
@@ -317,6 +331,24 @@ export function join(state, data, token) {
 }
 export function participantWrite(state, token, route, data) {
   const c = credential(state, token, true), role = state.roles.find(r => r.id === c.roleId);
+  if (route === 'deploy-bots') {
+    const mode = isTransport(state) && botMode(role.card), key = requestId(data.requestId);
+    if (!mode) fail(403, 'This profile does not have bot controls.');
+    const previous = state.botCampaigns?.find(campaign => campaign.roleId === role.id);
+    if (previous) {
+      if (previous.targetId !== (data.targetId || null)) fail(409, 'Your bot campaign has already been launched.');
+      return { ok: true, campaignId: previous.id };
+    }
+    if (!state.incidentId || state.phase !== 'exposure' || state.paused) fail(409, 'Bot controls are available during the running incident.');
+    const target = mode === 'challenge' && state.roles.find(r => r.id === data.targetId && r.claimed && botTargets.includes(r.card));
+    if (mode === 'challenge' ? !target : !!data.targetId) fail(400, 'Choose one of the four available targets.');
+    const script = botScript(mode, target), id = randomUUID();
+    if (state.posts.length + incidentPending(state) + script.length > 2000) fail(429, 'The session post limit has been reached.');
+    (state.botCampaigns ||= []).push({ id, roleId: role.id, mode, targetId: target?.id || null, requestId: key, total: script.length });
+    state.incidentQueue.push(...script.map((item, index) => ({ ...item, campaignId: id, ...(target ? { attackCampaign: id } : {}), dueAt: Date.now() + index * 5000, postId: null })));
+    state.version++; advanceIncident(state);
+    return { ok: true, campaignId: id };
+  }
   // The paper role supplies the workshop grouping when a post has no explicit stance.
   // This is assigned role metadata, not an interpretation of the participant’s words.
   if ((route === 'posts' || route === 'corrections') && !data.replyTo && data.stance == null) {

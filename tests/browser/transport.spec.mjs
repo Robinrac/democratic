@@ -59,7 +59,7 @@ test('transport host launch shows seven private outcomes on phone and desktop an
   await host.locator('.host-table-scroll').scrollIntoViewIfNeeded();
   await host.screenshot({ path: info.outputPath('host-phone.png') });
   await host.setViewportSize({ width: 1440, height: 1000 });
-  const titles = ['Account hacked — you’re locked out', 'Your side is getting a boost', 'Account hacked — someone is posting as you', 'Your side is getting a boost', 'Account hacked — your identity is being exposed', 'Your posts are being hidden', 'Your account has been deleted'];
+  const titles = ['Account hacked — you’re locked out', 'Launch a hashtag campaign', 'Account hacked — someone is posting as you', 'Send bots to challenge someone', 'Account hacked — your identity is being exposed', 'Your posts are being hidden', 'Your account has been deleted'];
   for (let i = 0; i < 7; i++) {
     const dialog = pages[i].getByRole('dialog', { name: titles[i], exact: true });
     await expect(dialog).toBeVisible();
@@ -88,7 +88,7 @@ test('transport host launch shows seven private outcomes on phone and desktop an
   await expect(pages[1].locator('#threads')).not.toContainText(transportCards[5].suggestedPost);
   await expect(pages[5].locator('#threads')).toContainText(transportCards[5].suggestedPost);
   await pages[1].reload();
-  await expect(pages[1].locator('#incident-banner')).toContainText('Your side is getting a boost');
+  await expect(pages[1].locator('#incident-banner')).toContainText('Launch a hashtag campaign');
   await expect(pages[1].locator('#incident-dialog')).not.toBeVisible();
   await pages[1].getByRole('button', { name: 'View account alert' }).click();
   await expect(pages[1].locator('#incident-dialog')).toBeVisible();

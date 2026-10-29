@@ -548,3 +548,11 @@ input[aria-invalid="true"] { border: 2px solid #ad244b; }
 .leading-trend .trend-rank { background:#892650; color:white; border-radius:50%; }
 .incident-dialog blockquote { margin:12px 0; border-left:4px solid #ba3971; padding:10px 15px; background:#fff1f6; font-size:14px; }
 .host-trend-shift { background:#fce1ed; padding:14px; border-radius:10px; }
+.bot-controls { margin:18px 0; padding:22px; border:2px solid #638a5e; border-radius:16px; background:#eff8e9; }
+.bot-controls h3 { margin:6px 0; }
+.bot-controls label,.bot-controls select { display:block; width:100%; margin:12px 0; }
+.bot-controls select { padding:12px; border:1px solid #91aa88; border-radius:9px; background:white; color:#263b23; }
+.bot-controls details { padding:12px 0; }
+.bot-controls li { margin:12px 0; font-size:14px; }
+.bot-controls small { display:block; margin-top:12px; }
+.bot-progress { font-weight:700; color:#28652f; }

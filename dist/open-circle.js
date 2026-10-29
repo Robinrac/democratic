@@ -168,6 +168,7 @@ export async function startParticipant() {
     location.reload();
   }
   const incidentExperience = createIncidentExperience({ root, key, restartAccount: restartDeletedAccount,
+    async deployBots(targetId) { await api('deploy-bots', { requestId: uid(), ...(targetId ? { targetId } : {}) }); await refresh(); },
     forceFeed() {
       memberId = null; activeHashtag = null;
       document.querySelectorAll('dialog[open]:not(#incident-dialog)').forEach(dialog => dialog.close());

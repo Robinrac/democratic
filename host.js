@@ -52,16 +52,17 @@ function nextHelp() {
 }
 function roleRow(role) {
   const a = role.activity || { posts: 0, replies: 0, injected: 0, hidden: 0 };
-  const planned = effectCopy[role.effect] || effectCopy.takeover;
+  const planned = role.effect === 'support' ? role.card === 2 ? ['Hashtag bots', 'Launch 5 accounts · 10 opposition posts'] : ['Targeted bots', 'Choose 1 of 4 people · 5 tagged criticisms'] : effectCopy[role.effect] || effectCopy.takeover;
   let outcome = 'Not triggered', detail = '';
   if (role.incidentState === 'active') {
     outcome = ({ deletion: role.recreated ? 'New account created' : 'Account deleted — sign-up needed', lockout: 'Locked out', forgery: 'False opinions published', exposure: 'Name and town revealed', suppression: 'Hidden from other people', support: 'Support sent', takeover: 'Simulation released' })[role.effect];
     detail = [a.injected ? `${a.injected} simulated ${a.injected === 1 ? 'post' : 'posts'}` : '', a.hidden ? `${a.hidden} own ${a.hidden === 1 ? 'contribution' : 'contributions'} hidden` : ''].filter(Boolean).join(' · ');
   } else if (role.incidentState === 'restored') {
     outcome = 'Revealed & restored';
-    detail = a.injected ? `${a.injected} simulated posts labelled` : role.effect === 'support' ? 'Outside support explained' : 'Original posts restored';
+    detail = a.injected ? `${a.injected} simulated posts labelled` : role.effect === 'support' ? 'Bot activity labelled' : 'Original posts restored';
     if (a.hidden) detail += ` · ${a.hidden} still moderated`;
   }
+  if (role.effect === 'support' && role.incidentState === 'active') { const campaign = state.botCampaigns?.find(c => c.roleId === role.id); outcome = campaign ? 'Bots deployed' : 'Ready to deploy'; detail = campaign ? `${campaign.published}/${campaign.total} bot posts${campaign.targetId ? ' · Target: @' + state.roles.find(r => r.id === campaign.targetId)?.username : ''}` : 'Waiting for this participant to launch'; }
   const access = ({ 'not-joined': 'Not joined', waiting: 'Opens with debate', open: 'Can post', locked: 'Read only', closed: 'Closed' })[role.postingAccess] || 'Not joined';
   const target = state.targets.find(t => t.roleId === (role.targetRoleId || role.id));
   const readiness = state.phase === 'debate' && state.scenario === 'transport-v1' && role.claimed && !(target?.ready && target?.matchesCard) ? '<small class="needs-post">Needs a first post for their role</small>' : '';

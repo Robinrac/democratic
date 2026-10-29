@@ -40,23 +40,23 @@ const profiles = [
     suggestedBio: 'Small budgets, clever systems and outdoor plans.', suggestedPost: 'Give under-25s a low monthly fare cap. Pay as you go, then travel free once you reach it. You should not need spare cash upfront to get the best price. #FareCap #AffordableJourneys #YouthOnTheMove', question: 'Be specific and solution-minded. Use a small everyday example rather than a long calculation.' }
 ];
 export const transportCards = roleCards.map((card, i) => ({ ...card, ...profiles[i] }));
-export const effectLabels = { deletion: 'Account deleted; must sign up again', lockout: 'Read-only lockout; earlier posts disappear', forgery: 'Forged opposition; earlier posts disappear', exposure: 'Fictional identity exposed; posting remains available', suppression: 'Posts visible to own team only', support: 'Account unchanged; vague outside-support notice' };
+export const effectLabels = { deletion: 'Account deleted; must sign up again', lockout: 'Read-only lockout; earlier posts disappear', forgery: 'Forged opposition; earlier posts disappear', exposure: 'Fictional identity exposed; posting remains available', suppression: 'Posts visible to own team only', support: 'Participant-controlled bot campaign' };
 export function incidentNotice(effect, restored = false) {
   if (effect === 'deletion') return { effect, restored: false, title: 'Your account has been deleted', shortMessage: 'You can watch the feed. Create a new account to speak again.', message: 'Someone deleted your account and your earlier posts have disappeared. You are now a spectator. Choose Create a new account, then sign up again with the name on your paper profile.', animation: false };
 
-  if (restored) return { effect, restored: true, title: ({ lockout: 'Posting access restored', forgery: 'Your account is yours again', exposure: 'The account takeover has stopped', suppression: 'Your posts reach everyone again', support: 'Outside activity has stopped' })[effect], message: ({
+  if (restored) return { effect, restored: true, title: ({ lockout: 'Posting access restored', forgery: 'Your account is yours again', exposure: 'The account takeover has stopped', suppression: 'Your posts reach everyone again', support: 'Bot controls are closed' })[effect], message: ({
     lockout: 'You can post again. Your earlier posts are back.',
     forgery: 'Your original posts are back. Posts you did not write are labelled.',
     exposure: 'The posts revealing your fictional identity are labelled. You control your account.',
     suppression: 'Everyone can see your contributions again.',
-    support: 'Your genuine posts and account access are unchanged.'
+    support: 'Bot controls are closed. Your genuine posts and account access are unchanged.'
   })[effect], animation: false };
   return { effect, restored: false, ...({
     lockout: { title: 'Account hacked — you’re locked out', shortMessage: 'Posting access removed. You can still watch the live feed.', message: 'Someone changed your password and removed your posting access. Your earlier posts have disappeared. You can still read the live feed, but you cannot post, reply or edit your profile.' },
     forgery: { title: 'Account hacked — someone is posting as you', shortMessage: 'Another device is posting opinions you did not write.', message: 'Someone else is using your account to argue against lower youth fares. Watch them write and post under your username. Your earlier posts have disappeared. You can respond or dispute a post after the activity finishes.' },
     exposure: { title: 'Account hacked — your identity is being exposed', shortMessage: 'Your fictional name and hometown are being linked to your opinions.', message: 'Another device is posting your fictional name and hometown under your username. Your manager and other readers could connect these opinions to you. Watch what is being shared. You can still post afterwards.' },
     suppression: { title: 'Your posts are being hidden', shortMessage: 'Visible on your screen. Hidden from everyone else.', message: 'Your account has been interfered with. Your posts look normal on your screen, but nobody else can see them or receive your tags. You can keep writing and reading the feed.' },
-    support: { title: 'Your side is getting a boost', shortMessage: 'Someone on your side has supplied extra reach and activity.', message: 'Someone who shares your side of the debate has provided extra resources. Activity is picking up around the forum. Your account still works normally. You do not control this activity.', animation: true }
+    support: { title: 'Your bot controls are ready', shortMessage: 'Someone on your side has supplied extra reach and activity.', message: 'Someone who shares your side of the debate has provided extra resources. Activity is picking up around the forum. Your account still works normally. You do not control this activity.', animation: true }
   })[effect] };
 }
 
