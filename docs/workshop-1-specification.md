@@ -96,7 +96,8 @@ choose its weight or vote for another organization's identity. Repeated identica
 requests return the original receipt, including after closing, without counting
 again, unless the host deleted the ballot. Deleted request IDs are rejected. Pending submissions survive reloads and reconcile against the team's
 private receipt after a lost response. Only that organization's ballot appears
-in its participant response. Other organizations’ ballots and aggregate results are host-only.
+in its participant response. Other organizations’ ballots remain host-only.
+Aggregate results stay host-only until the facilitator reveals the final result.
 
 The host table distinguishes not joined, not voted, For, Against, and Blank.
 The main lead compares weighted For and Against totals. Zero substantive votes
@@ -108,6 +109,8 @@ Closing voting or ending the session stops new votes. Pausing the room blocks
 new submissions until resumed. Existing receipts remain retrievable. Rehearsal
 reset clears all votes and activation; closed voting is not reopened independently.
 Existing Workshop 1 rooms without stored voting state begin inactive.
+
+After closing voting and reviewing the weighted tally, the facilitator can press **Reveal result to everyone**. The participant feed and projector then show whether For or Against won, whether the vote tied, or whether no substantive side received weight, with the final For, Against, and Blank totals. Participant screens also show a one-time result dialog. The result remains visible after a reload or the room ending. Revealing freezes ballot changes, so the public outcome cannot shift afterward. At least one organization must have submitted a ballot before reveal.
 
 ## Host vote controls
 

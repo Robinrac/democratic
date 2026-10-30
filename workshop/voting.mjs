@@ -4,6 +4,7 @@ export const ballotQuestion = 'Should the municipality build a central youth cen
 export const voteChoices = ['for', 'against', 'blank'];
 export const emptyVoting = () => ({ id: null, status: 'inactive', ballots: {} });
 export const votingState = state => state.voting || emptyVoting();
+export const publicVoteResult = state => state.voting?.result || null;
 
 export function ownVoting(state, role) {
   const voting = votingState(state), association = associations[role.card - 1];
@@ -29,7 +30,7 @@ export function hostVoting(state) {
   const countedMandate = Object.values(totals).reduce((sum, weight) => sum + weight, 0);
   const castMandate = rows.filter(row => row.choice).reduce((sum, row) => sum + row.mandate, 0);
   const leader = totals.for === 0 && totals.against === 0 ? 'none' : totals.for === totals.against ? 'tie' : totals.for > totals.against ? 'for' : 'against';
-  return { id: voting.id, status: voting.status, question: ballotQuestion, rows, totals, leader,
+  return { id: voting.id, status: voting.status, question: ballotQuestion, rows, totals, leader, result: voting.result || null,
     totalMandate, castMandate, uncastMandate: totalMandate - castMandate,
     countedMandate, excludedMandate: castMandate - countedMandate,
     excludedOrganizations: rows.filter(row => row.choice && !row.counted).length,

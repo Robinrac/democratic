@@ -17,7 +17,7 @@ test('Workshop 1 isolates six read-only associations and rejects forum features 
   const w = await workshop(t); await w.login(); const sid = await createRoom(w);
   const roster = await w.state(sid);
   assert.equal(roster.workshopType, 'workshop-1'); assert.equal(roster.capacity, 6);
-  assert.deepEqual(roster.actions.map(a => a.id), ['activate-voting', 'close-voting', 'end']);
+  assert.deepEqual(roster.actions.map(a => a.id), ['activate-voting', 'close-voting', 'reveal-result', 'end']);
   assert.equal(roster.roles.length, 6);
   for (const route of ['host/transport-topic', 'host/clear-profile']) {
     assert.equal((await w.call(route, { version: roster.version, confirmLabel: roster.label }, { sid, host: true })).status, 403);

@@ -9,6 +9,7 @@ import { roleCards } from './workshop/roles.mjs';
 import { workshopTypes, workshopType, isWorkshopOne } from './workshop/types.mjs';
 import { renderProfileAvatar } from './dist/profile-avatars.js';
 import { newsImages, hostNews } from './workshop/news.mjs';
+import { publicVoteResult } from './workshop/voting.mjs';
 import { runtimeConfig, validateConfig } from './config.mjs';
 import { hash, fail, makeSession, summary, feed, hostView, release, join, joinPreview, me, credential, participantWrite, receipt, questionFor, clearProfile, incidentDue, advanceIncident, setPaused, restartAccount } from './workshop/model.mjs';
 
@@ -151,7 +152,7 @@ export async function createWorkshopServer({ hostPassword = process.env.HOST_PAS
           const state = await readSession(sid); if (!state) fail(410, 'Session expired or cleared. Ask the host for the current link.');
           if (['feed', 'profile'].includes(route) && !hostAuthorized) credential(state, token);
           if (route === 'feed') return reply(res, 200, feed(state, token));
-          if (route === 'projector') return reply(res, 200, { ...summary(state), question: questionFor(state) });
+          if (route === 'projector') return reply(res, 200, { ...summary(state), question: questionFor(state), ...(isWorkshopOne(state) ? { voteResult: publicVoteResult(state) } : {}) });
           if (route === 'me') return reply(res, 200, me(state, token));
           if (route === 'receipt') return reply(res, 200, receipt(state, token, url.searchParams.get('id')));
           if (route === 'profile') {

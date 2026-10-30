@@ -35,7 +35,7 @@ export async function startWorkshopOne(initialRoom) {
     if (room.phase === 'ended' && dialog.open) dialog.close();
     document.querySelector('#room-status').textContent = room.phase === 'ended' ? 'This workshop room has closed.' : room.paused ? 'The facilitator has paused room controls.' : '';
     form.querySelector('button').disabled = joining || room.phase === 'ended';
-    voting.update(person);
+    voting.update(person, room);
     news.update(person);
   }
   async function refresh() {

@@ -98,6 +98,38 @@ test('host shows no lead for blanks alone and an explicit tie for equal weighted
   assert.equal(hostVoting(state).leader, 'tie');
 });
 
+test('host reveals a frozen result only after voting closes, without exposing organization ballots', async t => {
+  const w = await workshop(t), sid = await room(w);
+  const tokens = await Promise.all([1, 2, 3, 4, 5, 6].map(card => claim(w, sid, card)));
+  await w.action(sid, 'activate-voting');
+  for (const [index, choice] of ['for', 'blank', 'against', 'blank', 'blank', 'for'].entries()) {
+    assert.equal((await cast(w, sid, tokens[index], choice)).status, 200);
+  }
+  assert.equal((await w.call('projector', undefined, { sid })).voteResult, null);
+  assert.equal((await w.action(sid, 'reveal-result')).status, 409);
+  await w.action(sid, 'close-voting');
+  const before = await w.state(sid);
+  assert.equal(before.actions.find(action => action.id === 'reveal-result').enabled, true);
+  const requestId = randomUUID();
+  const reveal = { action: 'reveal-result', requestId, version: before.version };
+  assert.equal((await w.call('host/action', reveal, { sid, host: true })).status, 200);
+  assert.equal((await w.call('host/action', reveal, { sid, host: true })).status, 200);
+  const result = (await w.call('projector', undefined, { sid })).voteResult;
+  assert.equal(result.winner, 'against');
+  assert.deepEqual(result.totals, { for: 340, against: 350, blank: 750 });
+  assert.equal(result.votedOrganizations, 6);
+  assert.equal(result.countedMandate, 1440);
+  assert.ok(result.at);
+  assert.doesNotMatch(JSON.stringify(result), /ballot|castAt|requestId|association|card/);
+  assert.equal((await w.call('me', undefined, { sid, token: tokens[0] })).voting.ballot.choice, 'for');
+  assert.equal((await w.call('host/action', await adjustment(w, sid, 3, 'vote-exclude'), { sid, host: true })).status, 409);
+  assert.equal((await w.action(sid, 'reveal-result')).status, 409);
+  await w.action(sid, 'end');
+  assert.deepEqual((await w.call('projector', undefined, { sid })).voteResult, result);
+  const { sid: w2 } = await w.session();
+  assert.equal((await w.call('projector', undefined, { sid: w2 })).voteResult, undefined);
+});
+
 test('ballots and activation survive a database restart; ending closes voting', async t => {
   const dataDir = await mkdtemp(path.join(os.tmpdir(), 'weighted-vote-'));
   try {

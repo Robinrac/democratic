@@ -1,7 +1,7 @@
 import { signInWorkshopOneHost } from './workshop-one-host.mjs';
 import { associations } from '../../workshop/types.mjs';
 import { test, expect } from '@playwright/test';
-import { randomUUID } from 'node:crypto';
+import { randomBytes, randomUUID } from 'node:crypto';
 
 test('weighted voting works on phones and desktops, reconciles interrupted submissions and closes safely', async ({ browser, page: host }, info) => {
   const errors = []; host.on('pageerror', error => errors.push(error.message));
@@ -121,4 +121,55 @@ test('weighted voting works on phones and desktops, reconciles interrupted submi
   await expect(phone.locator('#news .news-card')).toHaveCount(8);
   expect(errors).toEqual([]);
   for (const page of pages) await page.close();
+});
+
+test('host reveals the final weighted result to participants and projector', async ({ browser, page: host }) => {
+  await signInWorkshopOneHost(host);
+  const response = await host.request.post('/api/host/sessions', { data: { id: randomUUID(), label: 'Result reveal rehearsal', kind: 'rehearsal', workshopType: 'workshop-1', expiresAt: Date.now() + 86400000 } });
+  const { session } = await response.json(), sid = session.id;
+  const participant = await browser.newPage({ viewport: { width: 390, height: 850 }, reducedMotion: 'reduce' });
+  const projector = await browser.newPage();
+  await host.goto('/host?s=' + sid);
+  await participant.goto('/?s=' + sid);
+  await participant.getByLabel('Organization name').fill(associations[0].name);
+  await participant.getByRole('button', { name: 'Join workshop', exact: true }).click();
+  await expect(participant.locator('#join-dialog')).not.toBeVisible();
+  await projector.goto('/?s=' + sid + '&presenter=1');
+  await host.getByRole('button', { name: 'Activate voting', exact: true }).click();
+  await expect(host.getByRole('button', { name: 'Reveal result to everyone' })).toBeDisabled();
+  const choices = ['for', 'blank', 'against', 'blank', 'blank', 'for'];
+  for (let card = 1; card <= 6; card++) {
+    let token;
+    if (card === 1) token = await participant.evaluate(id => localStorage.getItem('open-circle:' + id), sid);
+    else {
+      token = randomBytes(32).toString('hex');
+      const joined = await host.request.post('/api/join?s=' + sid, { headers: { Authorization: 'Bearer ' + token }, data: { name: associations[card - 1].name } });
+      expect(joined.status()).toBe(200);
+    }
+    const own = await host.request.get('/api/me?s=' + sid, { headers: { Authorization: 'Bearer ' + token } });
+    const profile = await own.json();
+    const ballot = await host.request.post('/api/votes?s=' + sid, { headers: { Authorization: 'Bearer ' + token }, data: { requestId: randomUUID(), votingId: profile.voting.id, choice: choices[card - 1] } });
+    expect(ballot.status()).toBe(200);
+  }
+  await host.getByRole('button', { name: 'Refresh state', exact: true }).click();
+  await expect(host.locator('#vote-leader')).toHaveText('Against leads');
+  await expect(participant.locator('#vote-result')).not.toBeVisible();
+  await expect(projector.locator('#projector-result')).not.toBeVisible();
+  await host.getByRole('button', { name: 'Close voting', exact: true }).click();
+  await host.getByRole('button', { name: 'Confirm release', exact: true }).click();
+  await expect(host.getByRole('button', { name: 'Reveal result to everyone' })).toBeEnabled();
+  await host.getByRole('button', { name: 'Reveal result to everyone' }).click();
+  await expect(host.getByRole('dialog', { name: 'Reveal result' })).toContainText('Against wins');
+  await host.getByRole('button', { name: 'Confirm release', exact: true }).click();
+  await expect(host.locator('#reveal-status')).toContainText('Result revealed to every participant');
+  await expect(participant.getByRole('dialog', { name: 'Against wins' })).toBeVisible();
+  await expect(participant.locator('#vote-result')).toContainText('For 340 · Against 350 · Blank 750');
+  await expect(projector.locator('#projector-result')).toContainText('Against wins');
+  await participant.getByRole('button', { name: 'Back to news feed', exact: true }).click();
+  await participant.reload();
+  await expect(participant.locator('#vote-result')).toContainText('Against wins');
+  await expect(participant.locator('#vote-result-dialog')).not.toBeVisible();
+  await projector.reload();
+  await expect(projector.locator('#projector-result')).toContainText('Against wins');
+  await participant.close(); await projector.close();
 });

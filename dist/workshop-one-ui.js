@@ -5,7 +5,7 @@ export const header = (hostEntry = true) => `<header class="topbar"><a class="br
 export async function startProjector() {
   const sid = new URLSearchParams(location.search).get('s');
   const link = location.origin + '/?s=' + encodeURIComponent(sid || '');
-  document.querySelector('#app').innerHTML = header(false) + `<main id="main" class="projector"><section><span class="eyebrow">WELCOME TO CIRCLE NEWS</span><h1 id="projector-title">Your voice.<br>Your choice.<br>Our conversation.</h1><span class="eyebrow">TODAY’S TOPIC</span><p id="question"></p><div class="phase" id="phase"></div><p id="progress" role="status"></p></section><section class="panel"><div id="qr"></div><h2>Join the circle.</h2><p>Scan the QR, or enter this room code:</p><strong id="room-code" class="projector-room-code" aria-label="Room code"></strong><p id="display-url"></p><p id="join-instructions">Use the details on your paper profile to join.</p><p id="connection" role="status"></p></section></main>`;
+  document.querySelector('#app').innerHTML = header(false) + `<main id="main" class="projector"><section><span class="eyebrow">WELCOME TO CIRCLE NEWS</span><h1 id="projector-title">Your voice.<br>Your choice.<br>Our conversation.</h1><span class="eyebrow">TODAY’S TOPIC</span><p id="question"></p><div class="phase" id="phase"></div><p id="progress" role="status"></p><section id="projector-result" class="vote-result" aria-live="polite" hidden><span class="eyebrow">FINAL VOTE · WORKSHOP 1</span><h2 id="projector-result-title"></h2><p id="projector-result-totals"></p></section></section><section class="panel"><div id="qr"></div><h2>Join the circle.</h2><p>Scan the QR, or enter this room code:</p><strong id="room-code" class="projector-room-code" aria-label="Room code"></strong><p id="display-url"></p><p id="join-instructions">Use the details on your paper profile to join.</p><p id="connection" role="status"></p></section></main>`;
   if (!sid) { document.querySelector('#connection').textContent = 'Open the projector link from your host screen.'; return; }
   const qr = window.qrcode(0, 'M'); qr.addData(link); qr.make();
   document.querySelector('#qr').innerHTML = qr.createSvgTag({ cellSize: 6, margin: 24, scalable: true });
@@ -27,6 +27,12 @@ export async function startProjector() {
       document.querySelector('#join-instructions').textContent = 'Enter your organization’s name.';
       document.querySelector('#phase').textContent = data.phase === 'ended' ? 'This workshop room has closed.' : 'Join your association and follow the facilitator.';
       document.querySelector('#progress').textContent = `${data.participants} / ${data.capacity} associations joined`;
+      const result = data.voteResult;
+      document.querySelector('#projector-result').hidden = !result;
+      if (result) {
+        document.querySelector('#projector-result-title').textContent = result.winner === 'for' ? 'For wins' : result.winner === 'against' ? 'Against wins' : result.winner === 'tie' ? 'It’s a tie' : 'No decision';
+        document.querySelector('#projector-result-totals').textContent = `For ${result.totals.for} · Against ${result.totals.against} · Blank ${result.totals.blank} weighted votes`;
+      }
       document.querySelector('#phase').hidden = false;
       document.querySelector('#connection').textContent = ['localhost', '127.0.0.1'].includes(location.hostname) ? 'For phones, open the host screen using the computer’s network address before opening this projector link.' : 'Live updates connected';
     } catch (error) { document.querySelector('#connection').textContent = error.message; if (error.status === 410) { document.querySelector('#qr').replaceChildren(); document.querySelector('#room-code').textContent = ''; document.querySelector('#progress').textContent = ''; } }
@@ -34,4 +40,3 @@ export async function startProjector() {
   };
   await refresh(); setInterval(refresh, 2000);
 }
-

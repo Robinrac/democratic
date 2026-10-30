@@ -170,6 +170,7 @@ export function hostView(state, includeFallback = []) {
     actions: [
       { id: 'activate-voting', label: 'Activate voting', enabled: votingState(state).status === 'inactive' },
       { id: 'close-voting', label: 'Close voting', enabled: votingState(state).status === 'open' },
+      { id: 'reveal-result', label: 'Reveal result', enabled: votingState(state).status === 'closed' && !votingState(state).result && hostVoting(state).votedOrganizations > 0 },
       { id: 'end', label: 'End session', enabled: true }
     ].map(action => ({ ...action, enabled: action.enabled && state.phase === 'opening' && !state.paused }))
   };
@@ -256,6 +257,7 @@ export function release(state, data, { incidentStepMs = 20000 } = {}) {
   if (isWorkshopOne(state)) {
     if (['vote-exclude', 'vote-count', 'vote-delete'].includes(data.action)) {
       const voting = votingState(state), role = state.roles.find(role => role.card === data.card);
+      if (voting.result) fail(409, 'The result has been revealed and can no longer be changed.');
       const ballot = role && voting.ballots[role.id];
       if (!voting.id || voting.id !== data.votingId || !ballot || ballot.requestId !== data.ballotRequestId) fail(409, 'That vote changed or is no longer available. Refresh the host screen.');
       if (data.action === 'vote-exclude' && ballot.counted === false || data.action === 'vote-count' && ballot.counted !== false) fail(409, 'That vote already has this counting status.');
@@ -276,6 +278,10 @@ export function release(state, data, { incidentStepMs = 20000 } = {}) {
     state.voting ||= emptyVoting();
     if (data.action === 'activate-voting') { state.voting.id = key; state.voting.status = 'open'; }
     if (data.action === 'close-voting' || data.action === 'end' && state.voting.status === 'open') state.voting.status = 'closed';
+    if (data.action === 'reveal-result') {
+      const voting = hostVoting(state);
+      state.voting.result = { winner: voting.leader, totals: { ...voting.totals }, votedOrganizations: voting.votedOrganizations, countedMandate: voting.countedMandate, at: new Date().toISOString() };
+    }
     if (data.action === 'end') state.phase = 'ended';
     state.version++;
     const event = { action: data.action, count: 0, phase: state.phase, version: state.version };
