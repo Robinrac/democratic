@@ -1,11 +1,12 @@
+async function openPhoneMenu(page) { if (await page.locator('#open-menu').isVisible() && !await page.locator('#phone-menu').isVisible()) await page.locator('#open-menu').click(); }
 import { test, expect } from '@playwright/test';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { roleCards } from '../../workshop/roles.mjs';
 
-test('profile browsing, reply drafts, interrupted sends and private saved responses work across reloads', async ({ browser, request }, info) => {
+test('profile browsing, reply drafts, interrupted sends and offline recovery work across reloads', async ({ browser, request }, info) => {
   await request.post('/api/host/login', { data: { password: 'browser-test-host-password-only' } });
   const sid = randomUUID();
-  await request.post('/api/host/sessions', { data: { id: sid, label: 'Conversation resilience', kind: 'rehearsal', expiresAt: Date.now() + 86400000 } });
+  await request.post('/api/host/sessions', { data: { id: sid, label: 'Conversation resilience', scenario: 'legacy', kind: 'rehearsal', expiresAt: Date.now() + 86400000 } });
   const tokens = [0, 1].map(() => randomBytes(32).toString('hex'));
   const members = [];
   for (let i = 0; i < 2; i++) {
@@ -29,7 +30,8 @@ test('profile browsing, reply drafts, interrupted sends and private saved respon
   await expect(page.locator('#reply-label')).toContainText(members[1].username);
   await expect(page.locator('#stance')).toBeHidden();
   await expect(page.getByLabel('Your reason or reply')).toHaveValue('Listening without judging helps.');
-  await page.getByRole('button', { name: 'Edit profile', exact: true }).click();
+  await openPhoneMenu(page); await page.getByRole('button', { name: 'Edit profile', exact: true }).click();
+  await page.getByRole('tab', { name: 'Personal info' }).click();
   await page.locator('#profile-form').getByLabel('Bio', { exact: true }).fill('Listening first.');
   await page.getByRole('button', { name: 'Save profile', exact: true }).click();
   await expect(page.locator('#profile-dialog')).not.toBeVisible();
@@ -61,7 +63,6 @@ test('profile browsing, reply drafts, interrupted sends and private saved respon
   await expect(page.locator('#threads .reply-context')).toContainText('What makes a conversation welcoming?');
   // The server commits, but the response disappears. A receipt must resolve it
   // after reload without producing a duplicate or clearing a different draft.
-  await page.getByLabel('Allow public usernames', { exact: true }).check();
   await page.getByLabel('Your reason or reply').fill('This send will lose its response.');
   await page.route('**/api/receipt?*', route => route.abort('failed'));
   await page.route('**/api/posts?*', async route => { await route.fetch(); await route.abort('failed'); });
@@ -72,18 +73,14 @@ test('profile browsing, reply drafts, interrupted sends and private saved respon
   await expect(page.getByLabel('Your reason or reply')).toHaveValue('');
   await expect(page.locator('#threads .post')).toHaveCount(3);
   for (const action of ['exposure', 'forgery', 'reactions', 'reflection', 'reveal']) await release(action);
-  await page.getByLabel('Better privacy boundaries', { exact: true }).check();
-  await page.getByRole('button', { name: 'Save team response' }).click();
-  await expect(page.locator('#response-status')).toContainText('saved privately');
+  await expect(page.locator('#response-form')).toHaveCount(0);
+  await expect(page.locator('#notice')).toBeEmpty();
   await page.reload();
-  await expect(page.getByLabel('Better privacy boundaries', { exact: true })).toBeChecked();
-  await expect(page.locator('#response-status')).toContainText('saved privately');
-  const host = await (await request.get('/api/host/state?s=' + sid)).json();
-  expect(host.recovery.count).toBe(1);
+  await expect(page.locator('#response-form')).toHaveCount(0);
   await release('discussion'); await release('closing'); await release('end');
   await expect(page.getByRole('button', { name: 'Publish post' })).toBeDisabled();
-  await expect(page.getByRole('button', { name: 'Edit profile', exact: true })).toBeDisabled();
-  await expect(page.getByRole('button', { name: 'Save team response' })).toBeDisabled();
+  await openPhoneMenu(page); await expect(page.getByRole('button', { name: 'Edit profile', exact: true })).toBeDisabled();
+  await expect(page.locator('#response-form')).toHaveCount(0);
   expect(errors).toEqual([]);
   await context.close();
 });

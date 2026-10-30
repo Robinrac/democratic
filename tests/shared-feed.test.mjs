@@ -83,9 +83,9 @@ test('seven-team debate → 7 disclosures → 14 forgeries → 21 reactions → 
   f.posts.forEach(p=>{assert.equal(p.provenance,undefined);assert.equal(p.actualActor,undefined);});
   assert.equal(f.notice,null);
   const forged = f.threads[0].posts[2];
-  assert.equal((await w.call('flags',{postId:forged.id},{sid,token:teams[1].token})).status,403);
-  for(let i=0;i<2;i++) assert.equal((await w.call('flags',{postId:forged.id},{sid,token:teams[0].token})).status,200);
-  assert.equal((await w.server.store.read(sid)).flags.length,1);
+  assert.equal((await w.call('flags',{postId:forged.id},{sid,token:teams[1].token})).status,404);
+  for(let i=0;i<2;i++) assert.equal((await w.call('flags',{postId:forged.id},{sid,token:teams[0].token})).status,404);
+  assert.equal((await w.server.store.read(sid)).flags.length,0);
   assert.equal((await w.action(sid,'reveal')).status,409);
   assert.equal((await w.call('corrections',{text:'Correction',stance:'real-names',requestId:randomUUID()},{sid,token:teams[0].token})).status,409);
   assert.equal((await w.action(sid,'reflection')).count,0);
@@ -95,7 +95,7 @@ test('seven-team debate → 7 disclosures → 14 forgeries → 21 reactions → 
   assert.equal(f.posts.filter(p=>p.provenance==='team').length,7);
   assert.equal(f.posts.filter(p=>p.provenance==='simulation').length,21);
   assert.equal(f.posts.filter(p=>p.provenance==='scripted').length,21);
-  assert.match(f.notice,/workshop host/); assert.equal(f.posts.find(p=>p.id===forged.id).disputed,true);
+  assert.match(f.notice,/workshop host/); assert.equal(f.posts.find(p=>p.id===forged.id).disputed,undefined);
   const correction = await w.call('corrections',{text:'Those recent posts were not ours. Here is our view.',stance:'real-names',requestId:randomUUID()},{sid,token:teams[0].token}); assert.equal(correction.post.correction,true);
   assert.equal((await w.call('responses',{choice:'protect-privacy'},{sid,token:teams[0].token})).status,200);
   assert.equal((await w.call('feed',undefined,{sid,token:teams[1].token})).posts.length,50);
@@ -137,6 +137,8 @@ test('posts, replies and profile edits enforce ownership, text limits, origins a
   const publicViews=[await w.call('feed',undefined,{sid}),await w.call('profile?id='+a.participant.id,undefined,{sid}),await w.call('projector',undefined,{sid})];
   publicViews.forEach(view=>{ privateFree(view); assert.ok(!JSON.stringify(view).includes('Private workshop town')); });
   assert.equal((await w.call('profile',{name:'Someone else'},{sid,token:a.token})).status,400);
+  assert.equal((await w.call('profile',{name:roleCards[0].fullName.split(' ')[0]},{sid,token:a.token})).status,400);
+  assert.equal((await w.call('me',undefined,{sid,token:a.token})).privateDetails.name,roleCards[0].fullName);
   assert.equal((await w.call('me',undefined,{sid,token:b.token})).participant.bio,'');
   for(const bad of ['', 'x'.repeat(501), '<img src=x onerror=alert(1)>', null]) assert.equal((await w.call('posts',{...payload,requestId:randomUUID(),text:bad},{sid,token:a.token})).status,400);
   assert.equal((await w.call('profile',{bio:'x'.repeat(161)},{sid,token:a.token})).status,400);
@@ -162,17 +164,17 @@ test('a real database failure rolls back the entire release, then the same reque
   assert.equal((await w.call('feed',undefined,{sid})).posts.length,2);
 });
 
-test('disk restart restores tokens, phase, waves and flags; logout revocation also survives restart', async t=>{
+test('disk restart restores tokens, phase and waves; logout revocation also survives restart', async t=>{
   const dir=await mkdtemp(path.join(os.tmpdir(),'open-circle-restart-'));
   const first=await workshop(t,{dataDir:dir}); await first.login(); const cookie=first.cookie;
   const {sid}=await first.session(); const a=await first.claim(sid,0); await first.action(sid,'debate');
   await first.call('posts',{text:'Persist this opinion.',stance:'usernames',requestId:randomUUID()},{sid,token:a.token});
   const s=await first.state(sid), body={action:'exposure',version:s.version,requestId:randomUUID()}; await first.call('host/action',body,{sid,host:true});
-  const f=await first.call('feed',undefined,{sid}); await first.call('flags',{postId:f.posts[1].id},{sid,token:a.token});
+  const f=await first.call('feed',undefined,{sid}); assert.equal(f.posts.length,2);
   await first.stop();
   const next=await workshop(t,{dataDir:dir}); next.cookie=cookie;
   assert.equal((await next.call('me',undefined,{sid,token:a.token})).participant.id,a.participant.id);
-  assert.equal((await next.state(sid)).phase,'exposure'); assert.equal((await next.call('feed',undefined,{sid,token:a.token})).posts[1].disputed,true);
+  assert.equal((await next.state(sid)).phase,'exposure'); assert.equal((await next.call('feed',undefined,{sid,token:a.token})).posts[1].disputed,undefined);
   assert.equal((await next.call('host/action',body,{sid,host:true})).count,1); assert.equal((await next.call('feed',undefined,{sid,token:a.token})).posts.length,2);
   await next.call('host/logout',{}, {host:true}); await next.stop();
   const third=await workshop(t,{dataDir:dir}); third.cookie=cookie; assert.equal((await third.call('host/session',undefined,{host:true})).status,401);

@@ -5,12 +5,12 @@ test('host chooses Workshop 1, teams join a private association, and receives it
   await host.goto('/host');
   await host.getByLabel('Password', { exact: true }).fill('browser-test-host-password-only');
   await host.getByRole('button', { name: 'Unlock host screen' }).click();
-  await host.getByText('Create a separate session', { exact: true }).click();
+  await host.getByText('Create a new room', { exact: true }).click();
   const selector = host.getByLabel('Workshop', { exact: true });
   await expect(selector.locator('option').first()).toContainText('Hacked: Who Speaks for You?');
   await selector.selectOption('workshop-1');
-  await host.getByLabel('Session label').fill('Workshop 1 browser room');
-  await host.getByRole('button', { name: 'Create session', exact: true }).click();
+  await host.getByLabel('Room name').fill('Workshop 1 browser room');
+  await host.getByRole('button', { name: 'Create room', exact: true }).click();
   await expect(host.getByRole('heading', { name: 'Workshop 1 browser room', exact: true })).toBeVisible();
   await expect(host.getByText('Six associations', { exact: true })).toBeVisible();
   await expect(host.getByText('Private release preview', { exact: true })).toHaveCount(0);
@@ -93,7 +93,7 @@ test('host chooses Workshop 1, teams join a private association, and receives it
   await expect(phone.locator('body')).not.toContainText('Suburban');
   const projector = await browser.newPage(); await projector.goto('/?s=' + sid + '&presenter=1');
   await expect(projector.locator('#qr svg')).toBeVisible();
-  await expect(projector.locator('#display-url')).toHaveText('http://127.0.0.1:4197/?s=' + sid);
+  await expect(projector.locator('#display-url')).toHaveText('127.0.0.1:4197');
   await expect(projector.locator('#progress')).toHaveText('2 / 6 associations joined');
   await expect(projector.locator('#projector-title')).toContainText('Manipulated:');
   await expect(projector.locator('body')).not.toContainText('Creative');
@@ -133,37 +133,31 @@ test('host chooses Workshop 1, teams join a private association, and receives it
   await phone.close(); await other.close(); await projector.close();
 });
 
-test('switching rooms ignores a delayed response from the previously selected workshop', async ({ page: host }) => {
+test('room picker opens the correct workshop controls and preserves both room types', async ({ page: host }) => {
+  await host.request.post('/api/host/login', { data: { password: 'browser-test-host-password-only' } });
   await host.goto('/host');
-  await host.getByLabel('Password', { exact: true }).fill('browser-test-host-password-only');
-  await host.getByRole('button', { name: 'Unlock host screen' }).click();
   const ids = [];
   for (const [type, label] of [['workshop-2', 'Hacked switching room'], ['workshop-1', 'Manipulated switching room']]) {
-    await host.getByText('Create a separate session', { exact: true }).click();
+    await host.getByText('Create a new room', { exact: true }).click();
     await host.getByLabel('Workshop', { exact: true }).selectOption(type);
-    await host.getByLabel('Session label').fill(label);
-    await host.getByRole('button', { name: 'Create session', exact: true }).click();
+    await host.getByLabel('Room name').fill(label);
+    await host.getByRole('button', { name: 'Create room', exact: true }).click();
     await expect(host.getByRole('heading', { name: label, exact: true })).toBeVisible();
     ids.push(new URL(host.url()).searchParams.get('s'));
+    await host.getByRole('link', { name: '← All rooms', exact: true }).click();
   }
-  let received;
-  const intercepted = new Promise(resolve => { received = resolve; });
-  let release;
-  const blocked = new Promise(resolve => { release = resolve; });
-  await host.route('**/api/host/state?*', async route => {
-    if (new URL(route.request().url()).searchParams.get('s') === ids[0]) {
-      const response = await route.fetch(); received(); await blocked; await route.fulfill({ response });
-    } else await route.continue();
-  });
-  await host.locator(`[data-session="${ids[0]}"]`).click();
-  await intercepted;
-  await host.locator(`[data-session="${ids[1]}"]`).click();
-  release();
-  await expect(host.getByRole('heading', { name: 'Manipulated switching room', exact: true })).toBeVisible();
-  await expect(host.getByText('Six associations', { exact: true })).toBeVisible();
-  await expect(host.getByText('Private release preview', { exact: true })).toHaveCount(0);
-  await host.unrouteAll({ behavior: 'wait' });
-  await host.locator(`[data-session="${ids[0]}"]`).click();
-  await expect(host.getByText('Private release preview', { exact: true })).toBeVisible();
-  await expect(host.getByText('Six associations', { exact: true })).toHaveCount(0);
+  for (const [index, label] of [[0, 'Hacked:'], [1, 'Manipulated:'], [0, 'Hacked:']]) {
+    const room = host.locator(`[data-room="${ids[index]}"]`);
+    await expect(room).toContainText(label);
+    await room.getByRole('button', { name: 'Open room', exact: true }).click();
+    if (index === 1) {
+      await expect(host.getByText('Six associations', { exact: true })).toBeVisible();
+      await expect(host.locator('#activate-voting')).toBeVisible();
+      await expect(host.locator('#action-incident')).toHaveCount(0);
+    } else {
+      await expect(host.getByRole('heading', { name: 'Everyone in the circle', exact: true })).toBeVisible();
+      await expect(host.locator('#activate-voting')).toHaveCount(0);
+    }
+    await host.getByRole('link', { name: '← All rooms', exact: true }).click();
+  }
 });

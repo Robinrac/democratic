@@ -7,7 +7,7 @@ export const paperProfile = (index = 0) => ({ name: roleCards[index].fullName, t
 export const password = 'test-only-host-password-very-long';
 export const secret = () => randomBytes(32).toString('hex');
 export async function workshop(t, options = {}) {
-  const server = await createWorkshopServer({ hostPassword: password, dataDir: ':memory:', databaseUrl: null, production: false, publicOrigin: null, ...options });
+  const server = await createWorkshopServer({ hostPassword: password, dataDir: ':memory:', databaseUrl: null, production: false, publicOrigin: null, incidentStepMs: 0, ...options });
   server.listen(0, '127.0.0.1'); await once(server, 'listening');
   let stopped = false;
   const stop = async () => { if (!stopped) { stopped = true; await server.shutdown(); } };
@@ -23,8 +23,8 @@ export async function workshop(t, options = {}) {
     return { status: response.status, headers: response.headers, ...await response.json() };
   }
   async function login() { const result = await call('host/login', { password }); assert.equal(result.status, 200); cookie = result.headers.get('set-cookie').split(';')[0]; return cookie; }
-  async function session(kind = 'rehearsal') {
-    const result = await call('host/sessions', { id: randomUUID(), label: kind + ' test', kind, expiresAt: Date.now() + 86400000 }, { host: true });
+  async function session(kind = 'rehearsal', scenario = 'legacy') {
+    const result = await call('host/sessions', { id: randomUUID(), label: kind + ' test', kind, scenario, expiresAt: Date.now() + 86400000 }, { host: true });
     assert.equal(result.status, 201); return { sid: result.session.id, session: result.session };
   }
   async function state(sid, include = []) { return call('host/state' + (include.length ? '?' + include.map(v => 'include=' + v).join('&') : ''), undefined, { host: true, sid }); }

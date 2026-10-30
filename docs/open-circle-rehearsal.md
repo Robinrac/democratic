@@ -1,12 +1,14 @@
 # Open Circle — rehearsal and operations
 
+> Current workshop: [Youth transport roles and host flow](transport-workshop.md). New sessions use this scenario. The older scenario instructions below are retained for existing sessions.
+
 ## Start locally
 
 Use Node.js 20 or newer. No build or separate database installation is required.
 
 ```sh
 npm ci --ignore-scripts
-# Set HOST_PASSWORD privately in this terminal (at least 16 characters).
+# Set HOST_PASSWORD privately in this terminal.
 npm run check:config
 npm start
 ```
@@ -21,7 +23,7 @@ export HOST_PASSWORD
 In PowerShell 7:
 
 ```powershell
-$env:HOST_PASSWORD = Read-Host 'Host password (at least 16 characters)' -MaskInput
+$env:HOST_PASSWORD = Read-Host 'Host password' -MaskInput
 npm start
 ```
 
@@ -39,7 +41,7 @@ Project only **Open read-only projector**. It shows QR, current prompts and aggr
 4. Inspect the private release preview. Claimed teams with genuine first stances are included automatically. A claimed team without a first post is included only if the host explicitly selects its assigned leaning. Unclaimed profiles never become targets.
 5. Open **Launch simulated takeover**, inspect the confirmation, then cancel once. Verify no release. Pause, verify actions are unavailable, then resume and confirm. Seven eligible teams produce **7** disclosures. Targets and recorded first stances become fixed.
 6. Confirm **Release forged posts** (**14** posts) and **Release reactions** (**21** posts) separately. Wait as long as needed between steps. No timer advances the room. Three scripted reaction accounts were seeded with the session; waves do not create new team profiles.
-7. Reload the host. Disconnect and reconnect a participant device. The full confirmed conversation returns. A team's own thread stays first; other threads sort by latest activity and keep their expanded/collapsed state. Use **I did not write this** under the team's own username; the dispute remains without hiding the post.
+7. Reload the host. Disconnect and reconnect a participant device. The full confirmed conversation returns. Posts appear newest first, with labels for your account and mentions.
 8. Confirm **Begin reflection**, discuss, then confirm **Reveal what happened**. Provenance labels identify genuine, injected and scripted posts. Each team can publish a correction and save a private recovery choice. Reload and confirm its selection returns. The host sees response totals; other participants do not.
 9. Hide a genuine test post through host moderation. Its position and authorship remain, while its text is hidden everywhere, including quoted replies. Staged posts cannot be silently removed.
 10. Advance through discussion, closing and **End session**. New posts and corrections stop at closing; other participation stops at end. Reading remains until expiry or clearing. An already committed post can still be acknowledged safely after closing.

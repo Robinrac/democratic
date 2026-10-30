@@ -4,6 +4,7 @@ import path from 'node:path';
 import os from 'node:os';
 import { PGlite } from '@electric-sql/pglite';
 import pg from 'pg';
+import { randomInt } from 'node:crypto';
 
 export async function openStore({ databaseUrl, dataDir = path.join(os.homedir(), '.democratic', 'open-circle') } = {}) {
   let db, lock;
@@ -31,10 +32,23 @@ export async function openStore({ databaseUrl, dataDir = path.join(os.homedir(),
     finally { client.release(); }
   } : fn => db.transaction(fn);
   const close = async () => { if (databaseUrl) await db.end(); else await db.close(); if (lock) await unlink(lock); };
+  async function assignCode(client, id) {
+    const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+    for (let attempt = 0; attempt < 100; attempt++) {
+      const existing = (await client.query('SELECT code FROM open_circle_room_codes WHERE session_id=$1', [id])).rows[0];
+      if (existing) return existing.code;
+      const code = Array.from({ length: 6 }, () => alphabet[randomInt(alphabet.length)]).join('');
+      const result = await client.query('INSERT INTO open_circle_room_codes(session_id, code) VALUES ($1,$2) ON CONFLICT DO NOTHING RETURNING code', [id, code]);
+      if (result.rows.length) return result.rows[0].code;
+    }
+    throw new Error('Could not allocate a room code. Try creating the room again.');
+  }
   try {
-    const sql = await readFile(new URL('./migrations/001-sessions.sql', import.meta.url), 'utf8');
+    const sql = (await Promise.all(['001-sessions.sql', '002-room-codes.sql'].map(file => readFile(new URL('./migrations/' + file, import.meta.url), 'utf8')))).join('\n');
     await transaction(async client => {
       for (const statement of sql.split(';').filter(s => s.trim())) await client.query(statement);
+      const rooms = await client.query('SELECT id FROM open_circle_sessions WHERE expires_at > $1 ORDER BY id', [Date.now()]);
+      for (const room of rooms.rows) await assignCode(client, room.id);
     });
   } catch (error) { await close(); throw error; }
   return {
@@ -47,21 +61,30 @@ export async function openStore({ databaseUrl, dataDir = path.join(os.homedir(),
     async health() { await db.query('SELECT 1'); },
     async list() {
       await db.query('DELETE FROM open_circle_sessions WHERE expires_at <= $1', [Date.now()]);
-      return (await db.query('SELECT state FROM open_circle_sessions ORDER BY id')).rows.map(r => r.state);
+      return (await db.query('SELECT s.state, c.code FROM open_circle_sessions s JOIN open_circle_room_codes c ON c.session_id=s.id ORDER BY s.id')).rows.map(r => ({ ...r.state, joinCode: r.code }));
     },
     async create(state) {
-      const result = await db.query('INSERT INTO open_circle_sessions(id, expires_at, state) VALUES ($1,$2,$3) ON CONFLICT DO NOTHING RETURNING id', [state.id, state.expiresAt, JSON.stringify(state)]);
-      return result.rows.length > 0;
+      return transaction(async client => {
+        const result = await client.query('INSERT INTO open_circle_sessions(id, expires_at, state) VALUES ($1,$2,$3) ON CONFLICT DO NOTHING RETURNING id', [state.id, state.expiresAt, JSON.stringify(state)]);
+        state.joinCode = await assignCode(client, state.id);
+        return result.rows.length > 0;
+      });
     },
     async read(id) {
       await db.query('DELETE FROM open_circle_sessions WHERE id=$1 AND expires_at <= $2', [id, Date.now()]);
-      return (await db.query('SELECT state FROM open_circle_sessions WHERE id=$1', [id])).rows[0]?.state;
+      const row = (await db.query('SELECT s.state, c.code FROM open_circle_sessions s JOIN open_circle_room_codes c ON c.session_id=s.id WHERE s.id=$1', [id])).rows[0];
+      return row ? { ...row.state, joinCode: row.code } : undefined;
+    },
+    async resolveCode(code) {
+      const row = (await db.query('SELECT s.id FROM open_circle_room_codes c JOIN open_circle_sessions s ON s.id=c.session_id WHERE c.code=$1 AND s.expires_at > $2', [code, Date.now()])).rows[0];
+      return row?.id;
     },
     async update(id, fn) {
       return transaction(async client => {
-        const row = (await client.query('SELECT state, expires_at FROM open_circle_sessions WHERE id=$1 FOR UPDATE', [id])).rows[0];
+        const row = (await client.query('SELECT state, expires_at, (SELECT code FROM open_circle_room_codes WHERE session_id=$1) AS code FROM open_circle_sessions WHERE id=$1 FOR UPDATE', [id])).rows[0];
         const state = row?.state;
         if (!state || Number(row.expires_at) <= Date.now() || state.expiresAt <= Date.now()) throw Object.assign(new Error('Session expired or cleared. Ask the host for the current link.'), { status: 410 });
+        state.joinCode = row.code;
         const result = await fn(state);
         await client.query('UPDATE open_circle_sessions SET state=$2, expires_at=$3 WHERE id=$1', [id, JSON.stringify(state), state.expiresAt]);
         return result;

@@ -6,11 +6,11 @@ import path from 'node:path';
 import os from 'node:os';
 import { openStore } from './storage/store.mjs';
 import { roleCards } from './workshop/roles.mjs';
-import { workshopTypes, workshopType, isWorkshopOne, workshopOneQuestion } from './workshop/types.mjs';
+import { workshopTypes, workshopType, isWorkshopOne } from './workshop/types.mjs';
 import { renderProfileAvatar } from './dist/profile-avatars.js';
 import { newsImages, hostNews } from './workshop/news.mjs';
 import { runtimeConfig, validateConfig } from './config.mjs';
-import { hash, fail, makeSession, summary, feed, hostView, release, join, joinPreview, me, credential, participantWrite, receipt, question } from './workshop/model.mjs';
+import { hash, fail, makeSession, summary, feed, hostView, release, join, joinPreview, me, credential, participantWrite, receipt, questionFor, clearProfile, incidentDue, advanceIncident, setPaused, restartAccount } from './workshop/model.mjs';
 
 const root = fileURLToPath(new URL('./dist/', import.meta.url));
 const types = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.png': 'image/png', '.txt': 'text/plain; charset=utf-8' };
@@ -26,10 +26,15 @@ async function readJSON(req) {
 }
 const equal = (a, b) => { const x = Buffer.from(a), y = Buffer.from(b); return x.length === y.length && timingSafeEqual(x, y); };
 
-export async function createWorkshopServer({ hostPassword = process.env.HOST_PASSWORD, store, databaseUrl = process.env.DATABASE_URL, dataDir = process.env.DATA_DIR, production = process.env.NODE_ENV === 'production', publicOrigin = process.env.PUBLIC_ORIGIN } = {}) {
+export async function createWorkshopServer({ hostPassword = process.env.HOST_PASSWORD, store, databaseUrl = process.env.DATABASE_URL, dataDir = process.env.DATA_DIR, production = process.env.NODE_ENV === 'production', publicOrigin = process.env.PUBLIC_ORIGIN, incidentStepMs = 20000 } = {}) {
   publicOrigin = validateConfig({ hostPassword, databaseUrl, publicOrigin, production, store });
   const ownStore = !store;
   store ||= await openStore({ databaseUrl, ...(dataDir ? { dataDir } : {}) });
+  async function readSession(id) {
+    const state = await store.read(id);
+    if (state && incidentDue(state)) return store.update(id, current => { advanceIncident(current); return current; });
+    return state;
+  }
   const sign = value => createHmac('sha256', hostPassword).update('open-circle-host:' + value).digest('hex');
   function authorized(cookie) {
     if (!cookie) return false;
@@ -60,6 +65,16 @@ export async function createWorkshopServer({ hostPassword = process.env.HOST_PAS
         }
         const route = url.pathname.slice(5);
         if (route === 'health' && req.method === 'GET') { await store.health(); return reply(res, 200, { ok: true }); }
+        if (route === 'rooms/resolve' && req.method === 'POST') {
+          limit(req, 'room-code', 120);
+          const data = await readJSON(req);
+          const code = typeof data.code === 'string' ? data.code.replace(/\s/g, '').toUpperCase() : '';
+          if (!/^[A-Z]{6}$/.test(code)) fail(400, 'Enter the six-letter room code shown on the screen.');
+          const id = await store.resolveCode(code), room = id && await store.read(id);
+          if (!room) fail(404, 'Room not found. Check the code with your host.');
+          if (room.phase === 'ended') fail(410, 'This room has ended. Ask your host for the current code.');
+          return reply(res, 200, { id: room.id, label: room.label });
+        }
         if (route === 'host/login' && req.method === 'POST') {
           limit(req, 'login', 5);
           const data = await readJSON(req);
@@ -85,27 +100,34 @@ export async function createWorkshopServer({ hostPassword = process.env.HOST_PAS
           }
           if (!sid) fail(400, 'Choose a workshop session.');
           if (route === 'host/state' && req.method === 'GET') {
-            const state = await store.read(sid); if (!state) fail(410, 'Session expired or cleared.');
+            const state = await readSession(sid); if (!state) fail(410, 'Session expired or cleared.');
             return reply(res, 200, hostView(state, url.searchParams.getAll('include')));
           }
           if (route === 'host/export' && req.method === 'GET') {
-            const state = await store.read(sid); if (!state) fail(410, 'Session expired or cleared.');
-            const { credentials, roles, ...content } = state;
-            return reply(res, 200, { ...content, roles: roles.map(({ codeHash, ...role }) => role), ...(isWorkshopOne(state) ? { news: hostNews() } : {}) });
+            const state = await readSession(sid); if (!state) fail(410, 'Session expired or cleared.');
+            const { credentials, replacements, roles, ...content } = state;
+            return reply(res, 200, { ...content, roles: roles.map(({ codeHash, rejoinHash, ...role }) => role), ...(isWorkshopOne(state) ? { news: hostNews() } : {}) });
           }
           if (req.method !== 'POST') fail(404, 'Not found.');
           const data = await readJSON(req);
           if (route === 'host/delete') {
-            const state = await store.read(sid); if (!state) return reply(res, 200, { ok: true });
+            const state = await readSession(sid); if (!state) return reply(res, 200, { ok: true });
             if (data.confirmLabel !== state.label) fail(400, 'Type the session label to clear its data.');
             await store.delete(sid); return reply(res, 200, { ok: true });
           }
           const result = await store.update(sid, state => {
-            if (route === 'host/action') return release(state, data);
+            if (route === 'host/action') return release(state, data, { incidentStepMs });
             if (data.version !== state.version) fail(409, 'The session changed. Refresh before trying again.');
+            if (route === 'host/transport-topic') {
+              if (isWorkshopOne(state)) fail(403, 'Transport topics are only available in Workshop 2.');
+              if (data.confirmLabel !== state.label || state.phase !== 'opening' || state.posts.length || state.incidentId) fail(409, 'Only an unopened discussion with no posts can switch topics; confirm its exact label.');
+              state.scenario = 'transport-v1'; state.version++;
+              return summary(state);
+            }
+            if (route === 'host/clear-profile') return clearProfile(state, data);
             if (route === 'host/pause') {
               if (typeof data.paused !== 'boolean' || state.phase === 'ended') fail(400, 'Choose pause or resume for an active session.');
-              state.paused = data.paused; state.version++; return summary(state);
+              setPaused(state, data.paused); return summary(state);
             }
             if (route === 'host/moderate') {
               const post = state.posts.find(p => p.id === data.postId && p.origin === 'team');
@@ -114,8 +136,10 @@ export async function createWorkshopServer({ hostPassword = process.env.HOST_PAS
             }
             if (route === 'host/reset') {
               if (state.kind !== 'rehearsal' || data.confirmLabel !== state.label) fail(403, 'Only a rehearsal can be reset; type its exact label.');
-              const fresh = makeSession({ id: sid, label: state.label, kind: state.kind, workshopType: workshopType(state), expiresAt: data.expiresAt });
+              const fresh = makeSession({ id: sid, label: state.label, kind: state.kind, workshopType: workshopType(state), scenario: state.scenario || 'legacy', expiresAt: data.expiresAt });
+              fresh.state.joinCode = state.joinCode;
               fresh.state.version = state.version + 1;
+              for (const field of Object.keys(state)) delete state[field];
               Object.assign(state, fresh.state); return { session: summary(state) };
             }
             fail(404, 'Not found.');
@@ -124,10 +148,10 @@ export async function createWorkshopServer({ hostPassword = process.env.HOST_PAS
         }
         if (!sid) fail(400, 'Open the session link supplied by your host.');
         if (req.method === 'GET') {
-          const state = await store.read(sid); if (!state) fail(410, 'Session expired or cleared. Ask the host for the current link.');
+          const state = await readSession(sid); if (!state) fail(410, 'Session expired or cleared. Ask the host for the current link.');
           if (['feed', 'profile'].includes(route) && !hostAuthorized) credential(state, token);
           if (route === 'feed') return reply(res, 200, feed(state, token));
-          if (route === 'projector') return reply(res, 200, { ...summary(state), question: isWorkshopOne(state) ? workshopOneQuestion : question });
+          if (route === 'projector') return reply(res, 200, { ...summary(state), question: questionFor(state) });
           if (route === 'me') return reply(res, 200, me(state, token));
           if (route === 'receipt') return reply(res, 200, receipt(state, token, url.searchParams.get('id')));
           if (route === 'profile') {
@@ -142,14 +166,16 @@ export async function createWorkshopServer({ hostPassword = process.env.HOST_PAS
           // Seven teams often share one venue/router address, including behind HTTPS proxies.
           // Never trust arbitrary X-Forwarded-For headers as a way around these limits.
           limit(req, 'join-preview', 1200);
-          const data = await readJSON(req), state = await store.read(sid);
+          const data = await readJSON(req), state = await readSession(sid);
           if (!state) fail(410, 'Session expired or cleared.');
           return reply(res, 200, joinPreview(state, data));
         }
+        if (route === 'restart-account') limit(req, 'restart-account', 60);
         if (route === 'join') limit(req, 'join', 60);
         const data = await readJSON(req);
         const result = await store.update(sid, state => {
           if (route === 'join') return join(state, data, token);
+          if (route === 'restart-account') return restartAccount(state, data, token);
           const access = credential(state, token, !isWorkshopOne(state));
           limit(req, 'writes', 180, sid + ':' + access.roleId);
           return participantWrite(state, token, route, data);
@@ -177,7 +203,7 @@ export async function createWorkshopServer({ hostPassword = process.env.HOST_PAS
         res.end(req.method === 'HEAD' ? undefined : svg);
         return;
       } else {
-        const allowed = ['/brand/open-circle-mark.png', '/', '/index.html', '/app.js', '/open-circle.js', '/workshop-one.js', '/workshop-one-voting.js', '/workshop-one-news.js', '/workshop-one-news.css', '/open-circle.css', '/open-circle-theme.css', '/host-login.js', '/styles.css', '/profile-themes.js', '/vendor/qrcode.js', '/vendor/MUNIA-LICENSE.txt'];
+        const allowed = ['/brand/open-circle-mark.png', '/', '/index.html', '/app.js', '/open-circle.js', '/workshop-one.js', '/workshop-one-voting.js', '/workshop-one-news.js', '/workshop-one-news.css', '/forum-activity.js', '/incident-experience.js', '/open-circle.css', '/host.css', '/open-circle-theme.css', '/host-login.js', '/styles.css', '/profile-themes.js', '/vendor/qrcode.js', '/vendor/MUNIA-LICENSE.txt'];
         if (!allowed.includes(url.pathname)) fail(404, 'Not found.');
         file = path.join(root, url.pathname === '/' ? 'index.html' : url.pathname.slice(1));
       }

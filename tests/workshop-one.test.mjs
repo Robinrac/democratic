@@ -19,6 +19,10 @@ test('Workshop 1 isolates six read-only associations and rejects forum features 
   assert.equal(roster.workshopType, 'workshop-1'); assert.equal(roster.capacity, 6);
   assert.deepEqual(roster.actions.map(a => a.id), ['activate-voting', 'close-voting', 'end']);
   assert.equal(roster.roles.length, 6);
+  for (const route of ['host/transport-topic', 'host/clear-profile']) {
+    assert.equal((await w.call(route, { version: roster.version, confirmLabel: roster.label }, { sid, host: true })).status, 403);
+  }
+  assert.equal((await w.call('rooms/resolve', { code: roster.joinCode })).id, sid);
   const first = secret(), second = secret();
   for (const name of ['', '1', 'Unknown organization', 'Youth', 'The', null]) assert.equal((await w.call('join', { name }, { sid, token: first })).status, 400);
   const joined = await w.call('join', { name: associations[1 - 1].name }, { sid, token: first });
@@ -65,7 +69,7 @@ test('Workshop 1 isolates six read-only associations and rejects forum features 
   const ended = await w.state(sid);
   assert.equal((await w.call('host/reset', { version: ended.version, confirmLabel: ended.label, expiresAt: Date.now() + 86400000 }, { sid, host: true })).status, 200);
   const reset = await w.state(sid);
-  assert.equal(reset.workshopType, 'workshop-1'); assert.equal(reset.capacity, 6); assert.equal(reset.participants, 0);
+  assert.equal(reset.joinCode, roster.joinCode); assert.equal(reset.workshopType, 'workshop-1'); assert.equal(reset.capacity, 6); assert.equal(reset.participants, 0);
   assert.equal((await w.call('me', undefined, { sid, token: first })).status, 401);
 });
 

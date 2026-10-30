@@ -1,4 +1,4 @@
-import { identifyProfileByName, normalizeProfileName } from './profile-matching.mjs';
+import { normalizeProfileName } from './profile-matching.mjs';
 
 export const workshopTypes = [
   { id: 'workshop-2', title: 'Hacked: Who Speaks for You?', number: 2 },
@@ -22,7 +22,23 @@ export const associations = [
 ].map(association => ({ ...association, banner: `/association-banners/${association.card}.png` }));
 
 const organizationName = value => normalizeProfileName(value).split(' ').filter(word => word && word !== 'the' && word !== 'and').join(' ');
+// Keep a unique organization preview while the last word is still being typed.
+// Workshop 2 paper-person matching remains strict about complete name parts.
 export function identifyAssociation(value) {
-  const { status, profile } = identifyProfileByName(organizationName(value), associations.map(association => ({ ...association, fullName: organizationName(association.name) })));
-  return { status, association: profile ? associations.find(association => association.card === profile.card) : null };
+  const name = organizationName(value);
+  if (!name) return { status: 'empty', association: null };
+  const parts = name.split(' ');
+  const matches = associations.filter(association => {
+    const remaining = organizationName(association.name).split(' ');
+    let complete = 0;
+    for (const [index, part] of parts.entries()) {
+      let found = remaining.indexOf(part);
+      if (found >= 0) complete++;
+      else if (index === parts.length - 1 && complete > 0) found = remaining.findIndex(word => word.startsWith(part));
+      if (found < 0) return false;
+      remaining.splice(found, 1);
+    }
+    return complete > 0;
+  });
+  return { status: matches.length === 1 ? 'matched' : matches.length ? 'ambiguous' : 'unmatched', association: matches.length === 1 ? matches[0] : null };
 }
