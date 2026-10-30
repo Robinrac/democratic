@@ -1,4 +1,4 @@
-/* Open Circle community identity and participant layout. */
+/* Circle News community identity and participant layout. */
 .profile-link { padding: 0; min-height: 32px; color: inherit; background: transparent; text-align: left; overflow-wrap: anywhere; font: inherit; }
 .profile-link:hover { color: var(--burgundy); text-decoration: underline; text-underline-offset: 3px; }
 .reply-context { display: block; width: 100%; margin: 4px 0 14px; padding: 10px 12px; border-left: 3px solid var(--line); border-radius: 4px; background: #f6f5f7; color: var(--muted); text-align: left; font-size: 12px; }
@@ -198,7 +198,21 @@
 #profile-dialog.join-dialog fieldset { display: block; }
 #profile-dialog.join-dialog .private-fields { padding: 14px; border: 1px solid var(--line); }
 
-/* Open Circle logo: generated mark paired with a crisp, live wordmark. */
+/* Circle News logo: generated mark paired with a crisp, live wordmark. */
+.workshop-one .join-card h2 { font-size: 22px; line-height: 1.25; overflow-wrap: anywhere; }
+.workshop-one .workshop-news { min-height: 260px; }
+.workshop-one .workshop-news p { margin: 0; }
+.workshop-one .social-nav a { flex: 1; }
+.organization-card { overflow: hidden; border: 1px solid var(--line); border-radius: 12px; background: white; }
+.social-layout .sidebar .organization-card { padding: 0; }
+.organization-banner { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; object-fit: contain; }
+.organization-details { padding: 16px; }
+.organization-details h2 { font-size: 18px; line-height: 1.3; margin: 0 0 8px; overflow-wrap: anywhere; }
+.organization-details p { font-size: 14px; color: var(--muted); margin: 0; }
+.organization-join { width: min(520px, calc(100% - 24px)); }
+.organization-join .organization-card { margin: 0 0 20px; }
+.organization-join .organization-details h2 { font-size: 20px; }
+.organization-join .field-hint:empty, .organization-join .error:empty { display: none; }
 .forum-brand { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; flex-shrink: 0; }
 .forum-brand .forum-mark { display: block; width: 40px; height: 40px; object-fit: contain; }
 .forum-brand .forum-wordmark { display: inline; color: #682241; font-size: 27px; font-weight: 800; line-height: 1; letter-spacing: -1.2px; white-space: nowrap; }

@@ -1,4 +1,4 @@
-# Open Circle fictional role cards
+# Circle News fictional role cards
 
 These seven cards are participant-facing copy for Workshop 2, “Hacked: Who Speaks for You?” Each team receives **one private card**. The portrait can be used on the card and as the account avatar, but the **fictional full name and home town stay off the public forum profile** until the staged incident. The app assigns a neutral public username; the names here are never usernames.
 
@@ -6,7 +6,7 @@ These seven cards are participant-facing copy for Workshop 2, “Hacked: Who Spe
 
 **Instruction printed on every card:** “You are playing a fictional person. Use their situation to form your opinion. You may write the suggested post in your own words. Post only under the username the app gives you. Do not use your own name, regular username, or personal experiences. Keep this card within your team until the reveal.”
 
-**One question for everyone:** Should Open Circle require members to show their real names on every public post, or allow public usernames?
+**One question for everyone:** Should Circle News require members to show their real names on every public post, or allow public usernames?
 
 The suggested posts establish a clear starting position so the later forged reversal is easy to recognize. They are examples, not lines participants must copy. Each role has a genuine concern on both sides of the debate; place of origin does not determine the opinion.
 
@@ -16,7 +16,7 @@ The suggested posts establish a clear starting position so the later forged reve
 
 **Age, gender and home:** 19 · woman (she/her) · Reykjavík, Iceland  
 **Who you are:** You help organize a small youth arts group. Online discussions help you explore ideas before you are ready to defend them in public. You sometimes change your mind after hearing another person's experience.  
-**Your starting view:** Open Circle should allow public usernames.  
+**Your starting view:** Circle News should allow public usernames.\
 **Why it matters:** A real-name rule would make every unfinished thought searchable under your name. You want room to ask questions without a temporary opinion following you for years.  
 **What you also worry about:** People could misuse usernames to be cruel. You expect the forum to moderate abuse.  
 **What might persuade you:** A way to keep your name private from other members while letting moderators verify accounts when serious harm occurs.  
@@ -30,7 +30,7 @@ The suggested posts establish a clear starting position so the later forged reve
 
 **Age, gender and home:** 20 · man (he/him) · Tórshavn, Faroe Islands  
 **Who you are:** You have helped moderate a community chat. A few people repeatedly returned under new handles after being removed, leaving other members to deal with the same behavior again.  
-**Your starting view:** Open Circle should require public real names.  
+**Your starting view:** Circle News should require public real names.\
 **Why it matters:** When people stand behind their words, it may be harder to disappear after attacking someone and return as a new account.  
 **What you also worry about:** A public name can expose a person who is testing an unpopular idea or speaking from a vulnerable position. You do not want the rule to silence them.  
 **What might persuade you:** A username system with strong reporting, private verification, and a clear way to stop repeat abuse.  
@@ -44,7 +44,7 @@ The suggested posts establish a clear starting position so the later forged reve
 
 **Age, gender and home:** 18 · woman (she/her) · Trondheim, Norway  
 **Who you are:** You welcome first-time members to a youth club. Some newcomers speak confidently in person, while others need time before they trust a group enough to share a view.  
-**Your starting view:** Open Circle should allow public usernames.  
+**Your starting view:** Circle News should allow public usernames.\
 **Why it matters:** The people most unsure of their place may be the first to leave if a full name is required before they can contribute.  
 **What you also worry about:** A welcoming forum also has to protect members from harassment. Privacy should not mean that reports disappear.  
 **What might persuade you:** Evidence that a real-name rule brings in more quiet newcomers than it turns away, with an exception for those who need privacy.  
@@ -58,7 +58,7 @@ The suggested posts establish a clear starting position so the later forged reve
 
 **Age, gender and home:** 19 · man (he/him) · Mariehamn, Åland  
 **Who you are:** You coordinate a volunteer group that makes decisions in open meetings. You care about whether a proposal has a real person willing to stand behind it.  
-**Your starting view:** Open Circle should require public real names.  
+**Your starting view:** Circle News should require public real names.\
 **Why it matters:** If a post asks the community to change its rules, knowing who owns that proposal can make the decision process feel more accountable.  
 **What you also worry about:** In a small community, names can make people easy to recognize, and that may keep some good ideas out of the discussion.  
 **What might persuade you:** A way to let members use usernames during open debate but attach a verified identity when a formal proposal is submitted.  
@@ -72,7 +72,7 @@ The suggested posts establish a clear starting position so the later forged reve
 
 **Age, gender and home:** 20 · woman (she/her) · Umeå, Sweden  
 **Who you are:** You write for a student publication. Your best work often starts with a question rather than a fixed view, and you have published corrections when you learned something new.  
-**Your starting view:** Open Circle should allow public usernames.  
+**Your starting view:** Circle News should allow public usernames.\
 **Why it matters:** A discussion should make it easier to reconsider a position. You worry that a searchable real-name record will reward people for never admitting they changed their minds.  
 **What you also worry about:** Members still need to know when a speaker retracts a claim or spreads something harmful.  
 **What might persuade you:** A real-name rule that makes corrections and changes of mind normal, rather than treating every old post as a permanent label.  
@@ -86,7 +86,7 @@ The suggested posts establish a clear starting position so the later forged reve
 
 **Age, gender and home:** 21 · man (he/him) · Turku, Finland  
 **Who you are:** You facilitate peer discussions. You try to make sure quieter people can finish a thought without being talked over or intimidated.  
-**Your starting view:** Open Circle should require public real names.  
+**Your starting view:** Circle News should require public real names.\
 **Why it matters:** You suspect that some people would be less willing to target others if their own name appeared beside what they wrote.  
 **What you also worry about:** A person who needs privacy may be the one most affected by a public-name rule. Real names alone do not create kind behavior.  
 **What might persuade you:** Moderation that reliably protects people while allowing public usernames, plus a private route to verify repeat offenders.  
@@ -100,7 +100,7 @@ The suggested posts establish a clear starting position so the later forged reve
 
 **Age, gender and home:** 20 · man (he/him) · Tromsø, Norway  
 **Who you are:** You have just joined several online youth communities. You are interested in the discussion, but you prefer to learn the tone and rules before sharing personal details.  
-**Your starting view:** Open Circle should allow public usernames.  
+**Your starting view:** Circle News should allow public usernames.\
 **Why it matters:** You want to contribute a useful thought before deciding whether to make your identity known to strangers.  
 **What you also worry about:** If no one can be held responsible, the community may become hard for new people to trust.  
 **What might persuade you:** A public-name option for members who choose it, with effective moderation and private identity checks when needed.  

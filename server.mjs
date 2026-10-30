@@ -6,7 +6,9 @@ import path from 'node:path';
 import os from 'node:os';
 import { openStore } from './storage/store.mjs';
 import { roleCards } from './workshop/roles.mjs';
+import { workshopTypes, workshopType, isWorkshopOne, workshopOneQuestion } from './workshop/types.mjs';
 import { renderProfileAvatar } from './dist/profile-avatars.js';
+import { newsImages, hostNews } from './workshop/news.mjs';
 import { runtimeConfig, validateConfig } from './config.mjs';
 import { hash, fail, makeSession, summary, feed, hostView, release, join, joinPreview, me, credential, participantWrite, receipt, question } from './workshop/model.mjs';
 
@@ -76,7 +78,7 @@ export async function createWorkshopServer({ hostPassword = process.env.HOST_PAS
             return reply(res, 200, { ok: true });
           }
           if (route === 'host/sessions') {
-            if (req.method === 'GET') return reply(res, 200, { sessions: (await store.list()).map(summary) });
+            if (req.method === 'GET') return reply(res, 200, { sessions: (await store.list()).map(summary), workshops: workshopTypes });
             const data = await readJSON(req), created = makeSession(data);
             const inserted = await store.create(created.state);
             return reply(res, inserted ? 201 : 200, { session: summary(inserted ? created.state : await store.read(data.id)), retried: !inserted });
@@ -89,7 +91,7 @@ export async function createWorkshopServer({ hostPassword = process.env.HOST_PAS
           if (route === 'host/export' && req.method === 'GET') {
             const state = await store.read(sid); if (!state) fail(410, 'Session expired or cleared.');
             const { credentials, roles, ...content } = state;
-            return reply(res, 200, { ...content, roles: roles.map(({ codeHash, ...role }) => role) });
+            return reply(res, 200, { ...content, roles: roles.map(({ codeHash, ...role }) => role), ...(isWorkshopOne(state) ? { news: hostNews() } : {}) });
           }
           if (req.method !== 'POST') fail(404, 'Not found.');
           const data = await readJSON(req);
@@ -112,7 +114,7 @@ export async function createWorkshopServer({ hostPassword = process.env.HOST_PAS
             }
             if (route === 'host/reset') {
               if (state.kind !== 'rehearsal' || data.confirmLabel !== state.label) fail(403, 'Only a rehearsal can be reset; type its exact label.');
-              const fresh = makeSession({ id: sid, label: state.label, kind: state.kind, expiresAt: data.expiresAt });
+              const fresh = makeSession({ id: sid, label: state.label, kind: state.kind, workshopType: workshopType(state), expiresAt: data.expiresAt });
               fresh.state.version = state.version + 1;
               Object.assign(state, fresh.state); return { session: summary(state) };
             }
@@ -124,12 +126,12 @@ export async function createWorkshopServer({ hostPassword = process.env.HOST_PAS
         if (req.method === 'GET') {
           const state = await store.read(sid); if (!state) fail(410, 'Session expired or cleared. Ask the host for the current link.');
           if (['feed', 'profile'].includes(route) && !hostAuthorized) credential(state, token);
-          if (route === 'feed') return reply(res, 200, feed(state));
-          if (route === 'projector') return reply(res, 200, { ...summary(state), question });
+          if (route === 'feed') return reply(res, 200, feed(state, token));
+          if (route === 'projector') return reply(res, 200, { ...summary(state), question: isWorkshopOne(state) ? workshopOneQuestion : question });
           if (route === 'me') return reply(res, 200, me(state, token));
           if (route === 'receipt') return reply(res, 200, receipt(state, token, url.searchParams.get('id')));
           if (route === 'profile') {
-            const result = feed(state), profile = result.profiles.find(p => p.id === url.searchParams.get('id'));
+            const result = feed(state, token), profile = result.profiles.find(p => p.id === url.searchParams.get('id'));
             if (!profile) fail(404, 'This profile is unavailable.');
             const posts = result.posts.filter(p => p.author.id === profile.id);
             return reply(res, 200, { profile, posts, postCount: posts.length });
@@ -148,7 +150,7 @@ export async function createWorkshopServer({ hostPassword = process.env.HOST_PAS
         const data = await readJSON(req);
         const result = await store.update(sid, state => {
           if (route === 'join') return join(state, data, token);
-          const access = credential(state, token, true);
+          const access = credential(state, token, !isWorkshopOne(state));
           limit(req, 'writes', 180, sid + ':' + access.roleId);
           return participantWrite(state, token, route, data);
         });
@@ -165,13 +167,17 @@ export async function createWorkshopServer({ hostPassword = process.env.HOST_PAS
       } else if (/^\/portraits\/[1-7]\.png$/.test(url.pathname)) {
         const card = roleCards[Number(url.pathname.split('/')[2][0]) - 1];
         file = fileURLToPath(new URL('./assets/role-portraits/' + card.portraitFile, import.meta.url));
+      } else if (/^\/association-banners\/[1-6]\.png$/.test(url.pathname)) {
+        file = fileURLToPath(new URL('./assets' + url.pathname, import.meta.url));
+      } else if (Object.values(newsImages).some(image => image.src === url.pathname)) {
+        file = fileURLToPath(new URL('./assets' + url.pathname, import.meta.url));
       } else if (/^\/avatars\/[0-6]\.svg$/.test(url.pathname)) {
         const svg = renderProfileAvatar(Number(url.pathname.split('/')[2][0]));
         res.writeHead(200, { ...headers, 'Content-Type': 'image/svg+xml; charset=utf-8' });
         res.end(req.method === 'HEAD' ? undefined : svg);
         return;
       } else {
-        const allowed = ['/brand/open-circle-mark.png', '/', '/index.html', '/app.js', '/open-circle.js', '/open-circle.css', '/open-circle-theme.css', '/host-login.js', '/styles.css', '/profile-themes.js', '/vendor/qrcode.js', '/vendor/MUNIA-LICENSE.txt'];
+        const allowed = ['/brand/open-circle-mark.png', '/', '/index.html', '/app.js', '/open-circle.js', '/workshop-one.js', '/workshop-one-voting.js', '/workshop-one-news.js', '/workshop-one-news.css', '/open-circle.css', '/open-circle-theme.css', '/host-login.js', '/styles.css', '/profile-themes.js', '/vendor/qrcode.js', '/vendor/MUNIA-LICENSE.txt'];
         if (!allowed.includes(url.pathname)) fail(404, 'Not found.');
         file = path.join(root, url.pathname === '/' ? 'index.html' : url.pathname.slice(1));
       }

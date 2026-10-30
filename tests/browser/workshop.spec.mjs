@@ -53,7 +53,7 @@ test('host-paced seven-team rehearsal on phone and laptop, with cancel, reconnec
   await expect(phone.getByRole('dialog',{name:'Your profile.'})).not.toBeVisible();
   await phone.getByRole('link',{name:'Discover',exact:true}).click();
   await expect(phone.locator('#profiles').getByText('Listening and exploring new ideas.',{exact:true})).toBeVisible();
-  await phone.getByRole('link',{name:'Feed',exact:true}).click();
+  await phone.getByRole('link',{name:'News feed',exact:true}).click();
   const unjoined=await browser.newPage(); await unjoined.goto('/?s='+sid);
   await expect(unjoined.getByRole('dialog')).toBeVisible();
   await unjoined.keyboard.press('Escape'); await expect(unjoined.getByRole('dialog')).toBeVisible();

@@ -1,6 +1,7 @@
-# Open Circle identity
+# Circle News identity
 
-The participant-facing forum is Open Circle. Its header pairs the generated mark with a live-text wordmark; the same mark is the favicon and appears on the welcome page. The conference and facilitation identity stays in the private planning material.
+The participant-facing app is Circle News, renamed across both workshops on
+30 October 2026 at Robin’s request. The original asset filename remains stable. Its header pairs the generated mark with a live-text wordmark; the same mark is the favicon and appears on the welcome page. The conference and facilitation identity stays in the private planning material.
 
 - Final asset: `dist/brand/open-circle-mark.png` (1254 × 1254 PNG with transparency).
 - Generation method: built-in image-generation tool.

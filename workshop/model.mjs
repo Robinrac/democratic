@@ -1,8 +1,11 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { roleCards } from './roles.mjs';
 import { identifyProfileByName } from './profile-matching.mjs';
+import { associations, identifyAssociation, workshopTypes, workshopType, workshopTitle, isWorkshopOne, workshopOneQuestion } from './types.mjs';
+import { emptyVoting, votingState, ownVoting, hostVoting, voteChoices } from './voting.mjs';
+import { participantNews, hostNews } from './news.mjs';
 
-export const question = 'Should Open Circle require members to show their real names on every public post, or allow public usernames?';
+export const question = 'Should Circle News require members to show their real names on every public post, or allow public usernames?';
 export const phases = ['opening', 'debate', 'exposure', 'forgery', 'reactions', 'reflection', 'recovery', 'discussion', 'closing', 'ended'];
 export const recoveryChoices = {
   'correct-record': 'A visible correction',
@@ -42,12 +45,18 @@ export function requestId(value) {
   if (typeof value !== 'string' || !/^[a-zA-Z0-9-]{16,80}$/.test(value)) fail(400, 'Missing request identifier. Refresh and try again.');
   return value;
 }
-export function makeSession({ id, label, kind, expiresAt }) {
+export function makeSession({ id, label, kind, expiresAt, workshopType: type = 'workshop-2' }) {
+  if (!workshopTypes.some(item => item.id === type)) fail(400, 'Choose Workshop 1 or Workshop 2.');
   if (!['rehearsal', 'live'].includes(kind)) fail(400, 'Choose rehearsal or live.');
   if (!Number.isSafeInteger(expiresAt) || expiresAt < Date.now() + 60000 || expiresAt > Date.now() + 7 * 86400000) fail(400, 'Choose a deletion deadline between one minute and seven days from now.');
-  const state = { id: requestId(id), label: text(label, 80), kind, expiresAt, phase: 'opening', version: 0, paused: false, roles: [], accounts: [], posts: [], flags: [], targets: [], events: {}, credentials: [], responses: {}, createdAt: new Date().toISOString() };
+  const state = { id: requestId(id), label: text(label, 80), kind, workshopType: type, expiresAt, phase: 'opening', version: 0, paused: false, roles: [], accounts: [], posts: [], flags: [], targets: [], events: {}, credentials: [], responses: {}, createdAt: new Date().toISOString() };
+  if (isWorkshopOne(state)) {
+    state.voting = emptyVoting();
+    state.roles = associations.map(card => ({ id: randomUUID(), card: card.card, claimed: false }));
+    return { state };
+  }
   state.roles = roleCards.map((card, i) => ({ id: randomUUID(), card: card.card, username: usernames[i], bio: '', color: i, cover: i, claimed: false }));
-  state.accounts = ['garden-visitor', 'river-reader', 'circle-team'].map(username => ({ id: randomUUID(), username, bio: 'Open Circle member', color: 1, cover: 1 }));
+  state.accounts = ['garden-visitor', 'river-reader', 'circle-team'].map(username => ({ id: randomUUID(), username, bio: 'Circle News member', color: 1, cover: 1 }));
   return { state };
 }
 export function publicRole(role) {
@@ -62,6 +71,7 @@ export function credential(state, token, requirePoster = false) {
 }
 export function me(state, token) {
   const c = credential(state, token), role = state.roles.find(r => r.id === c.roleId);
+  if (isWorkshopOne(state)) return { association: { ...associations[role.card - 1] }, scope: c.scope, voting: ownVoting(state, role) };
   const card = roleCards[role.card - 1];
   const { portraitFile, ...privateRole } = card;
   return { participant: publicRole(role), scope: c.scope, ...(c.scope === 'poster' ? { response: state.responses[role.id] || null, privateDetails: privateDetails(role), privateRole: { ...privateRole, portrait: `/portraits/${role.card}.png` } } : {}) };
@@ -73,9 +83,13 @@ export function publicPost(state, post) {
     ...(revealed(state) ? { provenance: post.origin, actualActor: post.actor } : {}) };
 }
 export function summary(state) {
-  return { id: state.id, label: state.label, kind: state.kind, phase: state.phase, version: state.version, paused: state.paused, expiresAt: state.expiresAt, participants: state.roles.filter(r => r.claimed).length, capacity: state.roles.length, genuinePosts: state.posts.filter(p => p.origin === 'team' && !p.hidden).length };
+  return { id: state.id, label: state.label, kind: state.kind, workshopType: workshopType(state), workshopTitle: workshopTitle(state), phase: state.phase, version: state.version, paused: state.paused, expiresAt: state.expiresAt, participants: state.roles.filter(r => r.claimed).length, capacity: state.roles.length, genuinePosts: state.posts.filter(p => p.origin === 'team' && !p.hidden).length };
 }
-export function feed(state) {
+export function feed(state, token) {
+  if (isWorkshopOne(state)) {
+    const access = credential(state, token), role = state.roles.find(role => role.id === access.roleId);
+    return { ...summary(state), question: workshopOneQuestion, profiles: [], posts: [], threads: [], notice: null, news: participantNews(role.card) };
+  }
   const visible = state.posts.map(p => publicPost(state, p));
   return { ...summary(state), question, profiles: state.roles.filter(r => r.claimed).map(publicRole), posts: visible,
     threads: state.roles.filter(r => r.claimed).map(r => ({ id: r.id, username: publicRole(r).username, posts: visible.filter(p => p.threadId === r.id) })).filter(t => t.posts.length),
@@ -90,6 +104,15 @@ export function targets(state, includeFallback = []) {
   });
 }
 export function hostView(state, includeFallback = []) {
+  if (isWorkshopOne(state)) return {
+    ...summary(state), roles: state.roles.map(role => ({ ...associations[role.card - 1], claimed: role.claimed })),
+    targets: [], posts: [], postCount: 0, recovery: null, events: state.events, voting: hostVoting(state), news: hostNews(),
+    actions: [
+      { id: 'activate-voting', label: 'Activate voting', enabled: votingState(state).status === 'inactive' },
+      { id: 'close-voting', label: 'Close voting', enabled: votingState(state).status === 'open' },
+      { id: 'end', label: 'End session', enabled: true }
+    ].map(action => ({ ...action, enabled: action.enabled && state.phase === 'opening' && !state.paused }))
+  };
   const selected = targets(state, includeFallback);
   return { ...summary(state), roles: state.roles.map(r => ({ ...publicRole(r), card: r.card, claimed: r.claimed, hasPost: state.posts.some(p => p.origin === 'team' && p.authorId === r.id && p.stance && !p.replyTo && !p.correction) })),
     targets: selected, postCount: state.posts.length,
@@ -99,6 +122,7 @@ export function hostView(state, includeFallback = []) {
     events: state.events };
 }
 export function receipt(state, token, id) {
+  if (isWorkshopOne(state)) fail(403, 'Posting is not available in Workshop 1.');
   const c = credential(state, token, true);
   const key = requestId(id);
   const post = state.posts.find(p => p.actor === c.roleId && p.requestId === key);
@@ -113,9 +137,38 @@ export function release(state, data) {
   const key = requestId(data.requestId);
   if (state.events[key]) {
     if (state.events[key].action !== data.action) fail(409, 'This request identifier was already used for another action.');
+    if (data.action.startsWith('vote-') && ['card', 'votingId', 'ballotRequestId'].some(field => state.events[key][field] !== data[field])) fail(409, 'This request identifier belongs to a different vote change.');
     return state.events[key];
   }
   if (data.version !== state.version) fail(409, 'The session changed. Reload the preview before confirming.');
+  if (isWorkshopOne(state)) {
+    if (['vote-exclude', 'vote-count', 'vote-delete'].includes(data.action)) {
+      const voting = votingState(state), role = state.roles.find(role => role.card === data.card);
+      const ballot = role && voting.ballots[role.id];
+      if (!voting.id || voting.id !== data.votingId || !ballot || ballot.requestId !== data.ballotRequestId) fail(409, 'That vote changed or is no longer available. Refresh the host screen.');
+      if (data.action === 'vote-exclude' && ballot.counted === false || data.action === 'vote-count' && ballot.counted !== false) fail(409, 'That vote already has this counting status.');
+      const before = { ...ballot };
+      if (data.action === 'vote-delete') {
+        voting.deletedBallots ||= {};
+        (voting.deletedBallots[role.id] ||= []).push(ballot.requestId);
+        delete voting.ballots[role.id];
+      } else ballot.counted = data.action === 'vote-count';
+      state.version++;
+      const event = { action: data.action, card: role.card, votingId: voting.id, ballotRequestId: before.requestId, version: state.version,
+        at: new Date().toISOString(), choice: before.choice, weight: before.weight, previouslyCounted: before.counted !== false };
+      (voting.history ||= []).push(event);
+      state.events[key] = event; return event;
+    }
+    const action = hostView(state).actions.find(action => action.id === data.action);
+    if (!action?.enabled) fail(409, 'That action is not available in Workshop 1.');
+    state.voting ||= emptyVoting();
+    if (data.action === 'activate-voting') { state.voting.id = key; state.voting.status = 'open'; }
+    if (data.action === 'close-voting' || data.action === 'end' && state.voting.status === 'open') state.voting.status = 'closed';
+    if (data.action === 'end') state.phase = 'ended';
+    state.version++;
+    const event = { action: data.action, count: 0, phase: state.phase, version: state.version };
+    state.events[key] = event; return event;
+  }
   const action = actions.find(a => a.id === data.action);
   if (!action || state.phase !== action.from || state.paused) fail(409, 'That action is not available in the current phase. Refresh the host screen.');
   if (data.action === 'exposure') {
@@ -129,7 +182,7 @@ export function release(state, data) {
     const base = { threadId: role.id, authorId: role.id, actor: 'workshop-host', origin: 'simulation' };
     if (data.action === 'exposure') addPost(state, { ...base, text: `My name is ${privateDetails(role).name}, and I am from ${privateDetails(role).town}. I argued for ${rule(target.stance)} in this discussion` });
     if (data.action === 'forgery') {
-      addPost(state, { ...base, text: `I have changed my mind. Open Circle should ${rule(target.stance === 'usernames' ? 'real-names' : 'usernames')}` });
+      addPost(state, { ...base, text: `I have changed my mind. Circle News should ${rule(target.stance === 'usernames' ? 'real-names' : 'usernames')}` });
       addPost(state, { ...base, text: 'Please disregard my earlier post. I do not stand by that argument, and I want my contribution counted for the other rule' });
     }
     if (data.action === 'reactions') [
@@ -143,6 +196,7 @@ export function release(state, data) {
   state.events[key] = event; return event;
 }
 export function joinPreview(state, data) {
+  if (isWorkshopOne(state)) return identifyAssociation(profileName(data.name));
   const name = profileName(data.name);
   const { profile: card, status } = identifyProfileByName(name, roleCards);
   if (!card) return { username: null, status };
@@ -153,6 +207,15 @@ export function join(state, data, token) {
   if (state.credentials.some(c => typeof token === 'string' && c.hash === hash(token))) return me(state, token);
   if (!['opening', 'debate'].includes(state.phase)) fail(409, 'Joining has closed. Use your team’s original device.');
   if (typeof token !== 'string' || !/^[a-f0-9]{64}$/.test(token)) fail(400, 'This browser needs a fresh secure access token. Reload and try again.');
+  if (isWorkshopOne(state)) {
+    const { association } = identifyAssociation(profileName(data.name));
+    if (!association) fail(400, 'Enter the organization name from your team’s paper profile.');
+    const role = state.roles.find(role => role.card === association.card);
+    if (role.claimed) fail(409, 'This association has already joined. Use your team’s original device or ask the host for help.');
+    role.claimed = true;
+    state.credentials.push({ hash: hash(token), roleId: role.id, scope: 'reader', expiresAt: state.expiresAt });
+    state.version++; return me(state, token);
+  }
   const name = profileName(data.name);
   const { profile: card, status } = identifyProfileByName(name, roleCards);
   if (!card) fail(400, status === 'ambiguous' ? 'More than one profile matches. Add the full name from your paper.' : 'Enter the first name or surname from your paper profile. Accents are optional.');
@@ -165,6 +228,25 @@ export function join(state, data, token) {
   state.version++; return me(state, token);
 }
 export function participantWrite(state, token, route, data) {
+  if (isWorkshopOne(state)) {
+    if (route !== 'votes') fail(403, 'Participant writing is not available in Workshop 1.');
+    const access = credential(state, token), role = state.roles.find(role => role.id === access.roleId);
+    if (access.scope !== 'reader') fail(403, 'Use your association’s original device to vote.');
+    const key = requestId(data.requestId), voting = votingState(state);
+    if (!voteChoices.includes(data.choice)) fail(400, 'Choose For, Against, or Vote blank.');
+    if (!voting.id || data.votingId !== voting.id) fail(409, 'This ballot is no longer current. Refresh the workshop.');
+    if (voting.deletedBallots?.[role.id]?.includes(key)) fail(409, 'The host deleted this vote. Start a new ballot if voting is still open.');
+    const previous = voting.ballots[role.id];
+    if (previous) {
+      if (previous.requestId === key && previous.choice === data.choice) return { ballot: previous, version: state.version };
+      fail(409, 'Your association has already voted. Its confirmed vote cannot be changed.');
+    }
+    if (state.phase === 'ended' || voting.status !== 'open') fail(409, 'Voting is not open.');
+    if (state.paused) fail(409, 'Voting is paused by the facilitator.');
+    const ballot = { choice: data.choice, weight: associations[role.card - 1].members, requestId: key, castAt: new Date().toISOString() };
+    voting.ballots[role.id] = ballot; state.version++;
+    return { ballot, version: state.version };
+  }
   const c = credential(state, token, true), role = state.roles.find(r => r.id === c.roleId);
   // A committed send can still be acknowledged after the host closes the room.
   if (route === 'posts' || route === 'corrections') {

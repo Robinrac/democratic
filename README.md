@@ -1,12 +1,20 @@
-# Open Circle
+# Circle News
 
-A small English social app for Workshop 2 at Nordic Youth Conference, exploring privacy, identity and the freedom to participate.
+A small English app for Nordic Youth Conference, with separate rooms for Workshop 1 and Workshop 2.
 
-The planned 60-minute Open Circle experience and its Point feature record are
+The planned 60-minute Circle News experience and its Point feature record are
 summarized in [the Workshop 2 specification](docs/workshop-2-specification.md).
-The Open Circle flow is implemented locally; live hosting and venue verification remain. See [deployment readiness](docs/deployment-readiness.md) for the configuration handoff.
+The Circle News flow is implemented locally; live hosting and venue verification remain. See [deployment readiness](docs/deployment-readiness.md) for the configuration handoff.
 Draft participant copy and cartoon portraits are in
 [the seven role cards](docs/workshop-2-role-cards.md).
+
+Workshop 1 has a [minimal room implementation](docs/workshop-1-specification.md)
+for the six-association municipal consultation. Teams join with their assigned
+organization name and immediately preview their banner, name, and member count.
+After joining, the same card appears beside an organization-specific News feed.
+Each team receives eight stories, mixing tailored coverage, opinion, debate,
+neutral explanation and unrelated local news. Posting, replies, profile browsing
+and scripted voting notices are not available in this room. Its workshop materials live in the sibling NYC workspace.
 
 ## Run locally
 
@@ -18,7 +26,7 @@ $env:HOST_PASSWORD = Read-Host 'Choose a private host password (at least 16 char
 npm start
 ```
 
-Open [the private host screen](http://localhost:4173/host), sign in with that password, and create a **rehearsal** session. Give teams the seven paper profiles and share the participant link or projector QR. To let phones on the same network connect:
+Open [the private host screen](http://localhost:4173/host), sign in with that password, and create a **rehearsal** session. Choose **Workshop 2 · Hacked: Who Speaks for You?** for the existing seven-profile experience, or **Workshop 1 · Manipulated: Hijacked Message, Changed Decision?** for the new association room. Share the participant link or projector QR. For Workshop 2, give teams their paper profiles; for Workshop 1, give each team its association profile and use one shared device per association. To let phones on the same network connect:
 
 ```sh
 npm run dev:lan
@@ -26,7 +34,51 @@ npm run dev:lan
 
 Use the network URL printed by the server. A localhost link only works on the computer running the server. `PORT` and `HOST` can override the listening address.
 
-## Current experience
+## Workshop 1 room
+
+The same session links, QR generator, Circle News design, and private host access
+serve both workshops. Each session has its own QR destination and saved state.
+Workshop 1 joins use one organization-name field with a live banner preview.
+Matching accepts capitalization differences, optional ‘The’, ‘and’ or ‘&’, and
+unique name words. Only one matching profile is returned; there is no directory.
+After joining, only that organization's banner, name, and member count appear.
+The server rejects forum writing and other participants' profile lookups.
+The News sidebar link and ‘Whose voice is heard?’ sidebar box are removed; the
+Vote entry appears when the host activates voting. Banner assets are bundled
+in `assets/association-banners/` and require no sibling workspace at runtime.
+
+The host sees six-association readiness and can end, export, clear, or reset a
+rehearsal. Reset retains the selected workshop and invalidates prior team access.
+Existing sessions without a workshop type remain Workshop 2. News is available
+as soon as a team joins: 28 authored stories, eight per organization, with seven
+original generated images. Articles open in a full reader; category filters stay
+within the assigned feed. The host can inspect every story and private framing
+note in **Organization news feeds · facilitator guide**. See the
+[news catalogue and facilitation notes](docs/workshop-1-news.md).
+
+Use **Activate voting** to show the Vote sidebar section. Phones also receive a
+“You can now vote” prompt that takes them to it. **Start voting** opens a ballot
+with For, Against, and Vote blank. Each organization confirms one ballot, weighted
+by its documented membership: 180, 240, 350, 210, 300, and 160, totaling 1,440.
+The implementation uses one member as one unit of mandate, since the source has
+no separate seat-allocation formula. The confirmation thanks the team for voting
+on behalf of its members and provides a return to the feed.
+
+The private host sees each organization's membership, mandate and share, vote,
+weighted totals, and a prominent For/Against lead. Blank votes count toward
+participation but neither side; missing votes and ties remain explicit. **Close
+voting** or ending the session stops new ballots. Pausing also pauses voting.
+Teams cannot change a confirmed vote themselves; retries cannot add weight.
+The host can mark a vote **Does not count**, **Count vote** again, or **Delete
+vote** after confirmation. Excluded votes stay visible but contribute no weight
+to the totals or lead. Deletion clears the ballot and lets the team submit a
+new one while voting is open. Old retries cannot restore deleted ballots.
+Host changes remain in a private history and export, and each team sees the
+status of its own ballot. These controls also work after closing voting. Rehearsal reset
+clears the ballot and returns voting to inactive. Results persist across restarts
+and are not included in participant or projector feeds.
+
+## Workshop 2 experience
 
 1. Seven teams scan the room QR or open its link. The first modal asks for the name and home town from their paper profile, a public bio based on that person, and a profile picture and banner. Joining matches a unique first name, surname or full paper name (accents optional) to an available role and automatically assigns its anonymous username. No host code is needed. Name and town appear only under the owner’s Private details until the host-controlled identity disclosure. A paper profile can join once; repeated requests from its original browser reconnect safely.
 2. The host opens debate. Teams choose public real names or public usernames, give a reason and reply in grouped conversations.
