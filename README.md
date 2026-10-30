@@ -1,6 +1,6 @@
-# Circle News
+# Nordic youth workshops
 
-A small English app for Nordic Youth Conference, with separate rooms for Workshop 1 and Workshop 2.
+A small English app for Nordic Youth Conference. Workshop 1 uses Circle News; Workshop 2 retains its original Open Circle experience.
 
 New Workshop 2 sessions use the [youth transport workshop](docs/transport-workshop.md): five different proposals for cheaper youth transport, two opponents, and seven role-specific incident outcomes. Earlier sessions keep their original scenario.
 
@@ -34,7 +34,7 @@ Use the network URL printed by the server. A localhost link only works on the co
 
 ## Workshop 1 room
 
-The same session links, QR generator, Circle News design, and private host access
+The same session links, QR generator, and private host access
 serve both workshops. Each session has its own QR destination and saved state.
 Workshop 1 joins use one organization-name field with a live banner preview.
 Matching accepts capitalization differences, optional ‘The’, ‘and’ or ‘&’, and

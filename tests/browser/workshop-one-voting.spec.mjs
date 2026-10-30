@@ -1,10 +1,11 @@
+import { signInWorkshopOneHost } from './workshop-one-host.mjs';
 import { associations } from '../../workshop/types.mjs';
 import { test, expect } from '@playwright/test';
 import { randomUUID } from 'node:crypto';
 
 test('weighted voting works on phones and desktops, reconciles interrupted submissions and closes safely', async ({ browser, page: host }, info) => {
   const errors = []; host.on('pageerror', error => errors.push(error.message));
-  await host.request.post('/api/host/login', { data: { password: 'browser-test-host-password-only' } });
+  await signInWorkshopOneHost(host);
   const response = await host.request.post('/api/host/sessions', { data: { id: randomUUID(), label: 'Weighted voting rehearsal', kind: 'rehearsal', workshopType: 'workshop-1', expiresAt: Date.now() + 86400000 } });
   const { session } = await response.json(), sid = session.id;
   await host.goto('/host?s=' + sid);

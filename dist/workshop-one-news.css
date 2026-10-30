@@ -1,3 +1,17 @@
+.workshop-one .join-card h2 { font-size: 22px; line-height: 1.25; overflow-wrap: anywhere; }
+.workshop-one .workshop-news { min-height: 260px; }
+.workshop-one .workshop-news p { margin: 0; }
+.workshop-one .social-nav a { flex: 1; }
+.organization-card { overflow: hidden; border: 1px solid var(--line); border-radius: 12px; background: white; }
+.social-layout .sidebar .organization-card { padding: 0; }
+.organization-banner { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; object-fit: contain; }
+.organization-details { padding: 16px; }
+.organization-details h2 { font-size: 18px; line-height: 1.3; margin: 0 0 8px; overflow-wrap: anywhere; }
+.organization-details p { font-size: 14px; color: var(--muted); margin: 0; }
+.organization-join { width: min(520px, calc(100% - 24px)); }
+.organization-join .organization-card { margin: 0 0 20px; }
+.organization-join .organization-details h2 { font-size: 20px; }
+.organization-join .field-hint:empty, .organization-join .error:empty { display: none; }
 /* Circle News: editorial cards scoped to the association workshop. */
 .workshop-one .conversation { min-width: 0; }
 .workshop-one .feed-heading { margin-bottom: 8px; }

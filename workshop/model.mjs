@@ -21,7 +21,7 @@ function visibleTo(state, post, viewerRoleId) {
   return post.origin !== 'team' || !author || transportCards[author.card - 1].effect !== 'suppression' || author.id === viewerRoleId;
 }
 
-export const question = 'Should Circle News require members to show their real names on every public post, or allow public usernames?';
+export const question = 'Should Open Circle require members to show their real names on every public post, or allow public usernames?';
 export const phases = ['opening', 'debate', 'exposure', 'forgery', 'reactions', 'reflection', 'recovery', 'discussion', 'closing', 'ended'];
 export const recoveryChoices = {
   'correct-record': 'A visible correction',
@@ -83,7 +83,7 @@ export function makeSession({ id, label, kind, expiresAt, workshopType: type = '
   }
   state.scenario = scenario;
   state.roles = cardsFor(state).map((card, i) => ({ id: randomUUID(), card: card.card, username: (isTransport(state) ? transportUsernames : usernames)[i], bio: '', color: i, cover: i, claimed: false }));
-  state.accounts = ['garden-visitor', 'river-reader', 'circle-team'].map(username => ({ id: randomUUID(), username, bio: 'Circle News member', color: 1, cover: 1 }));
+  state.accounts = ['garden-visitor', 'river-reader', 'circle-team'].map(username => ({ id: randomUUID(), username, bio: 'Open Circle member', color: 1, cover: 1 }));
   return { state };
 }
 export function publicRole(role) {
@@ -249,7 +249,7 @@ export function release(state, data, { incidentStepMs = 20000 } = {}) {
   const key = requestId(data.requestId);
   if (state.events[key]) {
     if (state.events[key].action !== data.action) fail(409, 'This request identifier was already used for another action.');
-    if (data.action.startsWith('vote-') && ['card', 'votingId', 'ballotRequestId'].some(field => state.events[key][field] !== data[field])) fail(409, 'This request identifier belongs to a different vote change.');
+    if (isWorkshopOne(state) && data.action.startsWith('vote-') && ['card', 'votingId', 'ballotRequestId'].some(field => state.events[key][field] !== data[field])) fail(409, 'This request identifier belongs to a different vote change.');
     return state.events[key];
   }
   if (data.version !== state.version) fail(409, 'The session changed. Reload the preview before confirming.');
@@ -311,7 +311,7 @@ export function release(state, data, { incidentStepMs = 20000 } = {}) {
     const base = { threadId: role.id, authorId: role.id, actor: 'workshop-host', origin: 'simulation' };
     if (data.action === 'exposure') addPost(state, { ...base, text: `My name is ${privateDetails(role).name}, and I am from ${privateDetails(role).town}. I argued for ${rule(target.stance)} in this discussion` });
     if (data.action === 'forgery') {
-      addPost(state, { ...base, text: `I have changed my mind. Circle News should ${rule(target.stance === 'usernames' ? 'real-names' : 'usernames')}` });
+      addPost(state, { ...base, text: `I have changed my mind. Open Circle should ${rule(target.stance === 'usernames' ? 'real-names' : 'usernames')}` });
       addPost(state, { ...base, text: 'Please disregard my earlier post. I do not stand by that argument, and I want my contribution counted for the other rule' });
     }
     if (data.action === 'reactions') [

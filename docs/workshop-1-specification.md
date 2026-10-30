@@ -35,9 +35,12 @@ in the preparation brief remain outside the implementation.
 - The name-only join form immediately previews the matching banner, name, and
   member count. The same card appears in the top-left sidebar after joining.
   There is no directory, profile editor, composer, reply, or recovery response form.
-- Both workshops use the Circle News name across participant, projector, and host
-  screens. The feed is labeled News feed. Workshop 1 has no News sidebar link
-  or ‘Whose voice is heard?’ sidebar box.
+- Circle News branding, organization cards, news, voting, and the warmer theme apply
+  only to Workshop 1. Workshop 2 retains its original Open Circle pages, labels,
+  styling, profiles, discussion and incident behavior from release `1dfaf33`.
+  Workshop 1 has a separate entry page and projector module; its additional
+  styles are loaded only for its participant and host screens. The shared room
+  picker selects the workshop without changing the Workshop 2 experience.
 - Each organization receives eight complete news articles on joining: four
   tailored pieces and four shared pieces, including a common budget explainer.
   The edition has 28 articles and seven original generated editorial images.

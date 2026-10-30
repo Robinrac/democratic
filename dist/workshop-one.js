@@ -1,4 +1,5 @@
-import { e, uid, request, header } from './open-circle.js';
+import { e, uid, request } from './open-circle.js';
+import { header } from './workshop-one-ui.js';
 import { setupVoting } from './workshop-one-voting.js';
 import { setupNews } from './workshop-one-news.js';
 

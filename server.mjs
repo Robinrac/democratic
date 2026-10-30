@@ -203,9 +203,15 @@ export async function createWorkshopServer({ hostPassword = process.env.HOST_PAS
         res.end(req.method === 'HEAD' ? undefined : svg);
         return;
       } else {
-        const allowed = ['/brand/open-circle-mark.png', '/', '/index.html', '/app.js', '/open-circle.js', '/workshop-one.js', '/workshop-one-voting.js', '/workshop-one-news.js', '/workshop-one-news.css', '/forum-activity.js', '/incident-experience.js', '/open-circle.css', '/host.css', '/open-circle-theme.css', '/host-login.js', '/styles.css', '/profile-themes.js', '/vendor/qrcode.js', '/vendor/MUNIA-LICENSE.txt'];
+        const allowed = ['/brand/open-circle-mark.png', '/', '/index.html', '/app.js', '/open-circle.js', '/workshop-one.js', '/workshop-one-app.js', '/workshop-one-ui.js', '/workshop-one-controls.css', '/workshop-one-voting.js', '/workshop-one-news.js', '/workshop-one-news.css', '/forum-activity.js', '/incident-experience.js', '/open-circle.css', '/host.css', '/open-circle-theme.css', '/host-login.js', '/styles.css', '/profile-themes.js', '/vendor/qrcode.js', '/vendor/MUNIA-LICENSE.txt'];
         if (!allowed.includes(url.pathname)) fail(404, 'Not found.');
         file = path.join(root, url.pathname === '/' ? 'index.html' : url.pathname.slice(1));
+        // Keep the original Workshop 2 entry and assets intact. Only organization
+        // rooms receive the Workshop 1 entry, including on their projector URL.
+        if (['/', '/index.html'].includes(url.pathname) && sid) {
+          const room = await store.read(sid);
+          if (room && isWorkshopOne(room)) file = path.join(root, 'workshop-one-index.html');
+        }
       }
       const data = await readFile(file);
       res.writeHead(200, { ...headers, 'Content-Type': types[path.extname(file)] || 'application/octet-stream' });

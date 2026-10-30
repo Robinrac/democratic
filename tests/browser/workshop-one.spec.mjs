@@ -1,10 +1,10 @@
+import { signInWorkshopOneHost } from './workshop-one-host.mjs';
 import { test, expect } from '@playwright/test';
 
 test('host chooses Workshop 1, teams join a private association, and receives its own editorial news feed', async ({ browser, page: host }, info) => {
   const errors = []; host.on('pageerror', error => errors.push(error.message));
+  await signInWorkshopOneHost(host);
   await host.goto('/host');
-  await host.getByLabel('Password', { exact: true }).fill('browser-test-host-password-only');
-  await host.getByRole('button', { name: 'Unlock host screen' }).click();
   await host.getByText('Create a new room', { exact: true }).click();
   const selector = host.getByLabel('Workshop', { exact: true });
   await expect(selector.locator('option').first()).toContainText('Hacked: Who Speaks for You?');
@@ -134,7 +134,7 @@ test('host chooses Workshop 1, teams join a private association, and receives it
 });
 
 test('room picker opens the correct workshop controls and preserves both room types', async ({ page: host }) => {
-  await host.request.post('/api/host/login', { data: { password: 'browser-test-host-password-only' } });
+  await signInWorkshopOneHost(host);
   await host.goto('/host');
   const ids = [];
   for (const [type, label] of [['workshop-2', 'Hacked switching room'], ['workshop-1', 'Manipulated switching room']]) {

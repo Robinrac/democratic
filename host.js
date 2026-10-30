@@ -19,6 +19,15 @@ async function work(fn) {
   finally { pending = false; signature = ''; if (!sid) document.querySelectorAll('#sessions button').forEach(b => b.disabled = false); await refresh(); }
 }
 function roomScreen() {
+  const workshopOne = !!sid && state?.workshopType === 'workshop-1';
+  let workshopStyles = document.querySelector('#workshop-one-host-styles');
+  if (workshopOne && !workshopStyles) {
+    workshopStyles = document.createElement('link'); workshopStyles.id = 'workshop-one-host-styles';
+    workshopStyles.rel = 'stylesheet'; workshopStyles.href = '/workshop-one-controls.css'; document.head.append(workshopStyles);
+  }
+  if (workshopStyles) workshopStyles.disabled = !workshopOne;
+  document.title = 'Private host · ' + (workshopOne ? 'Circle News' : 'Open Circle');
+  document.querySelector('header .brand').firstChild.textContent = workshopOne ? 'Circle News' : 'Open Circle';
   if (!sid && characterDialog.open) characterDialog.close();
   document.querySelector('#sessions').hidden = !!sid;
   document.querySelector('#controls').hidden = !sid;
@@ -182,7 +191,7 @@ function render() {
   document.querySelector('#retry-release')?.addEventListener('click', () => work(() => commit(JSON.parse(sessionStorage.getItem(pendingKey())))));
   document.querySelectorAll('[data-hide]').forEach(button => button.onclick = () => work(() => api('moderate', { version: state.version, postId: button.dataset.hide })));
   document.querySelector('#reset').onclick = () => {
-    const confirmLabel = prompt('Type the exact rehearsal label to reset this workshop room: ' + state.label);
+    const confirmLabel = prompt((state.workshopType === 'workshop-1' ? 'Type the exact rehearsal label to reset this workshop room: ' : 'Type the exact rehearsal label to reset its teams, posts and phases: ') + state.label);
     if (confirmLabel === null) return;
     work(async () => { const result = await api('reset', { version: state.version, confirmLabel, expiresAt: Date.now() + 86400000 }); includes.clear(); sessionStorage.removeItem(pendingKey()); status('Rehearsal reset.'); });
   };

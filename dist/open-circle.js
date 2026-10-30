@@ -14,7 +14,7 @@ export async function request(route, { sid, token, body } = {}) {
   return data;
 }
 export const phaseCopy = {
-  opening: ['Welcome to Circle News', 'Make yourself at home. The conversation opens soon.'],
+  opening: ['Welcome to Open Circle', 'Make yourself at home. The conversation opens soon.'],
   debate: ['One forum. Two possible rules.', 'Share your perspective, explain your thinking and hear what others have to say.'],
   exposure: ['Read the latest posts', 'Look at the thread under your username. Discuss what has changed with your team.'],
   forgery: ['Whose voice is this?', 'Compare the recent posts with what your team chose to say. '],
@@ -70,17 +70,17 @@ function setupProfileTabs(form) {
   }, true);
   return activate;
 }
-export const header = (hostEntry = true) => `<header class="topbar"><a class="brand forum-brand" href="${e(location.pathname + location.search)}" aria-label="Circle News home"><img class="forum-mark" src="/brand/open-circle-mark.png" width="40" height="40" alt=""><span class="forum-wordmark">Circle News<span class="brand-dot">.</span></span></a><span class="community-tagline">Different voices. Shared space.</span>${hostEntry ? '<a class="host-entry" href="/host" aria-label="Host access"><span>Host access</span></a>' : '<span class="header-spacer" aria-hidden="true"></span>'}</header>`;
+const header = (hostEntry = true) => `<header class="topbar"><a class="brand forum-brand" href="${e(location.pathname + location.search)}" aria-label="Open Circle home"><img class="forum-mark" src="/brand/open-circle-mark.png" width="40" height="40" alt=""><span class="forum-wordmark">open circle<span class="brand-dot">.</span></span></a><span class="community-tagline">Different voices. Shared space.</span>${hostEntry ? '<a class="host-entry" href="/host" aria-label="Host access"><span>Host access</span></a>' : '<span class="header-spacer" aria-hidden="true"></span>'}</header>`;
 function phaseHTML(data) { if (['reflection', 'recovery', 'discussion', 'closing'].includes(data.phase)) return ''; const copy = data.scenario === 'transport-v1' && data.phase === 'debate' ? ['Different journeys. Different priorities.', 'Discuss your own proposal: lower fares, free travel, a fare cap or improving services first.'] : phaseCopy[data.phase] || phaseCopy.opening; return `<strong>${e(copy[0])}</strong><p>${e(copy[1])}</p>${data.paused ? '<small>Updates are paused. You can still read the conversation.</small>' : ''}`; }
 
 export async function startProjector() {
   const sid = new URLSearchParams(location.search).get('s');
   const link = location.origin + '/?s=' + encodeURIComponent(sid || '');
-  document.querySelector('#app').innerHTML = header(false) + `<main id="main" class="projector"><section><span class="eyebrow">WELCOME TO CIRCLE NEWS</span><h1 id="projector-title">Your voice.<br>Your choice.<br>Our conversation.</h1><span class="eyebrow">TODAY’S TOPIC</span><p id="question"></p><div class="phase" id="phase"></div><p id="progress" role="status"></p></section><section class="panel"><div id="qr"></div><h2>Join the circle.</h2><p>Scan the QR, or enter this room code:</p><strong id="room-code" class="projector-room-code" aria-label="Room code"></strong><p id="display-url"></p><p id="join-instructions">Use the details on your paper profile to join.</p><p id="connection" role="status"></p></section></main>`;
+  document.querySelector('#app').innerHTML = header(false) + `<main id="main" class="projector"><section><span class="eyebrow">WELCOME TO OPEN CIRCLE</span><h1>Your voice.<br>Your choice.<br>Our conversation.</h1><span class="eyebrow">TODAY’S TOPIC</span><p id="question"></p><div class="phase" id="phase"></div><p id="progress" role="status"></p></section><section class="panel"><div id="qr"></div><h2>Join the circle.</h2><p>Scan the QR, or enter this room code:</p><strong id="room-code" class="projector-room-code" aria-label="Room code"></strong><p id="display-url"></p><p>Use the details on your paper profile to join.</p><p id="connection" role="status"></p></section></main>`;
   if (!sid) { document.querySelector('#connection').textContent = 'Open the projector link from your host screen.'; return; }
   const qr = window.qrcode(0, 'M'); qr.addData(link); qr.make();
   document.querySelector('#qr').innerHTML = qr.createSvgTag({ cellSize: 6, margin: 24, scalable: true });
-  document.querySelector('#qr svg').setAttribute('aria-label', 'Scan to open Circle News');
+  document.querySelector('#qr svg').setAttribute('aria-label', 'Scan to open Open Circle');
   document.querySelector('#qr svg').setAttribute('role', 'img');
   document.querySelector('#display-url').textContent = location.host;
   let busy = false;
@@ -93,16 +93,8 @@ export async function startProjector() {
       document.querySelector('#room-code').hidden = data.phase === 'ended';
       document.querySelector('#question').textContent = data.question;
       document.querySelector('#phase').innerHTML = phaseHTML(data);
-      const workshopOne = data.workshopType === 'workshop-1';
-      document.body.classList.toggle('workshop-one-mode', workshopOne);
-      document.title = data.workshopTitle + ' · Circle News';
-      if (workshopOne) {
-        document.querySelector('#projector-title').textContent = data.workshopTitle;
-        document.querySelector('#join-instructions').textContent = 'Enter your organization’s name.';
-        document.querySelector('#phase').textContent = data.phase === 'ended' ? 'This workshop room has closed.' : 'Join your association and follow the facilitator.';
-      }
-      document.querySelector('#progress').textContent = workshopOne ? `${data.participants} / ${data.capacity} associations joined` : `${data.participants} / ${data.capacity} profiles joined · ${data.genuinePosts} contributions`;
-      document.querySelector('#phase').hidden = !workshopOne && !phaseHTML(data);
+      document.querySelector('#phase').hidden = !phaseHTML(data);
+      document.querySelector('#progress').textContent = `${data.participants} / ${data.capacity} profiles joined · ${data.genuinePosts} contributions`;
       document.querySelector('#connection').textContent = ['localhost', '127.0.0.1'].includes(location.hostname) ? 'For phones, open the host screen using the computer’s network address before opening this projector link.' : 'Live updates connected';
     } catch (error) { document.querySelector('#connection').textContent = error.message; if (error.status === 410) { document.querySelector('#qr').replaceChildren(); document.querySelector('#room-code').textContent = ''; document.querySelector('#progress').textContent = ''; } }
     finally { busy = false; }
@@ -158,16 +150,16 @@ export async function startParticipant() {
     <div class="forum-toolbar"><button id="open-menu" class="secondary" aria-label="Open menu" aria-controls="phone-menu" aria-expanded="false"><span aria-hidden="true">☰</span> Menu</button><div id="notification-control"></div></div><dialog id="phone-menu" aria-label="Forum menu"><button id="close-menu" class="secondary">Close menu ×</button></dialog><aside class="sidebar">
       <section class="panel join-card" id="team"></section>
       <nav class="social-nav" aria-label="Forum navigation">
-        <a href="#feed" data-view="feed" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg><span>News feed</span></a>
+        <a href="#feed" data-view="feed" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg><span>Feed</span></a>
         <a href="#discover" data-view="discover"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="10.5" cy="10.5" r="7.5"/><path d="m16 16 5 5"/></svg><span>Discover</span></a>
       </nav>
       <ul id="sidebar-other-members" class="sidebar-names" aria-label="Other members" hidden></ul>
       <section class="sidebar-trends" id="trending" aria-label="Top five hashtags"></section>
-      <section class="sidebar-about"><span class="eyebrow">ABOUT CIRCLE NEWS</span><h2>Different voices.<br>Shared space.</h2><p>Share an idea. Hear another view.</p></section>
+      <section class="sidebar-about"><span class="eyebrow">ABOUT OPEN CIRCLE</span><h2>Different voices.<br>Shared space.</h2><p>Share an idea. Hear another view.</p></section>
       <div class="session-note"><span class="dot"></span><span id="connection" role="status">Connecting…</span></div>
     </aside>
     <section class="conversation" id="feed-view" aria-labelledby="feed-title">
-      <div class="feed-heading"><h1 id="feed-title">News feed</h1><span id="counts" class="people"></span></div>
+      <div class="feed-heading"><h1 id="feed-title">Feed</h1><span id="counts" class="people"></span></div>
       <div class="panel prompt"><span class="eyebrow">TODAY’S TOPIC</span><h2 id="question">Bus fares for young people</h2></div>
       <div class="phase" id="phase" aria-live="polite"></div><p id="error" role="alert"></p>
       <section id="notice"></section><section id="incident-banner" aria-live="polite"></section><section id="account-takeover" hidden></section>
@@ -508,7 +500,7 @@ export async function startParticipant() {
     container.innerHTML = ordered.length ? ordered.map(post => renderPost(post)).join('') : `<p class="empty">${activeHashtag ? 'No posts with this hashtag yet.' : 'No posts yet.'}</p>`;
     container.querySelectorAll('.post').forEach(post => { if (!existingPosts.has(post.id)) post.classList.add('post-enter'); });
     if (focus) container.querySelector(`[data-${focus[0]}="${focus[1]}"]`)?.focus({ preventScroll: true });
-    document.querySelector('#profiles').innerHTML = data.profiles.filter(p => p.id !== person.participant.id).map(p => `<button class="member-card theme-${p.cover}" data-profile="${e(p.id)}" aria-label="Visit @${e(p.username)}"><span class="member-cover banner-art cover-${p.cover}" aria-hidden="true">${bannerArtwork(p.cover)}</span><span class="member-card-body"><img src="${e(p.avatar)}" alt=""><strong>@${e(p.username)}</strong><span>${e(p.bio || 'Circle News member')}</span></span></button>`).join('') || '<p class="empty">Other members will appear here when they join.</p>';
+    document.querySelector('#profiles').innerHTML = data.profiles.filter(p => p.id !== person.participant.id).map(p => `<button class="member-card theme-${p.cover}" data-profile="${e(p.id)}" aria-label="Visit @${e(p.username)}"><span class="member-cover banner-art cover-${p.cover}" aria-hidden="true">${bannerArtwork(p.cover)}</span><span class="member-card-body"><img src="${e(p.avatar)}" alt=""><strong>@${e(p.username)}</strong><span>${e(p.bio || 'Open Circle member')}</span></span></button>`).join('') || '<p class="empty">Other members will appear here when they join.</p>';
   }
   async function refresh() {
     if (busy) return; busy = true;

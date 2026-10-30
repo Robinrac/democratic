@@ -83,8 +83,8 @@ test('name errors, mentions, post alerts, ranked tags and reset work together on
   await expect(b.locator('#profiles .member-card')).toHaveCount(6);
   await expect(b.locator('#trending')).toBeHidden();
   await b.screenshot({ path: info.outputPath('discover-phone.png') });
-  await openPhoneMenu(a); await a.getByRole('link', { name: 'News feed', exact: true }).click();
-  await openPhoneMenu(b); await b.getByRole('link', { name: 'News feed', exact: true }).click();
+  await openPhoneMenu(a); await a.getByRole('link', { name: 'Feed', exact: true }).click();
+  await openPhoneMenu(b); await b.getByRole('link', { name: 'Feed', exact: true }).click();
   await expect(a.locator('#discover-view')).toBeHidden();
   async function release(action) {
     const state = await (await request.get('/api/host/state?s=' + sid)).json();

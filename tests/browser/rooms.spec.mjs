@@ -23,6 +23,8 @@ test('home joins by code; host chooses rooms and opens the public QR screen; del
   await participant.screenshot({ path: info.outputPath('join-code-phone.png') });
   await participant.getByRole('button', { name: 'Join room' }).click(); await expect(participant).toHaveURL(new RegExp('s='+sid)); await expect(participant.locator('#join-dialog')).toBeVisible();
   await participant.locator('#join-name').fill('Eydis'); await participant.locator('#join-town').fill('Reykjavík'); await participant.getByRole('button', { name: 'Join the forum' }).click(); await participant.getByRole('button', { name: 'Enter the forum' }).click();
+  await expect(participant.getByRole('link', { name: 'Open Circle home', exact: true })).toBeVisible();
+  expect(await participant.locator('link[rel=stylesheet]').evaluateAll(links => links.some(link => link.href.includes('workshop-one')))).toBe(false);
   await participant.goto('/'); await participant.getByLabel('Room code', { exact: true }).fill(code); await participant.getByRole('button', { name: 'Join room' }).click(); await expect(participant.locator('#join-dialog')).toBeHidden(); await expect(participant.locator('#team')).toContainText('@lava-lundi');
   await host.getByRole('link', { name: 'All rooms' }).click(); await expect(host.getByRole('heading', { name: 'Your rooms', exact: true })).toBeVisible();
   const card = host.locator(`[data-room="${sid}"]`); await expect(card).toContainText(code); await expect(card).toContainText('1 / 7'); await host.screenshot({ path: info.outputPath('room-list.png'), fullPage: true });
